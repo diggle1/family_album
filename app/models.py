@@ -106,6 +106,31 @@ class AuthCode(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     email: Mapped[str] = mapped_column(String(255), index=True)
-    code: Mapped[str] = mapped_column(String(12))
+    # HMAC-SHA256 hex digest. The 6-digit code is never stored.
+    code: Mapped[str] = mapped_column(String(64))
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class AuthCodeRequest(Base):
+    """Accepted request-code events. Email cooldown and IP caps read this table."""
+
+    __tablename__ = "auth_code_requests"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    email: Mapped[str] = mapped_column(String(255), index=True)
+    ip: Mapped[str] = mapped_column(String(64), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class AuthThrottle(Base):
+    """Failed verify counts. kind is verify_email or verify_ip."""
+
+    __tablename__ = "auth_throttles"
+    __table_args__ = (UniqueConstraint("kind", "bucket_key", name="uq_auth_throttle_kind_key"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    kind: Mapped[str] = mapped_column(String(32))
+    bucket_key: Mapped[str] = mapped_column(String(255))
+    failures: Mapped[int] = mapped_column(default=0)
+    window_started: Mapped[datetime] = mapped_column(DateTime(timezone=True))

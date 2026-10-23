@@ -4,7 +4,8 @@
 <div class="center">
   <div class="illus">✉️</div>
   <h3>输入验证码</h3>
-  <p>发给 {{ email }} 的验证码。本版不走邮箱，测试码见 README。</p>
+  <p>发给 {{ email }} 的验证码。本版不发送真实邮件。</p>
+  {% if test_code_enabled %}<p class="hint">已开启测试码，见 README。</p>{% endif %}
   {% if error %}<p class="hint err">{{ error }}</p>{% endif %}
   <form method="post" action="/login/verify" class="stack">
     <input type="hidden" name="email" value="{{ email }}">

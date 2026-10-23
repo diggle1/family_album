@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.datastructures import Headers, MutableHeaders
 
-from app.config import get_settings
+from app.config import get_settings, validate_settings
 from app.constants import FORBIDDEN
 from app.db import Base, engine
 from app.http import safe_next, wants_json
@@ -26,6 +26,7 @@ STATIC_DIR = Path(__file__).resolve().parent / "static"
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     settings = get_settings()
+    validate_settings(settings)
     settings.photo_dir.mkdir(parents=True, exist_ok=True)
     import app.models  # noqa: F401  (register tables)
 
