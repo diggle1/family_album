@@ -10,6 +10,7 @@ _root = Path(tempfile.mkdtemp(prefix="family-album-"))
 (_root / "photos").mkdir()
 os.environ["DATABASE_URL"] = f"sqlite:///{_root / 'app.db'}"
 os.environ["PHOTO_DIR"] = str(_root / "photos")
+os.environ["STORAGE_BACKEND"] = "local"
 os.environ["AUTH_TEST_CODE"] = "000000"
 os.environ["SECRET_KEY"] = "test-secret"
 os.environ["COOKIE_SECURE"] = ""
@@ -25,6 +26,7 @@ from app.models import Base
 
 @pytest.fixture(autouse=True)
 def _reset_db():
+    get_settings.cache_clear()
     Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
     photo_dir = get_settings().photo_dir

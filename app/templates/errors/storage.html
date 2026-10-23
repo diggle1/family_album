@@ -1,0 +1,21 @@
+{% extends "layout.html" %}
+{% block title %}{{ title }} · kids时光机{% endblock %}
+{% block content %}
+<div class="failbar">启动失败 <span class="code">{{ code }}</span></div>
+<div class="pad">
+  <h1 class="setup-h">{{ title }}</h1>
+  <p>{{ reason }}</p>
+  <ol class="steps">
+    {% for step in steps %}
+    <li>{{ step }}</li>
+    {% endfor %}
+  </ol>
+  <pre class="cmd">{% for key in masked_keys %}{{ key }}=••••
+{% endfor %}</pre>
+  <div class="stack">
+    <a class="btn" href="/?recheck=1">我改好了，刷新重试</a>
+    <a class="btn ghost" href="/setup">打开部署说明 · 排查</a>
+  </div>
+  <p class="hint">高级配置请改 <code>.env</code> 后 <code>compose up -d</code> 再试。</p>
+</div>
+{% endblock %}

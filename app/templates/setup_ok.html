@@ -1,0 +1,18 @@
+{% extends "layout.html" %}
+{% block title %}装好了 · kids时光机{% endblock %}
+{% block content %}
+<div class="center">
+  <div class="big-ok" aria-hidden="true">✓</div>
+  <h3>装好了，可以给家人用了</h3>
+  <ul class="ok-list">
+    <li>已登录</li>
+    <li>已上传并看到孩子的照片</li>
+    <li>图片经登录鉴权查看，没有公开直链</li>
+  </ul>
+  <div class="stack">
+    <a class="btn" href="/">进入时光</a>
+    <a class="btn ghost" href="/setup">查看部署说明</a>
+  </div>
+  <p class="hint">换存储只改 <code>.env</code> 后重启，不改变 <code>family_id</code> 权限域。</p>
+</div>
+{% endblock %}

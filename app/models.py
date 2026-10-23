@@ -47,7 +47,8 @@ class Membership(Base):
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    # unique(user_id) is the v1 one-family rule. The pair unique is redundant and kept.
+    # unique(user_id) is the v1 one-family rule. AC10 keeps it: many families
+    # may share one instance, but a user still has at most one membership.
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), unique=True, index=True)
     family_id: Mapped[int] = mapped_column(ForeignKey("families.id"), index=True)
     role: Mapped[str] = mapped_column(String(16))
@@ -98,6 +99,9 @@ class Photo(Base):
     child_id: Mapped[int | None] = mapped_column(ForeignKey("children.id"), nullable=True)
     taken_on: Mapped[date] = mapped_column(Date)
     storage_path: Mapped[str] = mapped_column(String(80))
+    # Written at upload from the current STORAGE_BACKEND. Reads use this column,
+    # not the env at request time. create_all does not add it to an existing table.
+    storage_backend: Mapped[str] = mapped_column(String(16), default="local", server_default="local")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 

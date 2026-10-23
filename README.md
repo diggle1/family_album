@@ -1,94 +1,150 @@
 # 时光机（family_album）
 
-家庭成长相册：以孩子为主，也收进家人分享的照片。当前版本 `v2026.10.23.1`。
+家庭成长相册：以孩子为主，也收进家人分享的照片。当前版本 `v2026.10.23.2`。
+
+技术依据是部署与存储 tech r2（SHA256 `76772993db93cedb5c484c67e5ef18f9bd27611d51dca813b3237084eb486738`）。本版在 `v2026.10.23.1` 和登录安全加固之上，补 docker compose 自部署、本地 / S3 媒资，以及按 `family_id` 隔离的读图。不做日志、视频、评论、真实发信、公开直链、发现、商城、广告、导出界面、媒资迁移向导，也不做应用内的存储设置。
 
 ## 本版能做
 
-- **家庭成员与关系**。一人一个家庭。成员填写姓名（1–40 字），并可写家庭内关系（如爸爸、外婆）。关系记在成员上，在家人列表里展示，不绑定某个孩子，用 `PATCH /api/me` 修改。家长管理员可以邀请家人（默认 7 天有效）；接受邀请须先用受邀邮箱登录。已经有家庭时，再创建或接受邀请会返回 400。
+- **家庭成员与关系**。一人一个家庭（`Membership.user_id` 保持唯一）。同一实例可以并存多个家庭。成员填写姓名（1–40 字），并可写家庭内关系（如爸爸、外婆）。关系记在成员上，不绑定某个孩子。已经有家庭时，再创建或接受邀请会返回 400。
 - **三档权限**。`admin` 家长管理员可以邀请、改档、加孩子、上传；`uploader` 可上传孩子照片和本人照片，不能改别人的权限；`viewer` 只读，页面不渲染「＋」。家庭里最后一位家长管理员不能被降级。
-- **孩子照与本人照，按拍摄日展示**。孩子照片必须有拍摄日，按天出现在该孩子的时光线，并标出当时几岁几个月（未满月为「不足1个月」）。家人本人照片按拍摄日从新到旧排在本人相册，单张页展示日期；缺省拍摄日是 Asia/Shanghai 的上传日。本人照片不会出现在任何孩子的时光线里。
+- **孩子照与本人照，按拍摄日展示**。孩子照片必须有拍摄日。家人本人照片不会出现在任何孩子的时光线里。
+- **鉴权读图**。`GET /media/{id}` 要求登录，并且 `photo.family_id` 等于当前成员的 `family_id`。未登录和非本家庭成员返回 403。没有公开直链，也不把预签名 URL 写进页面。
+- **自部署**。`docker compose up -d` 拉起后，按清单登录、上传一张孩子照、再打开 `/media`。
 
-本版不做：日志、视频、评论、真实发信、公开直链、发现、AI、导出界面。
+## 一键自部署
 
-## 运行
+需要 Docker。干净机器上的验收路径是：
 
-需要 Python 3.12+。在仓库根目录执行：
+1. 准备一台能安装 Docker 的机器。
+2. 复制环境文件并写入密钥：
+
+   ```bash
+   cp .env.example .env
+   python3 -c 'import secrets; print(secrets.token_urlsafe(32))'
+   ```
+
+   把输出写进 `.env` 的 `SECRET_KEY`。Phase A 自测可以临时写 `AUTH_TEST_CODE=000000`，生产必须清空或不设置。不要设置 `ALLOW_INSECURE_DEFAULTS`，也不要把真实密钥写进镜像。
+3. `docker compose up -d`
+4. 浏览器打开 `http://<host>:8000`
+5. 用管理员账号登录。开了临时测试码时，先发送验证码，再输入 `000000`。
+6. 上传一张孩子照，用登录态打开 `/media/{id}`，应返回 200。
+
+同一份清单在网页 `/setup`。管理员在本会话里完成「登录 + 成功上传一张孩子照 + `/media` 200」后，可以打开 `/setup/ok`（「装好了，可以给家人用了」）。这是会话标记，没有 `setup_confirmed_at` 字段。
+
+`GET /healthz` 只检查进程和数据库，compose 的 healthcheck 只打这条路径。媒资卷或 S3 连不上时进程仍会起来，容器保持 healthy，浏览器看到 `/errors/storage?code=`。修 `.env` 或卷之后执行 `docker compose up -d`，或点「我改好了，刷新重试」。
+
+### 从 v2026.10.23.1 升级
+
+先备份数据卷，再迁移，再换镜像。只跑 `create_all` **不会**给已有的 `photos` 表加上 `storage_backend`。compose 的启动命令会执行 `python scripts/migrate.py`；不使用 compose 时要自己先跑。
+
+```bash
+python scripts/migrate.py
+```
+
+迁移是幂等的：缺列时执行 `ALTER TABLE photos ADD COLUMN storage_backend VARCHAR(16) NOT NULL DEFAULT 'local'`。已有行记为 `local`。本版不搬迁旧文件，切换存储只影响新上传。
+
+## 存储
+
+| 变量 | compose 示例 | 说明 |
+|---|---|---|
+| `STORAGE_BACKEND` | `local` | `local` 或 `s3`。写入用当前值，读图用每行的 `storage_backend` |
+| `MEDIA_ROOT` | `/data/media` | 本地根目录。未设置 `PHOTO_DIR` 时，进程默认也是 `/data/media` |
+| `PHOTO_DIR` | （不设） | 若设置，本地根目录改用它。本机开发可设为 `./data/photos` |
+| `DATABASE_URL` | `sqlite:////data/app.db` | 数据卷上的 SQLite。本机直接跑时默认 `sqlite:///./data/app.db` |
+| `S3_ENDPOINT` / `S3_BUCKET` / `S3_ACCESS_KEY` / `S3_SECRET_KEY` | 空 | 仅 `s3` 时必填 |
+| `S3_REGION` | 空 | 可选，客户端默认 `us-east-1` |
+| `S3_FORCE_PATH_STYLE` | 空 | MinIO 设为 `1` |
+
+`docker-compose.yml` 始终把命名卷 `app-data` 挂到 `/data`。即使 `STORAGE_BACKEND=s3`，旧的本地文件仍从这只卷读取。默认 compose **不**附带 MinIO。
+
+产品里没有「设置 → 存储」、测通或健康三灯。家长管理员的设置页只有一行灰字，指向本说明。可上传和只读成员看不到这行字。
+
+失败页只显示键名和 `••••`，不显示密钥明文。
+
+### 高级：MinIO（可选，不要写进默认 compose）
+
+自行增加 MinIO 服务时，应用侧只改 `.env` 后重启：
+
+```bash
+STORAGE_BACKEND=s3
+S3_ENDPOINT=http://minio:9000
+S3_BUCKET=family-album
+S3_ACCESS_KEY=minioadmin
+S3_SECRET_KEY=minioadmin
+S3_FORCE_PATH_STYLE=1
+```
+
+上面的 MinIO 账号只适合本机试验。桶保持私有。看图仍走 `/media/{id}`。
+
+## 本地开发（不用 compose）
+
+需要 Python 3.12+。
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 python scripts/migrate.py
+export PHOTO_DIR=./data/photos
 export AUTH_TEST_CODE=000000
 export SECRET_KEY=dev-secret-change-me
 export ALLOW_INSECURE_DEFAULTS=1
 uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
-浏览器打开 <http://127.0.0.1:8000>。
+`ALLOW_INSECURE_DEFAULTS=1` 只给本机开发，用来放过默认的 `dev-secret-change-me`。`AUTH_TEST_CODE` 不设置时是空的，测试旁路关闭。`SECRET_KEY` 为空，或仍是默认值且没有上面的开关时，进程拒绝启动。
 
-上面三行环境变量只给本机开发。`AUTH_TEST_CODE` 不设置时默认是空字符串，测试旁路是关的，所以本地要显式写成 `000000`。`SECRET_KEY` 若仍是 `dev-secret-change-me`，进程会在启动时直接拒绝，除非同时设置 `ALLOW_INSECURE_DEFAULTS=1`。
+生产不要设置 `ALLOW_INSECURE_DEFAULTS`。上线前确认：
 
-`uvicorn` 启动时也会建表，漏跑 `scripts/migrate.py` 仍能起服务。该脚本是显式建表入口，重复执行是安全的。
+- `AUTH_TEST_CODE` 为空，或者不设置。
+- `SECRET_KEY` 是高熵随机串（用上面的 `token_urlsafe` 命令生成）。
+- 站点走 HTTPS 时设置 `COOKIE_SECURE=1`。本地 `http://127.0.0.1` 不要开。
 
-### 生产
+限流按直接连上来的客户端地址计算，不读取 `X-Forwarded-For`。
 
-生产不要设置 `ALLOW_INSECURE_DEFAULTS`。上线前确认这三项：
+## 四角色夹具
 
-- `AUTH_TEST_CODE` 为空，或者不设置。测试旁路必须关闭。
-- `SECRET_KEY` 换成高熵随机串，不能继续用 `dev-secret-change-me`。
-- 站点走 HTTPS 时设置 `COOKIE_SECURE=1`（也接受 `true` / `yes`）。会话 cookie 会带上 Secure。本地用 `http://127.0.0.1` 时不要开，否则浏览器不会保存登录态。默认是关的。
+`python scripts/seed_roles.py` 写入一个示例家庭和四个账号，可重复执行。它不是生产默认数据。登录前临时设置 `AUTH_TEST_CODE=000000`，用完清空。
 
-```bash
-export AUTH_TEST_CODE=
-export SECRET_KEY="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')"
-export COOKIE_SECURE=1
-uvicorn app.main:app --host 127.0.0.1 --port 8000
-```
-
-限流按直接连上来的客户端地址计算，不读取 `X-Forwarded-For`。前面若有反向代理，同一出口会共用 IP 额度。
-
-数据文件：
-
-- SQLite：默认 `sqlite:///./data/app.db`（可用 `DATABASE_URL` 改文件位置）
-- 照片：`data/photos/`（可用 `PHOTO_DIR` 改位置）
-
-这两处都不进 git。
+| 角色 | 邮箱 |
+|---|---|
+| 家长管理员 | `admin@example.test` |
+| 可上传 | `uploader@example.test` |
+| 只读长辈 | `viewer@example.test` |
+| 非成员 | `outsider@example.test` |
 
 ## 登录
 
-本版不发真实邮件。流程是：
+本版不发真实邮件。
 
-1. 填写邮箱，请求验证码。服务端生成 6 位数字，只把 HMAC-SHA256（密钥是 `SECRET_KEY`）写入 `auth_codes`，不存明文，响应里也不返回验证码。默认 10 分钟有效。
-2. 若设置了 `AUTH_TEST_CODE`，必须先请求过验证码，该值才能通过校验。本地开发设为 `000000`。不设置或设成空字符串则旁路关闭。
-3. 同一邮箱两次获取验证码至少间隔 60 秒。同一 IP 每小时最多 20 次、每天最多 50 次。被拒绝的请求不会换掉已经记下的验证码。超出时返回 429，正文说明要等多久或已达上限。
-4. 同一邮箱连续验错 5 次后，在验证码有效期内（默认 600 秒，从第一次失败算起）会拒绝继续校验。同一 IP 累计失败 30 次同样拒绝。返回 429。验证成功，或该邮箱重新成功获取验证码，会清掉这个邮箱的失败次数。IP 的失败次数要等窗口过去，重新获取验证码不会把它清掉。
-5. 新的验证码会使该邮箱上一条验证码失效。
+1. 填写邮箱，请求验证码。服务端只存 HMAC-SHA256，响应里不返回验证码。默认 10 分钟有效。
+2. 若设置了 `AUTH_TEST_CODE`，必须先请求过验证码，该值才能通过校验。
+3. 同一邮箱两次获取至少间隔 60 秒。同一 IP 每小时最多 20 次、每天最多 50 次。超出返回 429。
+4. 同一邮箱连续验错 5 次，或同一 IP 累计失败 30 次，在验证码有效期内拒绝继续校验。
+5. 新的验证码会使该邮箱上一条失效。
 
-关闭旁路之后，不能从数据库读出明文验证码交给用户。本版没有 SMTP。
-
-登录后若还没有姓名，页面会停在「完善资料」，填完才能进时光线。接口本身不拦时间线读取。
+登录后若还没有姓名，页面会停在「完善资料」。
 
 ## 权限
 
 | 档位 | 能做的事 |
 |---|---|
-| `admin` 家长管理员 | 邀请、改档、加孩子、上传孩子照片和本人照片 |
-| `uploader` 可上传 | 上传孩子照片和本人照片，不能改别人的权限 |
+| `admin` 家长管理员 | 邀请、改档、加孩子、上传、装机确认页、设置里的一行存储说明 |
+| `uploader` 可上传 | 上传孩子照片和本人照片 |
 | `viewer` 只读 | 只看。页面不渲染「＋」 |
 
-一个用户最多一个家庭。已经有家庭时，再创建或接受邀请会返回 400。
+非成员访问家庭内容返回 403，正文只有「没有访问权限」。跨家庭访问 `/media` 同样是 403。切换本地和 S3 不改变这套 `family_id` 规则。
 
-家庭里最后一位家长管理员不能被降级。
-
-非成员访问家庭、孩子、时光线、成员、媒体、本人相册时返回 403，正文只有「没有访问权限」，不带家庭名、孩子名或成员列表。
+自己的媒资按路线图可以永久免费导出。本版没有导出界面，也没有收费入口。
 
 ## 照片
 
 - 只接受 jpeg / png / webp，单张不超过 10MB。
-- 文件名是随机 UUID，不提供公开直链。看图必须带登录态访问 `GET /media/{id}`，且照片属于当前家庭。
-- `kind=child`：必须有 `taken_on`。`child_id` 必填；家里正好一个孩子时可以省略，服务端会写成这个孩子。缺了或日期非法都是 400。照片按拍摄日分组出现在孩子时光线。
-- `kind=self`：`child_id` 必须为空。若请求里带了非空 `child_id`，返回 400（不静默清空）。`taken_on` 缺省为 Asia/Shanghai 的上传日，也可以自己指定。本人照片按拍摄日排在本人相册，不会出现在任何孩子时光线里。
+- 文件名是随机 UUID。`storage_backend` 在上传时写成当时的 `STORAGE_BACKEND`。
+- 看图必须带登录态访问 `GET /media/{id}`，且照片属于当前家庭。
+- `kind=child`：必须有 `taken_on`。家里正好一个孩子时可以省略 `child_id`。
+- `kind=self`：`child_id` 必须为空，否则 400。缺省拍摄日是 Asia/Shanghai 的上传日。
 
 ## 测试
 
@@ -96,8 +152,8 @@ uvicorn app.main:app --host 127.0.0.1 --port 8000
 pytest
 ```
 
-`tests/conftest.py` 会自行设置 `AUTH_TEST_CODE=000000` 和测试用 `SECRET_KEY`。覆盖权限矩阵、最后一位管理员、本人照片不进孩子时光线、媒体 403、403 不泄密、孩子照片缺 `taken_on` / `child_id` 返回 400、第二家庭 400、`PATCH /api/me`，以及验证码旁路关闭、请求限流、验错锁定、默认密钥拒绝启动。
+`tests/conftest.py` 会设置 `AUTH_TEST_CODE=000000`、测试用 `SECRET_KEY` 和本地 `PHOTO_DIR`。覆盖权限矩阵、验证码限流、默认密钥拒绝启动，以及迁移补列、切到 S3 后旧本地图仍可看、跨家庭 `/media` 403、坏存储时 `/healthz` 仍为 200。S3 用 moto，不启 MinIO。
 
 ## 发布说明
 
-见 [CHANGELOG.md](CHANGELOG.md) 和 [releases/v2026.10.23.1.md](releases/v2026.10.23.1.md)。
+见 [CHANGELOG.md](CHANGELOG.md) 和 [releases/v2026.10.23.2.md](releases/v2026.10.23.2.md)。

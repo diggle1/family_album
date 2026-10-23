@@ -44,5 +44,8 @@
   <form method="post" action="/auth/logout" class="stack">
     <button class="btn ghost" type="submit">退出登录</button>
   </form>
+  {% if is_admin %}
+  <p class="hint env-note">存储后端在服务器 <code>.env</code> 配置，见<a href="/setup">部署说明</a>。</p>
+  {% endif %}
 </div>
 {% endblock %}

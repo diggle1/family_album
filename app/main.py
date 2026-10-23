@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -10,13 +12,20 @@ from urllib.parse import quote, urlparse
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy import text
+from sqlalchemy.exc import OperationalError
 from starlette.datastructures import Headers, MutableHeaders
 
 from app.config import get_settings, validate_settings
 from app.constants import FORBIDDEN
-from app.db import Base, engine
+from app.db import engine
+from app.gate import StorageGateMiddleware
 from app.http import safe_next, wants_json
-from app.routers import auth, children, family, me, pages, photos
+from app.migrate_schema import migrate_schema
+from app.routers import auth, children, deploy, family, me, pages, photos
+from app.storage.errors import StorageError
+from app.storage.factory import probe_code
+from app.storage.respond import storage_block_response
 from app.templating import templates
 
 logger = logging.getLogger("family_album")
@@ -25,13 +34,40 @@ STATIC_DIR = Path(__file__).resolve().parent / "static"
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    settings = get_settings()
-    validate_settings(settings)
-    settings.photo_dir.mkdir(parents=True, exist_ok=True)
-    import app.models  # noqa: F401  (register tables)
+    # Default SECRET_KEY still refuses to boot. Storage problems must not.
+    validate_settings(get_settings())
+    _app.state.storage_error = None
+    _app.state.db_error = None
+    _app.state.storage_probe_done = asyncio.Event()
+    try:
+        migrate_schema()
+    except Exception as exc:
+        logger.warning("database migrate failed error=%s", type(exc).__name__)
+        _app.state.db_error = "DB_DOWN"
 
-    Base.metadata.create_all(engine)
-    yield
+    async def _probe() -> None:
+        try:
+            _app.state.storage_error = await asyncio.to_thread(probe_code)
+        finally:
+            _app.state.storage_probe_done.set()
+
+    task = asyncio.create_task(_probe())
+    try:
+        yield
+    finally:
+        task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await task
+
+
+def ping_db() -> bool:
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        return True
+    except Exception as exc:
+        logger.warning("database ping failed error=%s", type(exc).__name__)
+        return False
 
 
 class SecurityMiddleware:
@@ -71,7 +107,8 @@ class SecurityMiddleware:
         await self.app(scope, receive, send_with_headers)
 
 
-app = FastAPI(title="kids时光机", version="2026.10.23.1", lifespan=lifespan)
+app = FastAPI(title="kids时光机", version="2026.10.23.2", lifespan=lifespan)
+app.add_middleware(StorageGateMiddleware)
 app.add_middleware(SecurityMiddleware)
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 app.include_router(auth.router)
@@ -80,6 +117,28 @@ app.include_router(family.router)
 app.include_router(children.router)
 app.include_router(photos.router)
 app.include_router(pages.router)
+app.include_router(deploy.router)
+
+
+@app.get("/healthz")
+def healthz(request: Request):
+    """Process and database only. A bad media volume or S3 config stays healthy."""
+    if getattr(request.app.state, "db_error", None) or not ping_db():
+        return JSONResponse({"ok": False}, status_code=503)
+    return {"ok": True}
+
+
+@app.exception_handler(StorageError)
+async def storage_failed(request: Request, exc: StorageError):
+    request.app.state.storage_error = exc.code
+    return storage_block_response(request, exc.code)
+
+
+@app.exception_handler(OperationalError)
+async def database_failed(request: Request, exc: OperationalError):
+    logger.warning("database request failed error=%s", type(exc).__name__)
+    request.app.state.db_error = "DB_DOWN"
+    return storage_block_response(request, "DB_DOWN")
 
 
 @app.exception_handler(HTTPException)

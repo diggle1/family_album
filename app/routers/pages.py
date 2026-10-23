@@ -33,6 +33,7 @@ from app.services.families import (
     set_role,
 )
 from app.services.photos import create_photo, self_album
+from app.setup_gate import note_child_upload
 from app.services.validators import parse_iso_date
 from app.templating import templates
 from app.config import get_settings
@@ -592,7 +593,7 @@ async def upload_save(
         data = await _read_limited(file, request)
         photo = create_photo(
             db,
-            family_id=gate.family.id,
+            family_id=gate.membership.family_id,
             uploader_id=gate.user.id,
             kind_raw=kind,
             child_id_raw=child_id,
@@ -612,8 +613,11 @@ async def upload_save(
             status_code=exc.status_code,
         )
     if photo.kind == "self":
-        return RedirectResponse(f"/people/{gate.user.id}/album?toast=album", status_code=303)
-    return RedirectResponse(f"/?child={photo.child_id}&toast=timeline", status_code=303)
+        response = RedirectResponse(f"/people/{gate.user.id}/album?toast=album", status_code=303)
+    else:
+        response = RedirectResponse(f"/?child={photo.child_id}&toast=timeline", status_code=303)
+    note_child_upload(request, response, role=gate.membership.role, kind=photo.kind)
+    return response
 
 
 @router.get("/invites/{token}")

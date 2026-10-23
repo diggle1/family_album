@@ -26,7 +26,21 @@ class Settings:
         # Empty string disables the bypass. Unset stays empty; dev and pytest opt in.
         raw_code = os.environ.get("AUTH_TEST_CODE", "")
         self.auth_test_code = raw_code.strip() or None
-        self.photo_dir = Path(os.environ.get("PHOTO_DIR", "./data/photos")).expanduser()
+        backend = os.environ.get("STORAGE_BACKEND", "local").strip().lower()
+        self.storage_backend = backend or "local"
+        # PHOTO_DIR is the local-dev alias. When set, it is the media root.
+        photo_dir = os.environ.get("PHOTO_DIR")
+        if photo_dir is not None and photo_dir.strip():
+            self.media_root = Path(photo_dir).expanduser()
+        else:
+            self.media_root = Path(os.environ.get("MEDIA_ROOT", "/data/media")).expanduser()
+        self.photo_dir = self.media_root
+        self.s3_endpoint = os.environ.get("S3_ENDPOINT", "").strip() or None
+        self.s3_bucket = os.environ.get("S3_BUCKET", "").strip()
+        self.s3_access_key = os.environ.get("S3_ACCESS_KEY", "").strip()
+        self.s3_secret_key = os.environ.get("S3_SECRET_KEY", "").strip()
+        self.s3_region = os.environ.get("S3_REGION", "").strip() or "us-east-1"
+        self.s3_force_path_style = _enabled("S3_FORCE_PATH_STYLE")
         self.cookie_secure = _enabled("COOKIE_SECURE")
         self.code_ttl_seconds = int(os.environ.get("AUTH_CODE_TTL_SECONDS", "600"))
         self.invite_ttl_days = int(os.environ.get("INVITE_TTL_DAYS", "7"))
@@ -35,7 +49,9 @@ class Settings:
 
 
 def validate_settings(settings: Settings) -> None:
-    """Refuse the shipped SECRET_KEY unless local dev opted in."""
+    """Refuse an empty key, and the shipped SECRET_KEY unless local dev opted in."""
+    if not settings.secret_key.strip():
+        raise InsecureSettingsError("SECRET_KEY 为空，拒绝启动。请换成高熵随机串。")
     if settings.secret_key == DEFAULT_SECRET and not settings.allow_insecure_defaults:
         raise InsecureSettingsError(
             "SECRET_KEY 仍是开发默认值 dev-secret-change-me，拒绝启动。"

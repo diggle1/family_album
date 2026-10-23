@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
@@ -9,7 +11,8 @@ from app.constants import FORBIDDEN
 from app.db import get_db
 from app.deps import MemberCtx, require_member
 from app.models import Photo
-from app.services.photos import create_photo, photo_file, photo_payload, self_album
+from app.services.photos import create_photo, iter_stream, open_photo, photo_payload, self_album
+from app.setup_gate import note_child_media, note_child_upload
 
 router = APIRouter(tags=["photos"])
 
@@ -48,14 +51,16 @@ async def post_photo(
     data = await _read_limited(file, request)
     photo = create_photo(
         db,
-        family_id=ctx.family.id,
+        family_id=ctx.membership.family_id,
         uploader_id=ctx.user.id,
         kind_raw=kind,
         child_id_raw=child_id,
         taken_on_raw=taken_on,
         data=data,
     )
-    return photo_payload(photo)
+    response = JSONResponse(photo_payload(photo), status_code=201)
+    note_child_upload(request, response, role=ctx.membership.role, kind=photo.kind)
+    return response
 
 
 @router.get("/api/photos/self/{user_id}")
@@ -73,18 +78,22 @@ def get_self_album(
 @router.get("/media/{photo_id}")
 def get_media(
     photo_id: int,
+    request: Request,
     ctx: MemberCtx = Depends(require_member()),
     db: Session = Depends(get_db),
-) -> FileResponse:
+) -> StreamingResponse:
     photo = db.get(Photo, photo_id)
-    if photo is None or photo.family_id != ctx.family.id:
+    if photo is None or photo.family_id != ctx.membership.family_id:
         raise HTTPException(status_code=403, detail=FORBIDDEN)
-    path, media_type = photo_file(photo)
-    suffix = path.suffix.lower() or ""
-    return FileResponse(
-        path,
+    stream, media_type = open_photo(photo)
+    suffix = Path(photo.storage_path).suffix.lower()
+    response = StreamingResponse(
+        iter_stream(stream),
         media_type=media_type,
-        filename=f"photo-{photo.id}{suffix}",
-        content_disposition_type="inline",
-        headers={"Cache-Control": "private, max-age=3600"},
+        headers={
+            "Cache-Control": "private, max-age=3600",
+            "Content-Disposition": f'inline; filename="photo-{photo.id}{suffix}"',
+        },
     )
+    note_child_media(request, response, role=ctx.membership.role, kind=photo.kind)
+    return response

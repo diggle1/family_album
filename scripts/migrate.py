@@ -1,10 +1,19 @@
-"""Create tables for v2026.10.23.1.
+"""Create tables and add photos.storage_backend when it is missing.
 
-The first release uses SQLAlchemy ``create_all`` (no alembic revisions).
-The command is idempotent: existing tables are left in place.
+Idempotent. create_all alone does not alter an existing photos table, so
+upgrades from v2026.10.23.1 must run this. The compose entrypoint runs it too.
+
+``python scripts/migrate.py`` puts scripts/ on sys.path, not the repo root.
 """
 
-from app.db import Base, engine
+import sys
+from pathlib import Path
+
+_ROOT = Path(__file__).resolve().parent.parent
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
+
+from app.migrate_schema import migrate_schema
 from app.models import (  # noqa: F401
     AuthCode,
     AuthCodeRequest,
@@ -19,8 +28,12 @@ from app.models import (  # noqa: F401
 
 
 def main() -> None:
-    Base.metadata.create_all(engine)
-    print(f"schema ready: {engine.url}")
+    added = migrate_schema()
+    if added:
+        print("added photos.storage_backend default local")
+    else:
+        print("photos.storage_backend present")
+    print("schema ready")
 
 
 if __name__ == "__main__":
