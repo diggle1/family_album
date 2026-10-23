@@ -23,4 +23,4 @@
 
 ### 回退
 
-见 `releases/v2026.10.23.1.md`。空仓基线是 `5eb1bb9`。代码回退不会删除本机的 `data/app.db` 和 `data/photos/`。
+见 `releases/v2026.10.23.1.md`。空仓基线是 `db09d34`。代码回退不会删除本机的 `data/app.db` 和 `data/photos/`。
