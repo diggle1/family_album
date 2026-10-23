@@ -5,7 +5,17 @@ The command is idempotent: existing tables are left in place.
 """
 
 from app.db import Base, engine
-from app.models import AuthCode, Child, Family, Invite, Membership, Photo, User  # noqa: F401
+from app.models import (  # noqa: F401
+    AuthCode,
+    AuthCodeRequest,
+    AuthThrottle,
+    Child,
+    Family,
+    Invite,
+    Membership,
+    Photo,
+    User,
+)
 
 
 def main() -> None:

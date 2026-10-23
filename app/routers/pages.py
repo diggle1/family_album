@@ -12,7 +12,7 @@ from app.auth import set_session
 from app.constants import FORBIDDEN, ROLE_LABEL, ROLE_NOTE
 from app.db import get_db
 from app.deps import MemberCtx, optional_user
-from app.http import safe_next, toast_text
+from app.http import client_ip, safe_next, toast_text
 from app.models import Photo, User
 from app.services.accounts import get_family, get_membership, patch_me
 from app.services.auth_codes import request_code, verify_code
@@ -211,7 +211,7 @@ def login_request(
 ):
     nxt = safe_next(next)
     try:
-        request_code(db, email)
+        request_code(db, email, ip=client_ip(request))
     except HTTPException as exc:
         return render(
             request,
@@ -236,7 +236,7 @@ def login_verify(
 ):
     nxt = safe_next(next)
     try:
-        user = verify_code(db, email, code)
+        user = verify_code(db, email, code, ip=client_ip(request))
     except HTTPException as exc:
         return render(
             request,

@@ -9,6 +9,13 @@ from app.constants import TOASTS
 _API_PREFIXES = ("/api/", "/auth/", "/media/")
 
 
+def client_ip(request: Request) -> str:
+    """Direct peer address. Forwarded headers are not trusted."""
+    client = request.client
+    host = client.host.strip() if client is not None and client.host else ""
+    return (host or "unknown")[:64]
+
+
 def wants_json(request: Request) -> bool:
     path = request.url.path
     if any(path.startswith(prefix) for prefix in _API_PREFIXES):
