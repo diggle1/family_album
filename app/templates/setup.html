@@ -1,0 +1,56 @@
+{% extends "layout.html" %}
+{% block title %}自部署检查清单 · kids时光机{% endblock %}
+{% block content %}
+<div class="top">
+  <div class="title">kids时光机<div class="meta">自部署 · Phase A</div></div>
+</div>
+<div class="pad">
+  <h1 class="setup-h">自部署检查清单</h1>
+  <p class="hint">装机按文档走。存储只改服务器上的 <code>.env</code>，不要在网页里配。</p>
+  {% if ready %}
+  <div class="banner info">这台浏览器已经用管理员完成登录、孩子照和鉴权查看。<a href="/setup/ok">打开装机确认</a></div>
+  {% endif %}
+  <ol class="check-list">
+    <li class="check-item">
+      <b>① 准备机子</b>
+      <p>准备一台能安装 Docker 的机器。</p>
+    </li>
+    <li class="check-item">
+      <b>② 复制 .env 并写入密钥</b>
+      <p>先复制示例，再写入高熵 <code>SECRET_KEY</code>。Phase A 自测可以临时打开测试码，生产必须关掉。不要把 <code>ALLOW_INSECURE_DEFAULTS</code> 或真实密钥写进镜像。</p>
+      <pre class="cmd">cp .env.example .env
+python3 -c 'import secrets; print(secrets.token_urlsafe(32))'</pre>
+      <p>把上面命令的输出写进 <code>.env</code> 的 <code>SECRET_KEY</code>。自测时可临时设置 <code>AUTH_TEST_CODE=000000</code>，生产环境清空或不设置。</p>
+    </li>
+    <li class="check-item">
+      <b>③ 拉起服务</b>
+      <pre class="cmd">docker compose up -d</pre>
+    </li>
+    <li class="check-item">
+      <b>④ 打开网页</b>
+      <p>浏览器访问 <code>http://&lt;host&gt;:8000</code>。</p>
+    </li>
+    <li class="check-item">
+      <b>⑤ 管理员登录</b>
+      <p>用管理员账号登录。若开了临时测试码，先发送验证码，再输入 <code>000000</code>。</p>
+    </li>
+    <li class="check-item">
+      <b>⑥ 上传一张孩子照</b>
+      <p>上传成功后，用登录态打开 <code>/media/…</code>，应返回 200。图片经登录鉴权查看，没有公开直链。</p>
+    </li>
+  </ol>
+  <div class="sec">高级：对象存储</div>
+  <p class="hint">高级：切换本地 / S3 兼容请改 <code>.env</code>（见 README），不要在网页里配。下面只列键名，没有输入框。</p>
+  <pre class="cmd">STORAGE_BACKEND
+MEDIA_ROOT
+S3_ENDPOINT
+S3_BUCKET
+S3_ACCESS_KEY
+S3_SECRET_KEY
+S3_REGION
+S3_FORCE_PATH_STYLE</pre>
+  <div class="stack">
+    <a class="btn" href="/">打开站点检查</a>
+  </div>
+</div>
+{% endblock %}

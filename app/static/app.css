@@ -196,3 +196,49 @@ a { color: inherit; }
 .hero { width: 100%; display: block; background: #E7DDD2; }
 .pad-bottom { height: 24px; }
 .scroll-pad .banner { margin-top: 8px; }
+.setup-h { font-size: 18px; margin: 0 0 8px; }
+.check-list { list-style: none; padding: 0; margin: 12px 0; }
+.check-item {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+}
+.check-item b { display: block; font-size: 15px; margin-bottom: 4px; }
+.check-item p { margin: 0; font-size: 13px; color: var(--ink2); line-height: 1.5; }
+pre.cmd {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  background: #F6F1EB;
+  border-radius: 10px;
+  padding: 10px 12px;
+  overflow: auto;
+  color: var(--ink);
+  margin: 8px 0 0;
+  white-space: pre-wrap;
+}
+.failbar {
+  background: var(--err-soft);
+  color: var(--err);
+  padding: 12px 16px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.failbar .code {
+  display: inline-block;
+  margin-left: 8px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  font-weight: 700;
+}
+.steps { margin: 8px 0 16px; padding-left: 18px; color: var(--ink2); font-size: 14px; line-height: 1.5; }
+.steps li + li { margin-top: 6px; }
+.big-ok {
+  width: 96px; height: 96px; border-radius: 50%;
+  background: var(--ok-soft); color: var(--ok);
+  display: grid; place-items: center; font-size: 48px; margin: 0 auto;
+}
+.ok-list { text-align: left; color: var(--ink2); font-size: 14px; line-height: 1.6; padding-left: 18px; }
+.env-note { color: var(--ink3); font-size: 12px; line-height: 1.5; }
+code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.92em; }

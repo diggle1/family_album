@@ -1,13 +1,27 @@
 # Changelog
 
-## 未发版 — 登录安全加固
+## v2026.10.23.2 — 2026-10-23
 
-不另发产品版本号。相对 v2026.10.23.1：
+部署与存储补刀（AC8–AC10）。相对已发布的 `v2026.10.23.1`，并带上 main 上已经落地的登录安全加固。
 
-- `AUTH_TEST_CODE` 默认改为空字符串，测试旁路默认关闭。本地和测试要显式设为 `000000`。
-- `SECRET_KEY` 仍是 `dev-secret-change-me` 且未设置 `ALLOW_INSECURE_DEFAULTS=1` 时，启动直接拒绝。
-- 验证码改为 HMAC-SHA256 存储。同一邮箱 60 秒内只能获取一次；同一 IP 每小时 20 次、每天 50 次。连续验错 5 次（同一 IP 累计 30 次）后暂时拒绝。
-- 经 HTTPS 部署时设置 `COOKIE_SECURE=1`。
+### 加入
+
+- `Dockerfile`、`docker-compose.yml`、`.env.example`。数据卷 `app-data` 挂在 `/data`；`STORAGE_BACKEND=s3` 时这只卷仍然挂着，旧的本地文件还能读。healthcheck 只请求 `GET /healthz`。
+- 媒资抽象：写入走 `current_store()`，读取按 `Photo.storage_backend` 走 `store_for()`。支持本地目录和 S3 兼容存储。看图仍是登录后的 `GET /media/{id}`，不写公开直链或预签名 URL。
+- `scripts/migrate.py` 在 `create_all` 之后幂等执行 `ALTER`，给已有 `photos` 表补上 `storage_backend`（默认 `local`）。从 `.1` 升级必须跑迁移；compose 启动时会跑。
+- 存储探测失败不让进程退出。`/healthz` 只表示进程和数据库可用。失败时业务页进入 `/errors/storage?code=`；`/api` 或 `Accept: application/json` 返回 `{code, message}`。
+- `/setup` 六步清单（含高熵 `SECRET_KEY` 和临时 `AUTH_TEST_CODE=000000`）。管理员在本会话完成登录、孩子照上传和 `/media` 200 后可打开 `/setup/ok`。不新增 `setup_confirmed_at`。
+- 设置页仅家长管理员有一行灰字，说明存储在 `.env`。没有存储表单、测通或健康仪表盘。
+- `scripts/seed_roles.py`：`admin@example.test`、`uploader@example.test`、`viewer@example.test`、`outsider@example.test`。一人仍然最多一个家庭。
+- 登录安全加固（此前在 main，未单独发版）：`AUTH_TEST_CODE` 默认空；默认 `SECRET_KEY` 在未设置 `ALLOW_INSECURE_DEFAULTS=1` 时拒绝启动；验证码 HMAC 与限流；`COOKIE_SECURE`。
+
+### 不做
+
+应用内存储设置、测通、健康三灯、媒资迁移向导、导出界面、日志、视频、评论、商城、发现、广告、多租户 SaaS。不拆除「一人一家庭」。
+
+### 回退
+
+见 `releases/v2026.10.23.2.md`。回退代码不会删除数据卷，也不会删除 S3 上的对象。
 
 ## v2026.10.23.1 — 2026-10-23
 

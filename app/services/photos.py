@@ -1,9 +1,13 @@
-"""Photo storage. kind=self with a child_id is rejected (400), not cleared."""
+"""Photo records. Bytes go through MediaStore, never Path.write_bytes.
+
+kind=self with a child_id is rejected (400), not cleared.
+Writes use current_store() and stamp Photo.storage_backend.
+Reads use store_for(photo.storage_backend).
+"""
 
 from __future__ import annotations
 
 import uuid
-from pathlib import Path
 
 from fastapi import HTTPException
 from sqlalchemy import select
@@ -15,9 +19,9 @@ from app.models import Child, Membership, Photo, User
 from app.services.children import list_children
 from app.services.clock import isoformat, shanghai_today
 from app.services.validators import parse_iso_date, parse_optional_int
+from app.storage.factory import current_store, store_for
 
 _EXT = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}
-_MEDIA = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp"}
 
 
 def sniff_image(data: bytes) -> str | None:
@@ -94,10 +98,10 @@ def create_photo(
     if media_type is None:
         raise HTTPException(status_code=400, detail="只支持 jpeg、png、webp")
 
-    settings.photo_dir.mkdir(parents=True, exist_ok=True)
     filename = f"{uuid.uuid4().hex}{_EXT[media_type]}"
-    path: Path = settings.photo_dir / filename
-    path.write_bytes(data)
+    backend = settings.storage_backend if settings.storage_backend in {"local", "s3"} else "local"
+    store = current_store()
+    store.put(filename, data, media_type)
     photo = Photo(
         family_id=family_id,
         uploader_id=uploader_id,
@@ -105,13 +109,14 @@ def create_photo(
         child_id=child.id if child is not None else None,
         taken_on=taken,
         storage_path=filename,
+        storage_backend=backend,
     )
     db.add(photo)
     try:
         db.commit()
     except IntegrityError:
         db.rollback()
-        path.unlink(missing_ok=True)
+        store.delete(filename)
         raise HTTPException(status_code=400, detail="照片无法保存") from None
     db.refresh(photo)
     return photo
@@ -154,16 +159,22 @@ def self_album(db: Session, *, family_id: int, user_id: int) -> dict | None:
     }
 
 
-def photo_file(photo: Photo) -> tuple[Path, str]:
-    settings = get_settings()
-    name = photo.storage_path
-    if not name or "/" in name or "\\" in name or name.startswith("."):
-        raise HTTPException(status_code=404, detail="没有这张照片")
-    path = (settings.photo_dir / name).resolve()
-    root = settings.photo_dir.resolve()
-    if root not in path.parents or not path.is_file():
-        raise HTTPException(status_code=404, detail="没有这张照片")
-    media_type = _MEDIA.get(path.suffix.lower())
-    if media_type is None:
-        raise HTTPException(status_code=404, detail="没有这张照片")
-    return path, media_type
+def open_photo(photo: Photo) -> tuple[object, str]:
+    backend = photo.storage_backend or "local"
+    try:
+        return store_for(backend).open(photo.storage_path)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="没有这张照片") from None
+
+
+def iter_stream(stream: object):
+    try:
+        while True:
+            chunk = stream.read(64 * 1024)  # type: ignore[attr-defined]
+            if not chunk:
+                break
+            yield chunk
+    finally:
+        close = getattr(stream, "close", None)
+        if close is not None:
+            close()
