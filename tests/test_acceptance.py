@@ -491,6 +491,8 @@ def test_html_login_family_child_and_age(client: TestClient):
     assert "创建我们的家庭" in named.text
     created = client.post("/families", data={"name": "小美家"}, follow_redirects=True)
     assert "添加孩子" in created.text
+    assert "家庭里至少保留 1 名家长管理员（创建者自动担任）" in created.text
+    assert "不能降级家庭里最后一位家长管理员" in created.text
     born = client.post(
         "/children",
         data={"name": "果果", "birth_date": "2024-07-12", "relation_label": "果果妈妈"},
