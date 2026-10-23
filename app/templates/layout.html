@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}kids时光机{% endblock %}</title>
+  <link rel="stylesheet" href="/static/app.css">
+  <script src="/static/htmx.min.js" defer></script>
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <div class="app">
+    <main class="scroll" {% block main_attrs %}{% endblock %}>
+      {% block content %}{% endblock %}
+    </main>
+    {% if show_fab|default(false) %}
+    <a class="fab{% if fab_family|default(false) %} family{% endif %}" id="fab" href="{{ fab_href|default('/upload') }}" aria-label="上传">＋</a>
+    {% endif %}
+    {% if show_nav|default(false) %}
+    <nav class="tabbar">
+      <a class="tab{% if tab == 'timeline' %} on{% endif %}" href="/"><span>时光</span><span class="dot"></span></a>
+      <a class="tab{% if tab == 'people' %} on{% endif %}" href="/people"><span>家人</span><span class="dot"></span></a>
+      <a class="tab{% if tab == 'settings' %} on{% endif %}" href="/family/settings"><span>设置</span><span class="dot"></span></a>
+    </nav>
+    {% endif %}
+    {% if toast %}
+    <div class="toast" id="toast">{{ toast }}</div>
+    {% endif %}
+  </div>
+</body>
+</html>

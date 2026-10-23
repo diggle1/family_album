@@ -1,0 +1,6 @@
+{% extends "layout.html" %}
+{% block title %}{{ child.name }} · kids时光机{% endblock %}
+{% block main_attrs %}id="stage"{% endblock %}
+{% block content %}
+{% include "fragments/stage_inner.html" %}
+{% endblock %}

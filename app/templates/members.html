@@ -1,0 +1,64 @@
+{% extends "layout.html" %}
+{% block title %}邀请家人 · kids时光机{% endblock %}
+{% block content %}
+<div class="top"><a class="back" href="/family/settings">←</a><div class="title">邀请家人<div class="meta">白名单 · 三档权限</div></div></div>
+<div class="scroll-pad">
+  {% if error %}<div class="banner err">{{ error }}</div>{% endif %}
+  {% if is_admin %}
+  <form method="post" action="/family/invites" class="pad stack">
+    <label class="field"><span>邮箱</span>
+      <input class="input" type="email" name="email" required maxlength="255" placeholder="grandma@example.com">
+    </label>
+    <label class="field"><span>权限</span>
+      <select class="input" name="role">
+        <option value="admin">家长管理员 · 可邀人、改权限、上传</option>
+        <option value="uploader">可上传 · 可传照片，不能改别人权限</option>
+        <option value="viewer" selected>只读 · 只能看</option>
+      </select>
+      <span class="hint">红 · 家长管理员　绿 · 可上传　灰 · 只读</span>
+    </label>
+    <button class="btn" type="submit">发送邀请</button>
+  </form>
+  {% endif %}
+  <div class="sec">家庭成员</div>
+  <div class="list">
+    {% for member in members %}
+    <div class="li">
+      <span class="avatar">{{ member.name|initial }}</span>
+      <div class="t">
+        <b>{{ member.name or "未命名" }}</b>
+        <small>{% if member.relation_label %}{{ member.relation_label }}{% else %}关系未填{% endif %}</small>
+        <span class="role-note"><span class="dotp {{ member.role }}"></span>{{ role_notes[member.role] }}</span>
+      </div>
+      <span class="badge {{ member.role }}">{{ role_labels[member.role] }}</span>
+    </div>
+    {% if is_admin %}
+    <form class="role-form" method="post" action="/family/members/{{ member.user_id }}/role">
+      {% if member.role == 'admin' and admin_count <= 1 %}
+      <p class="hint">不能降级家庭里最后一位家长管理员</p>
+      {% else %}
+      <select name="role">
+        <option value="admin" {% if member.role == 'admin' %}selected{% endif %}>家长管理员</option>
+        <option value="uploader" {% if member.role == 'uploader' %}selected{% endif %}>可上传</option>
+        <option value="viewer" {% if member.role == 'viewer' %}selected{% endif %}>只读</option>
+      </select>
+      <button class="btn sm" type="submit">保存档位</button>
+      {% endif %}
+    </form>
+    {% endif %}
+    {% endfor %}
+    {% for invite in invites %}
+    <div class="li">
+      <span class="avatar g">邀</span>
+      <div class="t">
+        <b>待加入</b>
+        <small>{{ invite.email }}</small>
+        <span class="role-note"><span class="dotp {{ invite.role }}"></span>{{ role_notes[invite.role] }}</span>
+      </div>
+      <span class="badge {{ invite.role }}">{{ role_labels[invite.role] }}</span>
+    </div>
+    <p class="pad hint">把链接发给对方（本版不发邮件）：<a href="{{ invite.accept_path }}">{{ invite.accept_path }}</a></p>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

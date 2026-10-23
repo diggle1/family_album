@@ -1,0 +1,18 @@
+{% extends "layout.html" %}
+{% block title %}{{ date_label }} · {{ child.name }}{% endblock %}
+{% block content %}
+<div class="top">
+  <a class="back" href="/?child={{ child.id }}">←</a>
+  <div class="title">{{ date_label }} {{ weekday }}
+    <span class="meta">{{ child.name }}{% if age_label %} · {{ age_label }}{% endif %}</span>
+  </div>
+</div>
+<div class="grid3">
+  {% for photo in photos %}
+  <a class="ph" href="/photos/{{ photo.id }}"><img src="{{ photo.media_url }}" alt="{{ date_label }}的照片"></a>
+  {% endfor %}
+</div>
+{% if not photos %}
+<div class="center compact"><h3>这一天没有照片</h3></div>
+{% endif %}
+{% endblock %}

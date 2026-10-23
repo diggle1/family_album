@@ -1,0 +1,17 @@
+{% extends "layout.html" %}
+{% block title %}照片 · kids时光机{% endblock %}
+{% block content %}
+<div class="top">
+  <a class="back" href="javascript:history.back()">←</a>
+  <div class="title">{% if photo.kind == 'self' %}本人照片{% else %}孩子照片{% endif %}
+    <span class="meta">{{ date_label }} {{ weekday }} · {{ owner_name }} 上传</span>
+  </div>
+</div>
+{% if photo.kind == 'self' %}
+<div class="fam-bar">家人相册 · {{ owner_name }}</div>
+<div class="banner fam">记在本人名下，不进孩子时光线。<span class="badge self">本人</span></div>
+{% elif child %}
+<div class="banner info">挂在 · {{ child.name }}</div>
+{% endif %}
+<img class="hero" src="/media/{{ photo.id }}" alt="{{ date_label }}的照片">
+{% endblock %}

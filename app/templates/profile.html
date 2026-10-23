@@ -1,0 +1,21 @@
+{% extends "layout.html" %}
+{% block title %}完善资料 · kids时光机{% endblock %}
+{% block content %}
+<div class="top"><div class="title">完善资料<div class="meta">先填好怎么称呼你，再进入时光</div></div></div>
+<div class="pad">
+  {% if error %}<div class="banner err">{{ error }}</div>{% endif %}
+  <form method="post" action="/profile" class="stack">
+    <input type="hidden" name="next" value="{{ next|default('/') }}">
+    <label class="field"><span>姓名</span>
+      <input class="input" name="name" required maxlength="40" value="{{ user.name or '' }}" placeholder="小美">
+    </label>
+    {% if membership %}
+    <label class="field"><span>你在家庭里的关系（可空）</span>
+      <input class="input" name="relation_label" maxlength="40" value="{{ membership.relation_label or '' }}" placeholder="例如 果果妈妈">
+      <span class="hint">家庭内展示，不绑定某个孩子。可留空。</span>
+    </label>
+    {% endif %}
+    <button class="btn" type="submit">保存</button>
+  </form>
+</div>
+{% endblock %}
