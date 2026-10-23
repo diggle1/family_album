@@ -1,0 +1,23 @@
+{% extends "layout.html" %}
+{% block title %}添加孩子 · kids时光机{% endblock %}
+{% block content %}
+<div class="top"><div class="title">添加孩子<div class="meta">时光线按生日算「几岁几个月」</div></div></div>
+<div class="pad">
+  <div class="banner info">每个孩子至少需要 1 名家长管理员（创建者自动担任）。</div>
+  {% if error %}<div class="banner err">{{ error }}</div>{% endif %}
+  <form method="post" action="/children" class="stack">
+    <label class="field"><span>小名</span>
+      <input class="input" name="name" required maxlength="40" placeholder="果果">
+    </label>
+    <label class="field"><span>生日</span>
+      <input class="input" type="date" name="birth_date" required>
+    </label>
+    <label class="field"><span>你在家庭里的关系（可空）</span>
+      <input class="input" name="relation_label" maxlength="40" value="{{ membership.relation_label or '' }}" placeholder="例如 果果妈妈">
+      <span class="hint">本人填写，可留空；显示在家人列表。不绑定某个孩子。</span>
+    </label>
+    <button class="btn" type="submit">保存并进入时光</button>
+  </form>
+  <a class="btn ghost" href="/family/settings">稍后再说</a>
+</div>
+{% endblock %}

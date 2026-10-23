@@ -1,0 +1,48 @@
+{% extends "layout.html" %}
+{% block title %}设置 · kids时光机{% endblock %}
+{% block content %}
+<div class="top"><div class="title">设置<div class="meta">{{ family.name }} · {{ member_count }} 位家人</div></div></div>
+<div class="pad">
+  <div class="banner info">你的权限是「{{ role_note }}」。</div>
+  <div class="sec">孩子</div>
+  {% if cards %}
+  <div class="list">
+    {% for card in cards %}
+    <a class="li" href="/?child={{ card.child.id }}">
+      <span class="avatar kid">{{ card.child.name|initial }}</span>
+      <div class="t">
+        <b>{{ card.child.name }}</b>
+        <small>{{ card.age_label }} · {{ card.photo_count }} 张 · {{ card.child.birth_date }}</small>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="hint pad">还没有孩子档案。</p>
+  {% endif %}
+  {% if is_admin %}
+  <div class="pad stack">
+    <a class="btn" href="/children/new">添加孩子</a>
+    <a class="btn ghost" href="/family/members">成员与权限</a>
+  </div>
+  {% else %}
+  <div class="pad">
+    <a class="btn ghost" href="/family/members">家庭成员</a>
+  </div>
+  {% endif %}
+  <div class="sec">我的资料</div>
+  <form method="post" action="/profile" class="stack">
+    <input type="hidden" name="next" value="/family/settings">
+    <label class="field"><span>姓名</span>
+      <input class="input" name="name" required maxlength="40" value="{{ user.name or '' }}">
+    </label>
+    <label class="field"><span>关系（可空，不绑定某个孩子）</span>
+      <input class="input" name="relation_label" maxlength="40" value="{{ membership.relation_label or '' }}" placeholder="例如 果果妈妈">
+    </label>
+    <button class="btn" type="submit">保存资料</button>
+  </form>
+  <form method="post" action="/auth/logout" class="stack">
+    <button class="btn ghost" type="submit">退出登录</button>
+  </form>
+</div>
+{% endblock %}

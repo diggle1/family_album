@@ -1,0 +1,36 @@
+{% extends "layout.html" %}
+{% block title %}家人相册 · {{ album.name or "未命名" }}{% endblock %}
+{% block content %}
+<div class="fam-bar">家人相册 · 与孩子时光线分开</div>
+<div class="top">
+  <a class="back" href="/people">←</a>
+  <span class="avatar me">{{ album.name|initial }}</span>
+  <div class="title">{{ album.name or "未命名" }} 的相册
+    <span class="meta">{% if album.relation_label %}{{ album.relation_label }}{% else %}关系未填{% endif %} · {{ album.photos|length }} 张</span>
+  </div>
+</div>
+<div class="banner fam">这些照片记在本人名下，不会出现在{% if child_names %}{{ child_names|join("、") }}的{% else %}孩子{% endif %}时光线。</div>
+{% if album.photos %}
+<div class="grid3">
+  {% for photo in album.photos %}
+  <a class="ph" href="/photos/{{ photo.id }}">
+    <img src="{{ photo.media_url }}" alt="本人照片">
+    <span class="badge self corner">本人</span>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="center compact">
+  <div class="illus fam">👤</div>
+  <h3>还没有本人照片</h3>
+  {% if can_upload and owner_is_me %}
+  <p>记在你名下的照片只出现在这里。</p>
+  <a class="btn family" href="/upload?kind=self">上传到我的相册</a>
+  {% elif not can_upload %}
+  <p>只读 · 只能看</p>
+  {% else %}
+  <p>TA 还没有上传本人照片。</p>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

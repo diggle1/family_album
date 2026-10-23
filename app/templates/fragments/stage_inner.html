@@ -1,0 +1,66 @@
+<div class="skeleton" aria-hidden="true">
+  <div class="sk-row"><div class="sk circle"></div><div class="sk-col"><div class="sk line"></div><div class="sk line short"></div></div></div>
+  <div class="sk line short"></div>
+  <div class="sk block"></div>
+  <div class="sk line short"></div>
+  <div class="sk block"></div>
+</div>
+<div class="feed">
+  <div class="top">
+    <span class="avatar kid">{{ child.name|initial }}</span>
+    <div class="title">{{ timeline.child.name }}<span class="meta">{{ timeline.child.age_label }} · {{ timeline.child.photo_count }} 张</span></div>
+    <a class="avatar sm me" href="/family/settings">{{ user.name|initial }}</a>
+  </div>
+  {% if children|length >= 2 %}
+  <div class="caps">
+    {% for item in children %}
+    <a class="cap-pill{% if item.id == child.id %} on{% endif %}"
+       href="/?child={{ item.id }}"
+       hx-get="/fragments/timeline?child={{ item.id }}"
+       hx-target="#stage"
+       hx-swap="innerHTML"
+       hx-push-url="true"
+       hx-indicator="#stage">
+      <span class="avatar sm">{{ item.name|initial }}</span>{{ item.name }}
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% if membership and membership.role == 'viewer' %}
+  <div class="banner info">你的权限是「只读 · 只能看」。需要传照片请让家长改档位。</div>
+  {% endif %}
+  {% if timeline.days %}
+    {% for day in timeline.days %}
+    <section class="day">
+      <div class="day-h">
+        <b>{{ day.date_label }}</b>
+        <span>{{ day.weekday }}</span>
+        <span class="age">{{ day.age_label }}</span>
+      </div>
+      {% set n = day.photos|length %}
+      {% set shown = day.photos[:3] if n >= 3 else day.photos %}
+      <div class="pics n{{ 3 if n >= 3 else n }}">
+        {% for ph in shown %}
+        <a class="ph" href="{% if n > 3 and loop.last %}/children/{{ child.id }}/days/{{ day.taken_on }}{% else %}/photos/{{ ph.id }}{% endif %}">
+          <img src="{{ ph.media_url }}" alt="{{ day.date_label }}的照片">
+          {% if n > 3 and loop.last %}<span class="more">+{{ n - 3 }}</span>{% endif %}
+        </a>
+        {% endfor %}
+      </div>
+      <div class="byline">{{ day.byline }}</div>
+    </section>
+    {% endfor %}
+  {% else %}
+  <div class="center compact">
+    <div class="illus">📷</div>
+    <h3>还没有照片</h3>
+    {% if can_upload %}
+    <p>把第一张挂到孩子的这一天。</p>
+    <a class="btn" href="/upload?kind=child&amp;child={{ child.id }}">上传第一张</a>
+    {% else %}
+    <p>照片会按天出现在这里。</p>
+    {% endif %}
+  </div>
+  {% endif %}
+  <div class="pad-bottom"></div>
+</div>

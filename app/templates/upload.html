@@ -1,0 +1,78 @@
+{% extends "layout.html" %}
+{% block title %}照片放到哪里？ · kids时光机{% endblock %}
+{% block content %}
+<div class="sheet-page">
+  <div class="sheet">
+    <div class="grab"></div>
+    <h4>照片放到哪里？</h4>
+    <p class="sub">选好后再选图。本人照片不会进孩子时光线。</p>
+    {% if error %}<div class="banner err">{{ error }}</div>{% endif %}
+    {% if not kind %}
+    <form method="get" action="/upload" id="choose">
+      {% if selected %}<input type="hidden" name="child" value="{{ selected.id }}">{% endif %}
+      <label class="opt">
+        <input type="radio" name="kind" value="child" required>
+        <span class="ic a">🧒</span>
+        <span><b>挂到孩子时光线</b><small>按天出现在孩子的时光里，署你的名</small></span>
+      </label>
+      <label class="opt fam">
+        <input type="radio" name="kind" value="self">
+        <span class="ic f">👤</span>
+        <span><b>记在我名下</b><small>进「我的相册」，家庭可见，与孩子内容分开</small></span>
+      </label>
+      <button class="btn" id="continue" type="submit">继续选图</button>
+    </form>
+    <a class="btn ghost" href="/">取消</a>
+    <script>
+      (function () {
+        var btn = document.getElementById("continue");
+        var radios = document.querySelectorAll("#choose input[name=kind]");
+        function sync() {
+          var on = false;
+          radios.forEach(function (r) { if (r.checked) on = true; });
+          btn.disabled = !on;
+        }
+        radios.forEach(function (r) { r.addEventListener("change", sync); });
+        sync();
+      })();
+    </script>
+    {% else %}
+    <div class="opt on{% if kind == 'self' %} fam{% endif %}">
+      <span class="ic {{ 'f' if kind == 'self' else 'a' }}">{{ "👤" if kind == "self" else "🧒" }}</span>
+      <span><b>{{ "记在我名下" if kind == "self" else "挂到孩子时光线" }}</b>
+        <small>{{ "进你的家人相册，不进孩子时光" if kind == "self" else "会出现在孩子的按天时光里" }}</small>
+      </span>
+    </div>
+    <form method="post" action="/upload" enctype="multipart/form-data" class="stack">
+      <input type="hidden" name="kind" value="{{ kind }}">
+      {% if kind == "child" %}
+        {% if children|length >= 2 %}
+        <label class="field"><span>哪个孩子</span>
+          <select class="input" name="child_id" required>
+            {% for item in children %}
+            <option value="{{ item.id }}" {% if selected and item.id == selected.id %}selected{% endif %}>{{ item.name }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        {% elif selected %}
+        <input type="hidden" name="child_id" value="{{ selected.id }}">
+        <p class="hint">将挂到 {{ selected.name }} 的时光线。</p>
+        {% endif %}
+        <label class="field"><span>拍摄日期</span>
+          <input class="input" type="date" name="taken_on" required value="{{ today }}">
+        </label>
+      {% else %}
+        <label class="field"><span>拍摄日期（可空，默认今天）</span>
+          <input class="input" type="date" name="taken_on" value="{{ today }}">
+        </label>
+      {% endif %}
+      <label class="field"><span>照片</span>
+        <input class="input" type="file" name="file" accept="image/jpeg,image/png,image/webp" required>
+      </label>
+      <button class="btn{% if kind == 'self' %} family{% endif %}" type="submit">上传</button>
+    </form>
+    <a class="btn ghost" href="/upload{% if selected %}?child={{ selected.id }}{% endif %}">重新选择</a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

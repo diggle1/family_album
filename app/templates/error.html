@@ -1,0 +1,10 @@
+{% extends "layout.html" %}
+{% block title %}没加载出来 · kids时光机{% endblock %}
+{% block content %}
+<div class="center">
+  <div class="illus err">⚠️</div>
+  <h3>没加载出来</h3>
+  <p>{{ message|default("网络不稳或服务暂时不可用。孩子的照片还在，请再试一次。") }}</p>
+  <a class="btn" href="{{ next|default('/') }}">重新加载</a>
+</div>
+{% endblock %}

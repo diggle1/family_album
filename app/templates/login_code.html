@@ -1,0 +1,19 @@
+{% extends "layout.html" %}
+{% block title %}验证码 · kids时光机{% endblock %}
+{% block content %}
+<div class="center">
+  <div class="illus">✉️</div>
+  <h3>输入验证码</h3>
+  <p>发给 {{ email }} 的验证码。本版不走邮箱，测试码见 README。</p>
+  {% if error %}<p class="hint err">{{ error }}</p>{% endif %}
+  <form method="post" action="/login/verify" class="stack">
+    <input type="hidden" name="email" value="{{ email }}">
+    <input type="hidden" name="next" value="{{ next }}">
+    <label class="field"><span>验证码</span>
+      <input class="input" name="code" inputmode="numeric" autocomplete="one-time-code" required maxlength="12" autofocus>
+    </label>
+    <button class="btn" type="submit">登录</button>
+  </form>
+  <a class="btn ghost" href="/">换一个邮箱</a>
+</div>
+{% endblock %}

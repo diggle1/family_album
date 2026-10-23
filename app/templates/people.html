@@ -1,0 +1,23 @@
+{% extends "layout.html" %}
+{% block title %}家人 · kids时光机{% endblock %}
+{% block content %}
+<div class="top"><div class="title">家人<div class="meta">点进「TA 的相册」看本人照片</div></div></div>
+<div class="list" style="margin-top:8px">
+  {% for member in members %}
+  <a class="li" href="/people/{{ member.user_id }}/album">
+    <span class="avatar">{{ member.name|initial }}</span>
+    <div class="t">
+      <b>{{ member.name or "未命名" }}</b>
+      <small>{% if member.relation_label %}{{ member.relation_label }}{% else %}关系未填{% endif %}</small>
+      <span class="role-note"><span class="dotp {{ member.role }}"></span>{{ role_notes[member.role] }}</span>
+    </div>
+    {% if user and member.user_id == user.id %}
+    <span class="badge self">我的相册</span>
+    {% else %}
+    <span class="badge upload">TA 的相册</span>
+    {% endif %}
+  </a>
+  {% endfor %}
+</div>
+<p class="pad hint">家人相册用青绿；孩子时光线用暖朱红年龄胶囊。</p>
+{% endblock %}
