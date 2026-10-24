@@ -4,6 +4,20 @@
 <div class="top"><div class="title">设置<div class="meta">{{ family.name }} · {{ member_count }} 位家人</div></div></div>
 <div class="pad">
   <div class="banner info">你的权限是「{{ role_note }}」。</div>
+  {% if is_admin %}
+  <div class="sec">长辈入口</div>
+  <form method="post" action="/family/settings/access-url" id="access-url-form" class="stack"
+        data-copy-url-saved="{{ elders.url_saved }}"
+        data-copy-url-help="{{ elders.url_help }}"
+        data-copy-err-403="{{ elders.err_403 }}">
+    <label class="field"><span>{{ elders.url_label }}</span>
+      <input class="input" name="family_access_url" maxlength="512" placeholder="{{ elders.url_ph }}" value="{{ family.family_access_url or '' }}">
+    </label>
+    <p class="hint">{{ elders.url_help }}</p>
+    <p class="hint err" id="access-url-error"{% if not access_error %} hidden{% endif %}>{{ access_error or '' }}</p>
+    <button class="btn" type="submit">{{ elders.url_save }}</button>
+  </form>
+  {% endif %}
   <div class="sec">孩子</div>
   {% if cards %}
   <div class="list">

@@ -1,0 +1,551 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>kids时光机 · 长辈免装提醒 v2026.10.25.2 · FINAL「门口笺」</title>
+<style>
+:root{
+  --bg:#FBF7F2; --surface:#FFFFFF; --line:#EDE5DC;
+  --ink:#2B2420; --ink2:#6F635A; --ink3:#9A8E85;
+  --accent:#C8553D; --accent-soft:#F8E6DF;
+  --family:#2F6F6A; --family-soft:#E4F0EE;
+  --ok:#3B7D4F; --ok-soft:#E3F1E6; --err:#B3261E; --err-soft:#FBE4E2;
+  --warn:#9A6200; --warn-soft:#FFF3D6;
+  --anno:#2563EB;
+  --font:"PingFang SC","Noto Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:#E5DFD7;color:var(--ink);padding:28px 20px 100px}
+h1.page{font-size:22px;font-weight:800;letter-spacing:.02em}
+p.lead{color:var(--ink2);font-size:13px;margin:6px 0 10px;line-height:1.55;max-width:1100px}
+.claim{display:inline-block;background:var(--accent-soft);color:var(--accent);font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px;margin-bottom:12px}
+.claim2{display:inline-block;background:var(--family-soft);color:var(--family);font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px;margin-bottom:18px;margin-left:6px}
+.nav{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:22px;max-width:1700px}
+.nav button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:8px 14px;font-size:12px;font-family:inherit;color:var(--ink2);cursor:pointer}
+.nav button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.group{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start}
+.group.hide{display:none}
+.gtitle{width:100%;font-size:15px;font-weight:800;color:var(--ink);margin-bottom:-12px}
+.frame{width:390px}
+.frame .cap{font-size:12px;color:var(--ink2);font-weight:600;margin-bottom:8px;min-height:34px;line-height:1.45}
+.phone{width:390px;height:760px;background:var(--surface);border-radius:28px;overflow:hidden;position:relative;
+  box-shadow:0 0 0 8px #1f1b18,0 18px 40px rgba(0,0,0,.18);display:flex;flex-direction:column}
+.phone.paper{background:var(--bg)}
+.status{height:28px;flex:none;font-size:12px;display:flex;justify-content:space-between;padding:6px 22px 0;color:var(--ink)}
+.scroll{flex:1;overflow:hidden;position:relative}
+.top{display:flex;align-items:center;gap:10px;padding:8px 16px 10px;flex:none}
+.top .title{font-size:18px;font-weight:700;flex:1;min-width:0}
+.top .meta{font-size:12px;color:var(--ink2);font-weight:400;display:block;margin-top:2px}
+.ib{border:0;background:transparent;font-size:20px;width:44px;height:44px;display:grid;place-items:center;font-family:inherit;cursor:pointer;color:var(--ink);flex:none}
+.btn{display:block;width:100%;height:48px;border-radius:12px;background:var(--accent);color:#fff;font-size:16px;font-weight:600;border:0;text-align:center;line-height:48px;font-family:inherit;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn.text{background:transparent;color:var(--ink2);font-size:14px;font-weight:600;height:40px;line-height:40px}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.hint{font-size:12px;color:var(--ink2);line-height:1.5}
+.toast{position:absolute;left:50%;transform:translateX(-50%);bottom:96px;background:#2B2420;color:#fff;font-size:14px;padding:10px 16px;border-radius:20px;white-space:nowrap;max-width:350px;z-index:9;box-shadow:0 4px 12px rgba(0,0,0,.2)}
+.toast.top{top:60px;bottom:auto}
+.anno{position:absolute;border:1.5px dashed var(--anno);border-radius:6px;pointer-events:none;z-index:7}
+.anno-tag{position:absolute;background:var(--anno);color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap;z-index:8;pointer-events:none;line-height:1.4}
+.note{margin-top:28px;padding:16px 18px;background:#fff;border-radius:12px;border:1px solid #ddd;max-width:1240px;font-size:13px;color:var(--ink2);line-height:1.65}
+.note b{color:var(--ink)}
+.tabbar{flex:none;display:flex;border-top:1px solid var(--line);background:#fff;height:56px}
+.tabbar span{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;color:var(--ink3);font-weight:600;gap:2px}
+.tabbar span.on{color:var(--accent)}
+.tabbar span i{font-style:normal;font-size:18px;line-height:1}
+
+/* 撕边口令笺 */
+.mask{position:absolute;inset:0;background:rgba(43,36,32,.42);z-index:5;display:flex;align-items:center;justify-content:center;padding:24px}
+.slip{width:100%;background:var(--bg);border-radius:4px;padding:20px 18px 16px;position:relative;
+  box-shadow:0 12px 32px rgba(0,0,0,.22);transform:rotate(-0.6deg);
+  background-image:repeating-linear-gradient(0deg,transparent,transparent 27px,rgba(237,229,220,.55) 28px);
+  border:1px solid #E6DCCF}
+.slip::before,.slip::after{content:"";position:absolute;left:0;right:0;height:10px;
+  background:radial-gradient(circle at 8px 0,#E5DFD7 5px,transparent 6px) repeat-x;
+  background-size:16px 10px}
+.slip::before{top:-5px;transform:rotate(180deg)}
+.slip::after{bottom:-5px}
+.slip .to{font-size:15px;font-weight:700;color:var(--accent);margin-bottom:6px;letter-spacing:.02em}
+.slip .fam{font-size:22px;font-weight:800;color:var(--ink);letter-spacing:.04em;text-align:center;margin-bottom:4px}
+.slip .tag{text-align:center;font-size:11px;font-weight:700;color:var(--accent);margin-bottom:12px}
+.slip .lines{font-size:15px;line-height:1.8;color:var(--ink);font-weight:600;padding:0 4px 10px}
+.slip .lines div{display:flex;gap:8px;align-items:flex-start}
+.slip .lines div::before{content:"·";color:var(--accent);font-weight:800}
+.slip .foot{border-top:1px dashed var(--line);padding-top:10px;margin-top:4px}
+.slip .foot .lbl{font-size:11px;color:var(--ink3);font-weight:700;margin-bottom:2px}
+.slip .foot .url{font-size:12px;color:var(--family);word-break:break-all;line-height:1.45;font-weight:600}
+.slip .foot .inv{margin-top:8px}
+.slip .actions{margin-top:14px;display:flex;flex-direction:column;gap:8px}
+.slip.disabled{opacity:.72}
+.slip.disabled .strike{position:relative}
+.slip.disabled .strike::after{content:"";position:absolute;left:-4px;right:-4px;top:50%;height:2px;background:var(--err);opacity:.85;transform:rotate(-2deg)}
+.slip .warnbox{background:var(--warn-soft);color:var(--warn);font-size:13px;font-weight:600;padding:10px 12px;border-radius:10px;line-height:1.5;margin-bottom:10px}
+
+/* 门口笺邀请整页 · 吸家书大字少术语 */
+.door{flex:1;display:flex;flex-direction:column;padding:28px 28px 24px;background:var(--bg);position:relative}
+.door::before{content:"";position:absolute;left:16px;right:16px;top:16px;bottom:16px;border:1.5px dashed #D9CFC3;border-radius:8px;pointer-events:none}
+.door .inner{position:relative;z-index:1;flex:1;display:flex;flex-direction:column}
+.door .eyebrow{font-size:14px;font-weight:700;color:var(--accent);letter-spacing:.06em;margin-bottom:14px}
+.door h2{font-size:34px;font-weight:800;line-height:1.22;letter-spacing:.02em;margin-bottom:18px}
+.door .role{display:inline-block;font-size:17px;font-weight:700;color:var(--ink);background:#fff;border:1.5px solid var(--line);padding:12px 14px;border-radius:12px;margin-bottom:14px;line-height:1.45}
+.door .note2{font-size:15px;color:var(--ink2);line-height:1.65;margin-bottom:auto}
+.door .acts{display:flex;flex-direction:column;gap:10px;padding-top:24px}
+.door .acts .btn{font-size:17px;height:52px;line-height:52px}
+.door.err h2{font-size:28px}
+
+/* 角上便签贴 */
+.sticky{position:absolute;right:14px;bottom:72px;width:210px;background:#FFF9E8;border:1px solid #E8D9A8;
+  box-shadow:2px 3px 10px rgba(0,0,0,.12);padding:14px 14px 12px;z-index:6;transform:rotate(1.5deg)}
+.sticky::before{content:"";position:absolute;top:-8px;left:50%;transform:translateX(-50%) rotate(-2deg);width:52px;height:14px;
+  background:rgba(232,200,120,.55);border-radius:2px}
+.sticky .t{font-size:14px;font-weight:700;color:var(--ink);line-height:1.55;margin-bottom:10px}
+.sticky .ok{display:block;width:100%;border:0;background:transparent;color:var(--family);font-size:14px;font-weight:800;text-align:right;font-family:inherit;cursor:pointer;padding:4px 0}
+
+/* 设置 / 成员 */
+.sec{font-size:12px;font-weight:700;color:var(--ink3);padding:16px 16px 8px;letter-spacing:.04em}
+.row{display:flex;align-items:center;gap:12px;padding:12px 16px;background:#fff;border-bottom:1px solid var(--line)}
+.row .av{width:40px;height:40px;border-radius:50%;background:#E39A5B;color:#fff;display:grid;place-items:center;font-weight:800;font-size:14px;flex:none}
+.row .av.g{background:#7FA36B}.row .av.b{background:#6B8FA3}.row .av.p{background:#C9A0C9}
+.row .info{flex:1;min-width:0}
+.row .info .n{font-size:15px;font-weight:700}
+.row .info .m{font-size:12px;color:var(--ink3);margin-top:2px}
+.row .pill{font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;background:var(--family-soft);color:var(--family)}
+.row .pill.ro{background:#EFE9E1;color:var(--ink2)}
+.row .pill.wait{background:var(--warn-soft);color:var(--warn)}
+.row .act{font-size:13px;font-weight:700;color:var(--accent);border:0;background:transparent;font-family:inherit;cursor:pointer;white-space:nowrap}
+.field{padding:8px 16px 16px}
+.field label{display:block;font-size:13px;font-weight:700;color:var(--ink);margin-bottom:8px}
+.field input{width:100%;height:44px;border:1.5px solid var(--line);border-radius:10px;padding:0 12px;font-size:14px;font-family:inherit;background:#fff;color:var(--ink)}
+.field .help{font-size:12px;color:var(--ink3);margin-top:8px;line-height:1.5}
+.field .keyhint{font-size:11px;color:var(--ink3);margin-top:6px;font-family:ui-monospace,monospace}
+
+/* 时光线简卡 */
+.tl{padding:6px 16px 16px;background:var(--bg);height:100%}
+.dayh{display:flex;align-items:center;gap:8px;margin:12px 0 8px;font-size:15px;font-weight:800}
+.agechip{font-size:11px;font-weight:700;color:var(--accent);background:var(--accent-soft);padding:2px 8px;border-radius:999px}
+.jcard{display:flex;gap:12px;background:#fff;border-radius:12px;padding:14px 14px 12px 0;margin:10px 0;border:1px solid var(--line)}
+.jcard .rail{width:56px;flex:none;display:flex;flex-direction:column;align-items:center;position:relative}
+.jcard .rail::after{content:"";position:absolute;top:0;bottom:0;left:50%;width:2px;background:var(--accent);opacity:.55;transform:translateX(-50%)}
+.jcard .rail .d{position:relative;z-index:1;background:#fff;text-align:center;font-size:11px;color:var(--ink2);line-height:1.3;padding:2px 0 4px}
+.jcard .rail .d b{display:block;font-size:17px;color:var(--ink);font-weight:800}
+.jcard .c{flex:1;min-width:0;padding-right:12px}
+.jcard .c .q{font-size:16px;font-weight:700;line-height:1.45;margin-bottom:4px}
+.jcard .c .sub{font-size:13px;color:var(--ink3);line-height:1.45}
+.photogrid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:10px 0}
+.photogrid .p{height:110px;border-radius:8px}
+.p1{background:linear-gradient(145deg,#F2C4A0,#E8A07A)}.p2{background:linear-gradient(145deg,#B9D3C6,#7FA59A)}
+.center{display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:24px 32px;height:100%}
+.center h3{font-size:20px;margin:16px 0 8px;font-weight:800}.center p{font-size:14px;color:var(--ink2);line-height:1.65;margin-bottom:12px}
+.illus{width:88px;height:88px;border-radius:50%;background:var(--accent-soft);display:grid;place-items:center;font-size:36px}
+.illus.mute{background:#EFE9E1}
+.rometa{font-size:11px;font-weight:700;color:var(--ink3);background:#EFE9E1;padding:2px 8px;border-radius:999px}
+</style>
+</head>
+<body>
+<h1 class="page">长辈免装提醒（窄）· v2026.10.25.2 · FINAL</h1>
+<span class="claim">FINAL · 门口笺</span>
+<span class="claim2">撕边口令笺主控 · 吸家书语气 · 角上便签 · PM 三问</span>
+<p class="lead">依据 cut 03:15 锁 + 群合并取舍。主控 = designer2 撕边口令笺（CTA「复制这张笺」）；邀请吸 designer 家书大字少术语；收藏 = 角上便签贴。服务端拼 <code>paste_body</code>；展示名「给家人的访问地址」键 <code>family_access_url</code>；uploader 设置页不展示地址行。<code>#s=状态id</code> / <code>#s=all</code>。示例「果果家」。</p>
+<nav class="nav" id="nav"></nav>
+<div id="stages"></div>
+<p class="note" id="foot"></p>
+
+<script>
+const COPY = {
+  tab_time:'时光', tab_family:'家人', tab_settings:'设置',
+  ro_meta:'只读 · 只能看',
+  copy_entry:'复制给长辈',
+  slip_to:'亲爱的奶奶：',
+  slip_head:'果果家',
+  slip_tag:'门口笺 · 给长辈',
+  slip_l1:'家里给您留了一份网页相册，不用装任何东西',
+  slip_l2:'请用系统浏览器（Safari/Chrome）打开下面的链接',
+  slip_l3:'打开就能看家里的时光',
+  slip_url_lbl:'入口',
+  slip_inv_lbl:'邀请（还未进家时用）',
+  copy_cta:'复制这张笺',
+  copy_cancel:'先不发',
+  toast_copied:'已复制，发给家人即可',
+  empty_url_hint:'还没填写「给家人的访问地址」，先去设置里填好再复制',
+  empty_url_go:'去填写',
+  url_label:'给家人的访问地址',
+  url_ph:'例如 https://相册.你家域名',
+  url_save:'保存地址',
+  url_saved:'地址已保存',
+  url_help:'长辈用系统浏览器打开这个地址就能看；请填你们实际部署的网址',
+  url_key_hint:'字段键 family_access_url · 仅管理员可见可编',
+  inv_title:'请来看家里的相册',
+  inv_family:'果果家',
+  inv_role:'您的角色：只看、不改——可以看照片、日志和视频，不能上传或改。',
+  inv_accept:'接受邀请',
+  inv_login:'已有账号登录',
+  inv_note:'用系统浏览器打开后点接受。接受后登录或设个密码，就能进时光线。',
+  inv_expired_title:'这张邀请过期了',
+  inv_expired_sub:'请让家人再发一次邀请。已进家的长辈仍可用网页入口。',
+  bad_title:'打不开这页',
+  bad_sub:'链接不对或已失效。家里的内容不会在这里显示。',
+  tip_wechat:'想下次好找：点右上角 ··· → 收藏',
+  tip_safari:'想下次好找：添加到主屏幕或书签',
+  tip_ok:'知道了',
+  mem_section:'家人',
+  mem_role_admin:'管理员',
+  mem_role_up:'可上传',
+  mem_role_ro:'只读',
+  mem_pending:'待接受',
+  settings_title:'设置',
+  tl_hint_ro:'只读 · 只能看',
+  paste_body:'亲爱的奶奶：\n\n家里给您留了一份网页相册，不用装任何东西。\n请用系统浏览器（Safari/Chrome）打开下面的链接。\n打开就能看家里的时光。\n\n家庭：果果家\n入口：https://album.guoguo.home\n邀请（还未进家）：https://album.guoguo.home/i/a8f3',
+  paste_inv_line:'邀请（还未进家）：{inv}',
+  err_403:'你没有复制权限',
+  uploader_no_url_note:'可上传设置页不展示「给家人的访问地址」',
+  readonly_no_copy:'只读长辈无「复制给长辈」入口',
+  entry_url_demo:'https://album.guoguo.home',
+  inv_url_demo:'https://album.guoguo.home/i/a8f3'
+};
+const C=(k)=>COPY[k];
+
+const S = [
+  ['copy_ok','1 复制成功'],
+  ['empty_url','2 空地址拦截'],
+  ['uploader','3 无复制入口'],
+  ['invite','4 邀请接受页'],
+  ['tip_wechat','5 收藏·微信'],
+  ['tip_safari','6 收藏·Safari'],
+  ['tip_gone','7 知道了后'],
+  ['invite_expired','8 过期邀请'],
+  ['bad_token','9 乱编 token'],
+  ['settings_url','10 访问地址']
+];
+
+function tabbar(on){
+  return `<div class="tabbar">
+    <span class="${on==='time'?'on':''}"><i>◷</i>${C('tab_time')}</span>
+    <span class="${on==='family'?'on':''}"><i>◎</i>${C('tab_family')}</span>
+    <span class="${on==='settings'?'on':''}"><i>⚙</i>${C('tab_settings')}</span>
+  </div>`;
+}
+function slipLines(){
+  return `<div class="lines">
+    <div>${C('slip_l1')}</div>
+    <div>${C('slip_l2')}</div>
+    <div>${C('slip_l3')}</div>
+  </div>`;
+}
+function memPage(opts){
+  const {showCopy, roleLabel, note} = opts;
+  return `
+    <div class="status"><span>9:41</span><span>${roleLabel}</span></div>
+    <div class="top"><div class="title">${C('tab_family')}<span class="meta">果果家 · 3 人</span></div></div>
+    <div class="scroll" style="background:var(--bg)">
+      <div class="sec">${C('mem_section')}</div>
+      <div class="row"><div class="av">妈</div><div class="info"><div class="n">妈妈</div><div class="m">我</div></div><span class="pill">${C('mem_role_admin')}</span></div>
+      <div class="row"><div class="av g">爸</div><div class="info"><div class="n">爸爸</div><div class="m">可传照片</div></div><span class="pill">${C('mem_role_up')}</span></div>
+      <div class="row">
+        <div class="av b">奶</div>
+        <div class="info"><div class="n">奶奶</div><div class="m">${C('mem_pending')} · 只读</div></div>
+        <span class="pill wait">${C('mem_role_ro')}</span>
+        ${showCopy?`<button class="act" type="button">${C('copy_entry')}</button>`:''}
+      </div>
+      ${note?`<p class="hint" style="padding:14px 16px;color:var(--ink3)">${note}</p>`:''}
+    </div>
+    ${tabbar('family')}`;
+}
+
+function tlReadonly(stickyHtml){
+  return `
+    <div class="status"><span>9:41</span><span>果果家</span></div>
+    <div class="top"><div class="title">果果<span class="meta"></span></div><span class="rometa">${C('ro_meta')}</span></div>
+    <div class="scroll">
+      <div class="tl">
+        <div class="dayh">10月24日 <span class="agechip">3岁2个月</span></div>
+        <div class="jcard">
+          <div class="rail"><div class="d"><b>24</b>周五</div></div>
+          <div class="c"><div class="q">「今天幼儿园画了大太阳」</div><div class="sub">妈妈写 · 写给果果</div></div>
+        </div>
+        <div class="photogrid"><div class="p p1"></div><div class="p p2"></div></div>
+      </div>
+      ${stickyHtml||''}
+    </div>
+    ${tabbar('time')}`;
+}
+
+const stages = document.getElementById('stages');
+
+/* ===== 1 copy_ok ===== */
+stages.innerHTML += `<div class="group" id="copy_ok">
+  <div class="gtitle">1 · 管理员复制成功（撕边口令笺 → Toast）· paste_body 服务端拼</div>
+  <div class="frame"><div class="cap">成员页点「复制给长辈」→ 撕边笺预览（家书语气 · 未写剪贴板）</div>
+    <div class="phone">
+      ${memPage({showCopy:true, roleLabel:'管理员'})}
+      <div class="mask">
+        <div class="slip">
+          <div class="to">${C('slip_to')}</div>
+          <div class="fam">${C('slip_head')}</div>
+          <div class="tag">${C('slip_tag')}</div>
+          ${slipLines()}
+          <div class="foot">
+            <div class="lbl">${C('slip_url_lbl')}</div>
+            <div class="url">${C('entry_url_demo')}</div>
+            <div class="inv"><div class="lbl">${C('slip_inv_lbl')}</div><div class="url">${C('inv_url_demo')}</div></div>
+          </div>
+          <div class="actions">
+            <button class="btn" type="button">${C('copy_cta')}</button>
+            <button class="btn text" type="button">${C('copy_cancel')}</button>
+          </div>
+        </div>
+      </div>
+      <div class="anno" style="left:40px;top:190px;width:310px;height:340px"></div>
+      <div class="anno-tag" style="left:40px;top:172px">撕边口令笺 · CTA「复制这张笺」· 吸家书称呼</div>
+    </div>
+  </div>
+  <div class="frame"><div class="cap">点「复制这张笺」→ 前端只写剪贴板（paste_body 已由服务端拼）→ Toast</div>
+    <div class="phone">
+      ${memPage({showCopy:true, roleLabel:'管理员'})}
+      <div class="mask" style="background:rgba(43,36,32,.25)">
+        <div class="slip" style="opacity:.92">
+          <div class="to">${C('slip_to')}</div>
+          <div class="fam">${C('slip_head')}</div>
+          <div class="tag">${C('slip_tag')}</div>
+          ${slipLines()}
+          <div class="foot">
+            <div class="lbl">${C('slip_url_lbl')}</div>
+            <div class="url">${C('entry_url_demo')}</div>
+            <div class="inv"><div class="lbl">${C('slip_inv_lbl')}</div><div class="url">${C('inv_url_demo')}</div></div>
+          </div>
+          <div class="actions">
+            <button class="btn" type="button" disabled>${C('copy_cta')}</button>
+          </div>
+        </div>
+      </div>
+      <div class="toast">${C('toast_copied')}</div>
+    </div>
+  </div>
+</div>`;
+
+/* ===== 2 empty_url ===== */
+stages.innerHTML += `<div class="group hide" id="empty_url">
+  <div class="gtitle">2 · 空地址拦截（笺上红线 · 说真话）</div>
+  <div class="frame"><div class="cap">family_access_url 空 → 笺半透明 + 红线 + CTA 禁用 + 去填写</div>
+    <div class="phone">
+      ${memPage({showCopy:true, roleLabel:'管理员'})}
+      <div class="mask">
+        <div class="slip disabled">
+          <div class="warnbox">${C('empty_url_hint')}</div>
+          <div class="fam">${C('slip_head')}</div>
+          <div class="tag">门口笺 · 未就绪</div>
+          ${slipLines()}
+          <div class="foot strike">
+            <div class="lbl">${C('slip_url_lbl')}</div>
+            <div class="url" style="color:var(--ink3)">（未填写）</div>
+          </div>
+          <div class="actions">
+            <button class="btn" type="button" disabled>${C('copy_cta')}</button>
+            <button class="btn ghost" type="button">${C('empty_url_go')}</button>
+          </div>
+        </div>
+      </div>
+      <div class="anno-tag" style="left:48px;top:230px">红线 + 说真话 · 不假装复制</div>
+    </div>
+  </div>
+</div>`;
+
+/* ===== 3 uploader / readonly 无入口 + uploader 设置无地址行 ===== */
+stages.innerHTML += `<div class="group hide" id="uploader">
+  <div class="gtitle">3 · uploader / 只读无复制入口；uploader 设置不展示地址行</div>
+  <div class="frame"><div class="cap">可上传 · 成员行无「复制给长辈」· 直调 403</div>
+    <div class="phone">
+      ${memPage({showCopy:false, roleLabel:'可上传', note:'可上传角色无「'+C('copy_entry')+'」入口'})}
+      <div class="anno" style="left:16px;top:248px;width:358px;height:64px"></div>
+      <div class="anno-tag" style="left:16px;top:230px">无复制入口 · API → 403</div>
+    </div>
+  </div>
+  <div class="frame"><div class="cap">只读长辈 · 成员页无复制入口</div>
+    <div class="phone">
+      ${memPage({showCopy:false, roleLabel:'只读', note:C('readonly_no_copy')})}
+    </div>
+  </div>
+  <div class="frame"><div class="cap">uploader 设置页 · 不展示「给家人的访问地址」（仅 admin 可见可编）</div>
+    <div class="phone">
+      <div class="status"><span>9:41</span><span>可上传</span></div>
+      <div class="top"><div class="title">${C('settings_title')}<span class="meta">果果家</span></div></div>
+      <div class="scroll" style="background:var(--bg)">
+        <div class="sec">家庭</div>
+        <div class="row"><div class="info"><div class="n">家庭名称</div><div class="m">果果家</div></div></div>
+        <div class="row"><div class="info"><div class="n">我的角色</div><div class="m">${C('mem_role_up')}</div></div></div>
+        <p class="hint" style="padding:16px;color:var(--ink3)">${C('uploader_no_url_note')}</p>
+      </div>
+      ${tabbar('settings')}
+      <div class="anno" style="left:16px;top:88px;width:358px;height:120px"></div>
+      <div class="anno-tag" style="left:16px;top:70px">无地址行 · PM 三问③</div>
+    </div>
+  </div>
+</div>`;
+
+/* ===== 4 invite ===== */
+stages.innerHTML += `<div class="group hide" id="invite">
+  <div class="gtitle">4 · 邀请接受页（门口笺整页 · 吸家书大字少术语）</div>
+  <div class="frame"><div class="cap">系统浏览器 · 家庭名大字 · 角色一句「只看、不改」· 两钮</div>
+    <div class="phone paper">
+      <div class="status"><span>9:41</span><span>Safari</span></div>
+      <div class="door">
+        <div class="inner">
+          <div class="eyebrow">${C('inv_family')}</div>
+          <h2>${C('inv_title')}</h2>
+          <div class="role">${C('inv_role')}</div>
+          <p class="note2">${C('inv_note')}</p>
+          <div class="acts">
+            <button class="btn" type="button">${C('inv_accept')}</button>
+            <button class="btn ghost" type="button">${C('inv_login')}</button>
+          </div>
+        </div>
+      </div>
+      <div class="anno-tag" style="left:28px;top:90px">门口贴笺整页 · 无装 App / 无商店</div>
+    </div>
+  </div>
+</div>`;
+
+/* ===== 5 tip_wechat ===== */
+stages.innerHTML += `<div class="group hide" id="tip_wechat">
+  <div class="gtitle">5 · 只读首次收藏提示 · 微信（角上便签）</div>
+  <div class="frame"><div class="cap">时光线右下角便签贴 · 非全屏 · 微信 COPY</div>
+    <div class="phone">
+      ${tlReadonly(`<div class="sticky"><div class="t">${C('tip_wechat')}</div><button class="ok" type="button">${C('tip_ok')}</button></div>`)}
+      <div class="anno-tag" style="left:150px;top:520px">角上便签 · 非全屏 modal</div>
+    </div>
+  </div>
+</div>`;
+
+/* ===== 6 tip_safari ===== */
+stages.innerHTML += `<div class="group hide" id="tip_safari">
+  <div class="gtitle">6 · 只读首次收藏提示 · Safari/Chrome</div>
+  <div class="frame"><div class="cap">同位置便签 · Safari/Chrome COPY</div>
+    <div class="phone">
+      ${tlReadonly(`<div class="sticky"><div class="t">${C('tip_safari')}</div><button class="ok" type="button">${C('tip_ok')}</button></div>`)}
+    </div>
+  </div>
+</div>`;
+
+/* ===== 7 tip_gone ===== */
+stages.innerHTML += `<div class="group hide" id="tip_gone">
+  <div class="gtitle">7 · 「知道了」后本机不再弹</div>
+  <div class="frame"><div class="cap">同设备再进 · 无便签 · 正常浏览不挡</div>
+    <div class="phone">
+      ${tlReadonly('')}
+      <div class="anno-tag" style="left:100px;top:560px">localStorage dismiss · 零浮层</div>
+    </div>
+  </div>
+</div>`;
+
+/* ===== 8 invite_expired ===== */
+stages.innerHTML += `<div class="group hide" id="invite_expired">
+  <div class="gtitle">8 · 过期邀请</div>
+  <div class="frame"><div class="cap">门口笺过期态 · 无接受钮 · 请家人重发</div>
+    <div class="phone paper">
+      <div class="status"><span>9:41</span><span>Safari</span></div>
+      <div class="door err">
+        <div class="inner">
+          <div class="eyebrow" style="color:var(--err)">邀请笺</div>
+          <h2>${C('inv_expired_title')}</h2>
+          <p class="note2">${C('inv_expired_sub')}</p>
+          <div class="acts"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>`;
+
+/* ===== 9 bad_token ===== */
+stages.innerHTML += `<div class="group hide" id="bad_token">
+  <div class="gtitle">9 · 乱编 / 无效 token · 无家庭内容</div>
+  <div class="frame"><div class="cap">不透露家庭名 · 无媒资</div>
+    <div class="phone paper">
+      <div class="status"><span>9:41</span><span>浏览器</span></div>
+      <div class="center">
+        <div class="illus mute">?</div>
+        <h3>${C('bad_title')}</h3>
+        <p>${C('bad_sub')}</p>
+      </div>
+    </div>
+  </div>
+</div>`;
+
+/* ===== 10 settings_url ===== */
+stages.innerHTML += `<div class="group hide" id="settings_url">
+  <div class="gtitle">10 · 设置页 · 给家人的访问地址（仅 admin）</div>
+  <div class="frame"><div class="cap">展示名「给家人的访问地址」· 键 family_access_url · 可编</div>
+    <div class="phone">
+      <div class="status"><span>9:41</span><span>管理员</span></div>
+      <div class="top"><div class="title">${C('settings_title')}<span class="meta">果果家</span></div></div>
+      <div class="scroll" style="background:var(--bg)">
+        <div class="sec">长辈入口</div>
+        <div class="field">
+          <label>${C('url_label')}</label>
+          <input type="text" value="${C('entry_url_demo')}" readonly>
+          <p class="help">${C('url_help')}</p>
+          <p class="keyhint">${C('url_key_hint')}</p>
+          <button class="btn" type="button" style="margin-top:14px">${C('url_save')}</button>
+        </div>
+        <div class="sec">家庭</div>
+        <div class="row"><div class="info"><div class="n">家庭名称</div><div class="m">果果家</div></div></div>
+      </div>
+      ${tabbar('settings')}
+      <div class="anno" style="left:16px;top:90px;width:358px;height:190px"></div>
+      <div class="anno-tag" style="left:16px;top:72px">E4 · family_access_url · 空则拦复制</div>
+    </div>
+  </div>
+  <div class="frame"><div class="cap">保存成功 Toast</div>
+    <div class="phone">
+      <div class="status"><span>9:41</span><span>管理员</span></div>
+      <div class="top"><div class="title">${C('settings_title')}<span class="meta">果果家</span></div></div>
+      <div class="scroll" style="background:var(--bg)">
+        <div class="sec">长辈入口</div>
+        <div class="field">
+          <label>${C('url_label')}</label>
+          <input type="text" value="${C('entry_url_demo')}" readonly>
+          <p class="help">${C('url_help')}</p>
+          <button class="btn" type="button" style="margin-top:14px">${C('url_save')}</button>
+        </div>
+      </div>
+      ${tabbar('settings')}
+      <div class="toast top">${C('url_saved')}</div>
+    </div>
+  </div>
+</div>`;
+
+window.FRAME_COUNT = document.querySelectorAll('.frame').length;
+document.getElementById('foot').innerHTML =
+  '<b>FINAL 方向：</b>门口笺 — 撕边口令笺（吸家书称呼/语气）· 邀请整页门口贴（吸家书大字）· 角上便签贴 · 空地址红线。<br>'+
+  '<b>PM 三问：</b>① 服务端拼 paste_body，前端只写剪贴板 · ② 展示名「给家人的访问地址」键 family_access_url · ③ uploader 设置页不展示地址行。<br>'+
+  '<b>硬闸：</b>复制权仅 admin；uploader/只读无入口；空地址说真话；系统浏览器写死；禁下载 App/应用商店/去商店；COPY 无「会员|开通|商城|发现|广告」。<br>'+
+  '<b>文案：</b>全部来自 <code>COPY</code>（'+Object.keys(COPY).length+' keys），与 spec.md 同步。帧数：'+window.FRAME_COUNT+'。<br>'+
+  '<b>自检禁词（脚注）：</b>会员、开通、商城、发现、广告、下载 App、应用商店、去商店 — COPY 区须 0。';
+
+const nav=document.getElementById('nav');
+S.forEach(([id,label])=>{
+  const b=document.createElement('button');
+  b.type='button'; b.dataset.show=id; b.textContent=label;
+  b.onclick=()=>show(id); nav.appendChild(b);
+});
+const ball=document.createElement('button');
+ball.type='button'; ball.dataset.show='all'; ball.textContent='全部平铺';
+ball.onclick=()=>show('all'); nav.appendChild(ball);
+
+function show(id){
+  if(id==='all'){
+    document.querySelectorAll('.group').forEach(g=>{g.classList.remove('hide');g.style.marginBottom='36px';});
+    nav.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.show==='all'));
+    return;
+  }
+  if(!document.getElementById(id)) id=S[0][0];
+  document.querySelectorAll('.group').forEach(g=>g.classList.toggle('hide',g.id!==id));
+  nav.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.show===id));
+}
+function boot(){
+  const h=(location.hash||'').replace(/^#s=/,'').replace(/^#/,'');
+  show(h||'copy_ok');
+}
+window.addEventListener('hashchange',boot);
+boot();
+</script>
+</body>
+</html>
