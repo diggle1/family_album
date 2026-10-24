@@ -38,6 +38,7 @@ def main() -> None:
         print("added photos.storage_backend default local")
     else:
         print("photos.storage_backend present")
+    print("family_access_url ready")
     print("journals ready")
     print("journal_children ready")
     print("videos ready")

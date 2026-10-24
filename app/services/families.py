@@ -47,13 +47,16 @@ def current_family_payload(db: Session, user: User) -> dict:
     family = db.get(Family, membership.family_id)
     if family is None:
         raise HTTPException(status_code=404, detail="还没有家庭")
-    return {
+    payload = {
         "id": family.id,
         "name": family.name,
         "created_at": isoformat(family.created_at),
         "role": membership.role,
         "relation_label": membership.relation_label,
     }
+    if membership.role == "admin":
+        payload["family_access_url"] = family.family_access_url
+    return payload
 
 
 def _user_by_email(db: Session, email: str) -> User | None:
@@ -184,9 +187,19 @@ def set_role(db: Session, *, family_id: int, user_id: int, role: str) -> dict:
     }
 
 
+def invite_view(db: Session, token: str) -> tuple[str, Invite | None]:
+    """Page state for a token. Expired is distinct from missing. Neither carries a family."""
+    invite = db.scalar(select(Invite).where(Invite.token == token))
+    if invite is None or invite.accepted_at is not None:
+        return "invalid", None
+    if as_utc(invite.expires_at) <= utcnow():
+        return "expired", None
+    return "open", invite
+
+
 def preview_invite(db: Session, token: str) -> Invite | None:
     """Return an open invite, or None when it cannot be shown. Never raises a name."""
-    invite = db.scalar(select(Invite).where(Invite.token == token))
-    if invite is None or invite.accepted_at is not None or as_utc(invite.expires_at) <= utcnow():
+    state, invite = invite_view(db, token)
+    if state != "open":
         return None
     return invite

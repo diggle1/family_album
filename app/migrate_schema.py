@@ -17,6 +17,11 @@ existing journals.child_id / videos.child_id into one association row when
 that record has none yet. It does not alter the old columns. Rolling back to
 v2026.10.24.4 does not import the association models, so create_all leaves
 those tables and their rows in place. Do not DROP TABLE.
+
+v2026.10.25.2 adds a nullable families.family_access_url column. create_all
+does not alter a families table that already exists, so upgrades run the
+ALTER below. Rolling back to v2026.10.25.1 leaves the column in place and
+simply does not read it. Do not DROP COLUMN and do not DROP TABLE.
 """
 
 from __future__ import annotations
@@ -27,6 +32,7 @@ from sqlalchemy.engine import Engine
 from app.db import Base, engine as default_engine
 
 _ALTER = "ALTER TABLE photos ADD COLUMN storage_backend VARCHAR(16) NOT NULL DEFAULT 'local'"
+_FAMILY_URL = "ALTER TABLE families ADD COLUMN family_access_url VARCHAR(512)"
 
 
 def _column_names(bind: Engine, table: str) -> set[str]:
@@ -65,10 +71,21 @@ def _backfill_associations(bind: Engine) -> None:
             conn.execute(text(_VIDEO_BACKFILL))
 
 
-def migrate_schema(bind: Engine | None = None) -> bool:
-    """Create missing tables, then add storage_backend when it is absent.
+def _ensure_family_access_url(bind: Engine) -> None:
+    """Add the nullable elders entry column when an older families table lacks it."""
+    if not inspect(bind).has_table("families"):
+        return
+    if "family_access_url" in _column_names(bind, "families"):
+        return
+    with bind.begin() as conn:
+        conn.execute(text(_FAMILY_URL))
 
-    Returns True when the column was added on this call.
+
+def migrate_schema(bind: Engine | None = None) -> bool:
+    """Create missing tables, then add columns that create_all will not.
+
+    Returns True when photos.storage_backend was added on this call.
+    family_access_url is added the same way and is never dropped.
     Association tables are created and backfilled. They are never dropped.
     """
     target = bind or default_engine
@@ -76,6 +93,7 @@ def migrate_schema(bind: Engine | None = None) -> bool:
 
     Base.metadata.create_all(target)
     _backfill_associations(target)
+    _ensure_family_access_url(target)
     if "storage_backend" in _column_names(target, "photos"):
         return False
     if not _column_names(target, "photos") and not inspect(target).has_table("photos"):

@@ -24,6 +24,7 @@ from app.gate import StorageGateMiddleware
 from app.http import safe_next, wants_json
 from app.migrate_schema import migrate_schema
 from app.routers import auth, children, deploy, family, journals, me, pages, photos, export, videos
+from app.services.elders import EldersError
 from app.services.journals import JournalError
 from app.services.videos import VideoError, sweep_video_partials
 from app.services.export import sweep_temp_dir
@@ -119,7 +120,7 @@ class SecurityMiddleware:
         await self.app(scope, receive, send_with_headers)
 
 
-app = FastAPI(title="kids时光机", version="2026.10.25.1", lifespan=lifespan)
+app = FastAPI(title="kids时光机", version="2026.10.25.2", lifespan=lifespan)
 app.add_middleware(StorageGateMiddleware)
 app.add_middleware(SecurityMiddleware)
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
@@ -215,6 +216,21 @@ async def journal_failed(request: Request, exc: JournalError):
             },
             status_code=404,
         )
+    else:
+        response = templates.TemplateResponse(
+            request,
+            "error.html",
+            {"show_nav": False, "toast": None, "message": exc.detail, "next": "/"},
+            status_code=exc.status,
+        )
+    response.headers["Cache-Control"] = "private, no-store"
+    return response
+
+
+@app.exception_handler(EldersError)
+async def elders_failed(request: Request, exc: EldersError):
+    if wants_json(request) or request.url.path.startswith("/api/"):
+        response = JSONResponse({"detail": exc.detail, "code": exc.code}, status_code=exc.status)
     else:
         response = templates.TemplateResponse(
             request,

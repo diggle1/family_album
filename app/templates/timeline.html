@@ -16,4 +16,15 @@
   </div>
 </div>
 {% endif %}
+{% if membership and membership.role == 'viewer' %}
+<div class="sticky" id="elders-bookmark" hidden
+     data-family-id="{{ family.id }}"
+     data-user-id="{{ user.id }}"
+     data-copy-tip-wechat="{{ elders.tip_wechat }}"
+     data-copy-tip-safari="{{ elders.tip_safari }}"
+     data-copy-tip-ok="{{ elders.tip_ok }}">
+  <div class="t" data-bookmark-text></div>
+  <button type="button" class="ok" data-bookmark-ok>{{ elders.tip_ok }}</button>
+</div>
+{% endif %}
 {% endblock %}
