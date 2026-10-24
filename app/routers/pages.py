@@ -25,7 +25,7 @@ from app.services.children import (
     list_children,
     require_child,
 )
-from app.services.journals import build_feed
+from app.services.journals import build_family_feed, build_feed
 from app.services.clock import date_label, shanghai_today, weekday_zh
 from app.services.families import (
     accept_invite,
@@ -133,6 +133,10 @@ def home(
         raise HTTPException(status_code=403, detail=FORBIDDEN)
     children = list_children(db, family.id)
     flags = _flags(user, membership)
+    if request.query_params.get("view") == "family" and children:
+        return _timeline_response(
+            request, db, user, membership, family, children, children[0], toast, family_view=True
+        )
     current = None
     if child is not None:
         current = child_in_family(db, family_id=family.id, child_id=child)
@@ -179,9 +183,14 @@ def _journal_toast(params) -> str | None:
     return None
 
 
-def _timeline_response(request, db, user, membership, family, children, current, toast):
+def _timeline_response(request, db, user, membership, family, children, current, toast, family_view=False):
     flags = _flags(user, membership)
-    timeline = build_feed(db, current)
+    if family_view:
+        timeline = build_family_feed(db, family.id)
+        timeline["child"]["name"] = family.name
+    else:
+        timeline = build_feed(db, current)
+    write_child = "" if family_view else str(current.id)
     return render(
         request,
         "timeline.html",
@@ -191,10 +200,12 @@ def _timeline_response(request, db, user, membership, family, children, current,
             "children": children,
             "child": current,
             "timeline": timeline,
+            "family_view": family_view,
+            "write_child": write_child,
             "show_nav": True,
             "show_fab": flags["can_upload"],
             "fab_menu": flags["can_upload"],
-            "fab_href": f"/upload?child={current.id}",
+            "fab_href": "/upload" if family_view else f"/upload?child={current.id}",
             "tab": "timeline",
             "highlight_video": request.query_params.get("vhl") or "",
             "toast": _video_toast(request.query_params) or _journal_toast(request.query_params) or toast_text(toast),
@@ -203,23 +214,41 @@ def _timeline_response(request, db, user, membership, family, children, current,
 
 
 @router.get("/fragments/timeline")
-def timeline_fragment(request: Request, child: int, db: Session = Depends(get_db)):
+def timeline_fragment(
+    request: Request,
+    child: int | None = None,
+    db: Session = Depends(get_db),
+):
     gate = gate_member(request, db)
     if isinstance(gate, RedirectResponse):
         return gate
-    found = child_in_family(db, family_id=gate.family.id, child_id=child)
-    if found is None:
-        raise HTTPException(status_code=403, detail=FORBIDDEN)
     children = list_children(db, gate.family.id)
     flags = _flags(gate.user, gate.membership)
+    family_view = request.query_params.get("view") == "family"
+    if family_view:
+        if not children:
+            raise HTTPException(status_code=403, detail=FORBIDDEN)
+        found = children[0]
+        timeline = build_family_feed(db, gate.family.id)
+        timeline["child"]["name"] = gate.family.name
+    else:
+        if child is None:
+            raise HTTPException(status_code=403, detail=FORBIDDEN)
+        found = child_in_family(db, family_id=gate.family.id, child_id=child)
+        if found is None:
+            raise HTTPException(status_code=403, detail=FORBIDDEN)
+        timeline = build_feed(db, found)
     return render(
         request,
         "fragments/timeline_swap.html",
         {
             **flags,
+            "family": gate.family,
             "children": children,
             "child": found,
-            "timeline": build_feed(db, found),
+            "timeline": timeline,
+            "family_view": family_view,
+            "write_child": "" if family_view else str(found.id),
             "highlight_video": request.query_params.get("vhl") or "",
         },
     )

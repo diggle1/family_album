@@ -6,23 +6,27 @@
   <div class="sk block"></div>
 </div>
 <p class="sr-only">{{ video_copy.skel_note }}</p>
-<div class="feed" data-child-id="{{ child.id }}">
+<div class="feed" data-child-id="{{ child.id }}"{% if family_view|default(false) %} data-family-view="1"{% endif %}>
   <div class="top">
     <span class="avatar kid">{{ child.name|initial }}</span>
-    <div class="title">{{ timeline.child.name }}<span class="meta">{{ timeline.child.age_label }} · {{ timeline.child.photo_count }} 张</span></div>
+    <div class="title">{{ timeline.child.name }}<span class="meta">{% if family_view|default(false) %}{{ timeline.child.photo_count }} 张{% else %}{{ timeline.child.age_label }} · {{ timeline.child.photo_count }} 张{% endif %}</span></div>
     {% if membership and membership.role == 'viewer' %}
     <span class="rochip">{{ video_copy.ro_meta }}</span>
     {% endif %}
     {% if can_upload %}
-    <a class="write-pill" href="/journals/new?child={{ child.id }}">✎ {{ journal_copy.entry_write }}</a>
-    <a class="write-pill video-pill" href="/videos/new?child={{ child.id }}" aria-label="{{ video_copy.tl_hang.format(kid=child.name) }}">＋ {{ video_copy.entry_video }}</a>
+    <a class="write-pill" href="/journals/new{% if not family_view|default(false) %}?child={{ child.id }}{% endif %}">✎ {{ journal_copy.entry_write }}</a>
+    <a class="write-pill video-pill" href="/videos/new{% if not family_view|default(false) %}?child={{ child.id }}{% endif %}" aria-label="{{ video_copy.tl_hang.format(kid=child.name) }}">＋ {{ video_copy.entry_video }}</a>
     {% endif %}
     <a class="avatar sm me" href="/family/settings">{{ user.name|initial }}</a>
   </div>
   {% if children|length >= 2 %}
+  <div class="tabs2">
+    <a class="{% if not family_view|default(false) %}on{% endif %}" href="/?child={{ child.id }}">{{ multi_child.tl_tab_child }}</a>
+    <a class="{% if family_view|default(false) %}on{% endif %}" href="/?view=family">{{ multi_child.tl_tab_all }}</a>
+  </div>
   <div class="caps">
     {% for item in children %}
-    <a class="cap-pill{% if item.id == child.id %} on{% endif %}"
+    <a class="cap-pill{% if not family_view|default(false) and item.id == child.id %} on{% endif %}"
        href="/?child={{ item.id }}"
        hx-get="/fragments/timeline?child={{ item.id }}"
        hx-target="#stage"
@@ -44,7 +48,7 @@
       <div class="day-h">
         <b>{{ day.date_label }}</b>
         <span>{{ day.weekday }}</span>
-        <span class="age">{{ day.age_label }}</span>
+        {% if not family_view|default(false) %}<span class="age">{{ day.age_label }}</span>{% endif %}
       </div>
       {% endif %}
       {% for item in day.journals %}

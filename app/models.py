@@ -133,6 +133,25 @@ class Journal(Base):
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
+class JournalChild(Base):
+    """Ordered children on one journal. child_id has no FK, same as journals.child_id."""
+
+    __tablename__ = "journal_children"
+    __table_args__ = (
+        UniqueConstraint("journal_id", "child_id", name="uq_journal_child"),
+        Index("ix_journal_child_child", "child_id"),
+        Index("ix_journal_child_journal", "journal_id"),
+        CheckConstraint("position >= 0", name="ck_journal_child_pos"),
+    )
+
+    journal_id: Mapped[int] = mapped_column(
+        ForeignKey("journals.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    child_id: Mapped[int] = mapped_column(primary_key=True)
+    position: Mapped[int] = mapped_column()
+
+
 class JournalPhoto(Base):
     """Ordered photo references. photo_id has no FK so a deleted photo leaves the journal intact."""
 
@@ -180,6 +199,25 @@ class Video(Base):
     client_request_id: Mapped[str] = mapped_column(String(36))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class VideoChild(Base):
+    """Ordered children on one video. child_id has no FK, same as videos.child_id."""
+
+    __tablename__ = "video_children"
+    __table_args__ = (
+        UniqueConstraint("video_id", "child_id", name="uq_video_child"),
+        Index("ix_video_child_child", "child_id"),
+        Index("ix_video_child_video", "video_id"),
+        CheckConstraint("position >= 0", name="ck_video_child_pos"),
+    )
+
+    video_id: Mapped[int] = mapped_column(
+        ForeignKey("videos.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    child_id: Mapped[int] = mapped_column(primary_key=True)
+    position: Mapped[int] = mapped_column()
 
 
 class AuthCode(Base):

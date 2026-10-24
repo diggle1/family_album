@@ -72,6 +72,8 @@ if (typeof document !== "undefined") {
     body: "",
     date: "",
     childId: null,
+    childIds: [],
+    lastHint: "",
     photoIds: [],
     idemKey: "",
     baseUpdatedAt: "",
@@ -83,7 +85,22 @@ if (typeof document !== "undefined") {
     return document.getElementById("journal-app");
   }
 
+  function multiPack() {
+    if (multiPack.cache) return multiPack.cache;
+    multiPack.cache = {};
+    var node = document.getElementById("multi-child-copy");
+    if (!node) return multiPack.cache;
+    try {
+      multiPack.cache = JSON.parse(node.textContent || "{}") || {};
+    } catch (err) {
+      multiPack.cache = {};
+    }
+    return multiPack.cache;
+  }
+
   function copy(key) {
+    var multi = multiPack();
+    if (multi && Object.prototype.hasOwnProperty.call(multi, key)) return multi[key];
     var node = app();
     if (!node) return "";
     return node.getAttribute("data-copy-" + key) || "";
@@ -151,6 +168,38 @@ if (typeof document !== "undefined") {
       if (String(list[i].id) === String(id)) return list[i];
     }
     return null;
+  }
+
+  function selectedKids() {
+    return state.childIds.map(findChild).filter(Boolean);
+  }
+
+  function latestChild() {
+    var best = null;
+    selectedKids().forEach(function (child) {
+      if (!best || String(child.birth) > String(best.birth)) best = child;
+    });
+    return best;
+  }
+
+  function toggleChild(raw) {
+    var list = window.__journalChildren || [];
+    if (list.length <= 1) return;
+    var id = Number(raw);
+    if (!id) return;
+    var ids = state.childIds.slice();
+    var index = -1;
+    for (var i = 0; i < ids.length; i += 1) {
+      if (String(ids[i]) === String(id)) index = i;
+    }
+    state.lastHint = "";
+    if (index === -1) ids.push(id);
+    else if (ids.length <= 1) state.lastHint = copy("sib_hint_last");
+    else ids.splice(index, 1);
+    state.childIds = ids;
+    state.childId = ids.length ? ids[0] : null;
+    scheduleSave();
+    paint();
   }
 
   function showSheet(id) {
@@ -230,7 +279,8 @@ if (typeof document !== "undefined") {
       v: 1,
       body: state.body,
       date: state.date,
-      childId: state.childId,
+      childId: state.childIds.length ? state.childIds[0] : state.childId,
+      childIds: state.childIds.slice(),
       photoIds: state.photoIds.slice(),
       idemKey: state.idemKey,
       baseUpdatedAt: state.baseUpdatedAt || app().getAttribute("data-updated-at") || "",
@@ -260,7 +310,10 @@ if (typeof document !== "undefined") {
   function applyPayload(payload) {
     state.body = payload.body || "";
     state.date = payload.date || state.date || today();
-    state.childId = payload.childId || null;
+    var ids = Array.isArray(payload.childIds) ? payload.childIds.slice() : [];
+    if (!ids.length && payload.childId) ids = [payload.childId];
+    state.childIds = ids;
+    state.childId = state.childIds.length ? state.childIds[0] : null;
     state.photoIds = (payload.photoIds || []).slice();
     state.idemKey = payload.idemKey || state.idemKey || newIdem();
     state.baseUpdatedAt = payload.baseUpdatedAt || state.baseUpdatedAt || "";
@@ -361,8 +414,55 @@ if (typeof document !== "undefined") {
       return;
     }
     button.textContent = mode() === "edit" ? copy("w_submit_edit") : copy("w_submit");
-    var blocked = state.locked || bodyLen(state.body || "") > maxBody() || isBlank(state.body) || !state.childId;
+    var blocked = state.locked || bodyLen(state.body || "") > maxBody() || isBlank(state.body) || !state.childIds.length;
     button.disabled = blocked;
+  }
+
+  function paintSib() {
+    var row = document.getElementById("sib-row");
+    var hint = document.getElementById("sib-hint");
+    if (!row) return;
+    var list = window.__journalChildren || [];
+    var single = list.length <= 1;
+    row.textContent = "";
+    list.forEach(function (child, index) {
+      var on = false;
+      for (var i = 0; i < state.childIds.length; i += 1) {
+        if (String(state.childIds[i]) === String(child.id)) on = true;
+      }
+      var button = document.createElement("button");
+      button.type = "button";
+      button.className = "chip" + (on ? " on" : "") + (single ? " locked" : "");
+      button.setAttribute("data-child-id", String(child.id));
+      var av = document.createElement("span");
+      av.className = "av c" + String(index % 3);
+      av.appendChild(document.createTextNode((child.name || "").slice(0, 1)));
+      var mark = document.createElement("span");
+      mark.className = "ck";
+      mark.textContent = "\u2713";
+      av.appendChild(mark);
+      var name = document.createElement("span");
+      name.className = "nm";
+      name.textContent = child.name || "";
+      button.appendChild(av);
+      button.appendChild(name);
+      row.appendChild(button);
+    });
+    if (!hint) return;
+    if (single) {
+      hint.textContent = "";
+      return;
+    }
+    if (state.lastHint) {
+      hint.textContent = state.lastHint;
+      return;
+    }
+    if (!state.childIds.length) {
+      hint.textContent = copy("sib_hint_pick");
+      return;
+    }
+    var named = findChild(state.childIds[0]);
+    hint.textContent = (copy("sib_hint_pre") || "").replace("{name}", named ? named.name : "");
   }
 
   function paint() {
@@ -374,6 +474,7 @@ if (typeof document !== "undefined") {
     }
     paintCount();
     paintHead();
+    paintSib();
     paintFilm();
     paintButton();
     var done = document.getElementById("picker-done");
@@ -393,8 +494,8 @@ if (typeof document !== "undefined") {
     if (isBlank(state.body)) return copy("err_empty");
     var n = bodyLen(state.body);
     if (n > maxBody()) return copy("err_too_long").replace("{n}", String(n - maxBody()));
-    if (!state.childId) return copy("err_no_child");
-    var child = findChild(state.childId);
+    if (!state.childIds.length) return copy("err_no_child");
+    var child = latestChild();
     if (child && state.date < child.birth) return copy("err_date_birth").replace("{name}", child.name);
     if (state.date > today()) return copy("err_date_future");
     if (state.photoIds.length > 9) return copy("err_photo_max");
@@ -425,7 +526,8 @@ if (typeof document !== "undefined") {
       v: 1,
       body: source.body || "",
       date: source.date || today(),
-      childId: source.childId || null,
+      childId: (source.childIds && source.childIds.length) ? source.childIds[0] : (source.childId || null),
+      childIds: (source.childIds || (source.childId ? [source.childId] : [])).slice(),
       photoIds: (source.photoIds || []).slice(),
       idemKey: newIdem(),
       savedAt: Date.now(),
@@ -473,6 +575,7 @@ if (typeof document !== "undefined") {
 
   function mapError(status, data) {
     var code = data && data.code;
+    if (status === 422) return { text: copy("err_no_child"), retry: true };
     if (isRetryable(status, data)) return { text: copy("err_offline"), retry: true };
     if (status === 403) {
       explain403(data);
@@ -486,8 +589,9 @@ if (typeof document !== "undefined") {
     }
     if (code === "body_invalid" || code === "body_empty") return { text: copy("err_empty"), retry: false };
     if (code === "child_required") return { text: copy("err_no_child"), retry: false };
-    if (code === "child_not_found") {
+    if (code === "child_not_found" || code === "children_too_many") {
       state.childId = null;
+      state.childIds = [];
       return { text: copy("e_kid_gone"), retry: false };
     }
     if (code === "date_invalid" || code === "date_future") return { text: copy("err_date_future"), retry: false };
@@ -566,7 +670,8 @@ if (typeof document !== "undefined") {
         "Idempotency-Key": state.idemKey,
       },
       body: JSON.stringify({
-        child_id: state.childId,
+        child_id: state.childIds.length ? state.childIds[0] : state.childId,
+        child_ids: state.childIds.slice(),
         on_date: state.date,
         body: state.body,
         photo_ids: state.photoIds,
@@ -634,7 +739,7 @@ if (typeof document !== "undefined") {
     var day = document.getElementById("date-day");
     if (!year || !month || !day) return;
     var current = parseDay(state.date || today());
-    var child = findChild(state.childId);
+    var child = latestChild();
     var min = child ? parseDay(child.birth) : { y: current.y - 10, m: 1, d: 1 };
     var max = parseDay(today());
     year.textContent = "";
@@ -814,6 +919,20 @@ if (typeof document !== "undefined") {
         if (state.locked) return;
         bindChildren();
         showSheet("child-sheet");
+      });
+    }
+    var sibRow = document.getElementById("sib-row");
+    if (sibRow) {
+      sibRow.addEventListener("click", function (event) {
+        if (state.locked) return;
+        var node = event.target;
+        while (node && node !== sibRow) {
+          if (node.getAttribute && node.getAttribute("data-child-id")) {
+            toggleChild(node.getAttribute("data-child-id"));
+            return;
+          }
+          node = node.parentNode;
+        }
       });
     }
     document.querySelectorAll("[data-sheet-close]").forEach(function (node) {

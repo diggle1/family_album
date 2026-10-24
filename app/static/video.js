@@ -4,7 +4,23 @@ function videoApp() {
   return document.getElementById("video-app");
 }
 
+function videoMulti() {
+  if (videoMulti.cache) return videoMulti.cache;
+  videoMulti.cache = {};
+  if (typeof document === "undefined") return videoMulti.cache;
+  var node = document.getElementById("multi-child-copy");
+  if (!node) return videoMulti.cache;
+  try {
+    videoMulti.cache = JSON.parse(node.textContent || "{}") || {};
+  } catch (err) {
+    videoMulti.cache = {};
+  }
+  return videoMulti.cache;
+}
+
 function videoCopy(key) {
+  var multi = videoMulti();
+  if (multi && Object.prototype.hasOwnProperty.call(multi, key)) return multi[key];
   var node = videoApp();
   if (!node) return "";
   return node.getAttribute("data-copy-" + key) || "";
@@ -70,7 +86,7 @@ function videoNewIdem() {
 
 if (typeof document !== "undefined" && videoApp()) {
   var mode = videoApp().getAttribute("data-mode") || "";
-  if (mode === "upload") bootUpload();
+  if (mode === "upload" || mode === "edit") bootUpload();
   if (mode === "detail") bootDetail();
 }
 
@@ -81,9 +97,19 @@ function bootUpload() {
   } catch (err) {
     children = [];
   }
+  var selected = [];
+  try {
+    selected = JSON.parse((document.getElementById("video-selected") || {}).textContent || "[]");
+  } catch (err) {
+    selected = [];
+  }
+  if (!selected.length && videoApp().getAttribute("data-child")) {
+    selected = [videoApp().getAttribute("data-child")];
+  }
   var state = {
-    childId: videoApp().getAttribute("data-child") || "",
-    date: videoApp().getAttribute("data-today") || "",
+    childId: selected.length ? String(selected[0]) : (videoApp().getAttribute("data-child") || ""),
+    childIds: selected.map(function (id) { return String(id); }),
+    date: videoApp().getAttribute("data-initial-date") || videoApp().getAttribute("data-today") || "",
     file: null,
     durationMs: 0,
     posterBlob: null,
@@ -95,6 +121,7 @@ function bootUpload() {
     overSize: false,
     badFormat: false,
     xhr: null,
+    lastHint: "",
   };
 
   function maxMs() {
@@ -210,13 +237,27 @@ function bootUpload() {
     }
     if (ph) ph.hidden = true;
   }
+  function selectedChildren() {
+    return state.childIds.map(findChild).filter(Boolean);
+  }
   function canSubmit() {
-    if (state.sending || !state.file || state.overDur || state.overSize || state.badFormat) return false;
-    if (!findChild(state.childId)) return false;
+    if (state.sending) return false;
+    if (videoApp().getAttribute("data-mode") === "edit") {
+      return selectedChildren().length > 0 && !clientDateError();
+    }
+    if (!state.file || state.overDur || state.overSize || state.badFormat) return false;
+    if (!selectedChildren().length) return false;
     return !clientDateError();
   }
+  function latestChild() {
+    var best = null;
+    selectedChildren().forEach(function (child) {
+      if (!best || String(child.birth) > String(best.birth)) best = child;
+    });
+    return best;
+  }
   function clientDateError() {
-    var child = findChild(state.childId);
+    var child = latestChild();
     var day = videoParseDay(state.date);
     var today = videoParseDay(videoApp().getAttribute("data-today") || "");
     if (!day || !today) return videoCopy("err_date_future");
@@ -231,15 +272,76 @@ function bootUpload() {
     var prog = document.getElementById("film-prog");
     if (!button) return;
     button.disabled = !canSubmit();
-    button.textContent = state.sending ? videoCopy("u_sending") : videoCopy("u_submit");
+    var editing = videoApp().getAttribute("data-mode") === "edit";
+    button.textContent = state.sending ? videoCopy("u_sending") : (editing ? videoCopy("w_submit_edit") : videoCopy("u_submit"));
     if (cancel) cancel.hidden = !state.sending;
     if (keep) keep.hidden = !state.sending;
     if (prog) prog.hidden = !state.sending;
+  }
+  function paintSib() {
+    var row = document.getElementById("sib-row");
+    var hint = document.getElementById("sib-hint");
+    if (!row) return;
+    var single = children.length <= 1;
+    row.textContent = "";
+    children.forEach(function (child, index) {
+      var id = String(child.id);
+      var on = state.childIds.indexOf(id) !== -1;
+      var button = document.createElement("button");
+      button.type = "button";
+      button.className = "chip" + (on ? " on" : "") + (single ? " locked" : "");
+      button.setAttribute("data-child-id", id);
+      var av = document.createElement("span");
+      av.className = "av c" + String(index % 3);
+      av.appendChild(document.createTextNode((child.name || "").slice(0, 1)));
+      var mark = document.createElement("span");
+      mark.className = "ck";
+      mark.textContent = "\u2713";
+      av.appendChild(mark);
+      var name = document.createElement("span");
+      name.className = "nm";
+      name.textContent = child.name || "";
+      button.appendChild(av);
+      button.appendChild(name);
+      row.appendChild(button);
+    });
+    if (!hint) return;
+    if (single) {
+      hint.textContent = "";
+      return;
+    }
+    if (state.lastHint) {
+      hint.textContent = state.lastHint;
+      return;
+    }
+    if (!state.childIds.length) {
+      hint.textContent = videoCopy("sib_hint_pick");
+      return;
+    }
+    var named = findChild(state.childIds[0]);
+    var pre = videoApp().getAttribute("data-pre-name") || (named ? named.name : "");
+    hint.textContent = videoFill("sib_hint_pre", { name: pre });
+  }
+  function syncPrimary() {
+    state.childId = state.childIds.length ? state.childIds[0] : "";
+  }
+  function toggleChild(raw) {
+    if (children.length <= 1) return;
+    var id = String(raw);
+    var index = state.childIds.indexOf(id);
+    state.lastHint = "";
+    if (index === -1) state.childIds.push(id);
+    else if (state.childIds.length <= 1) state.lastHint = videoCopy("sib_hint_last");
+    else state.childIds.splice(index, 1);
+    syncPrimary();
+    showError("");
+    paint();
   }
   function paint() {
     paintHead();
     paintMeter();
     paintFilm();
+    paintSib();
     paintButton();
   }
   function extOf(file) {
@@ -372,7 +474,9 @@ function bootUpload() {
       video_duration_invalid: "err_limit_dur",
       video_duration: "err_limit_dur",
       child_required: "err_no_child",
-      child_not_found: "err_no_child",
+      child_not_found: "e_kid_gone",
+      children_too_many: "e_kid_gone",
+      video_file_immutable: "err_format",
       date_invalid: "err_date_future",
       date_future: "err_date_future",
       poster_invalid: "err_format",
@@ -409,10 +513,59 @@ function bootUpload() {
     showError(videoCopy("err_retry"));
     paint();
   }
+  function finishSend(xhr) {
+    if (state.aborted) return;
+    state.sending = false;
+    var data = null;
+    try { data = JSON.parse(xhr.responseText || ""); } catch (err) { data = null; }
+    if (xhr.status === 200 || xhr.status === 201) {
+      var when = data && data.date_label ? data.date_label : "";
+      var child = data && data.child ? data.child.id : state.childId;
+      var id = data && data.id ? data.id : "";
+      var editing = videoApp().getAttribute("data-mode") === "edit";
+      if (editing) {
+        window.location.href = "/videos/" + id + "?vtoast=edited";
+        return;
+      }
+      window.location.href = "/?child=" + child + "&vtoast=posted&vdate=" + encodeURIComponent(when) + "&vhl=" + id;
+      return;
+    }
+    if (xhr.status === 403 && !(data && data.code)) {
+      paint();
+      afterForbidden();
+      return;
+    }
+    showError(mapUpload(xhr.status, data));
+    paint();
+  }
+  function submitEdit() {
+    var xhr = new XMLHttpRequest();
+    state.xhr = xhr;
+    var id = videoApp().getAttribute("data-video-id") || "";
+    xhr.open("PATCH", "/api/videos/" + id);
+    xhr.setRequestHeader("Content-Type", "application/json");
+    xhr.onload = function () { finishSend(xhr); };
+    xhr.onerror = function () {
+      if (state.aborted) return;
+      state.sending = false;
+      showError(videoCopy("err_retry"));
+      paint();
+    };
+    xhr.onabort = function () {
+      state.sending = false;
+      if (!state.aborted) showError(videoCopy("err_retry"));
+      paint();
+    };
+    xhr.send(JSON.stringify({
+      child_ids: state.childIds.map(function (item) { return parseInt(item, 10); }),
+      on_date: state.date,
+    }));
+  }
   function submit() {
     if (state.sending) return;
+    var editing = videoApp().getAttribute("data-mode") === "edit";
     var dateErr = clientDateError();
-    if (!findChild(state.childId)) {
+    if (!selectedChildren().length) {
       showError(videoCopy("err_no_child"));
       return;
     }
@@ -420,13 +573,18 @@ function bootUpload() {
       showError(dateErr);
       return;
     }
-    if (!state.file || state.overDur || state.overSize || state.badFormat) return;
+    if (!editing && (!state.file || state.overDur || state.overSize || state.badFormat)) return;
     showError("");
     state.sending = true;
     state.aborted = false;
     paint();
+    if (editing) {
+      submitEdit();
+      return;
+    }
     var body = new FormData();
-    body.append("child_id", String(state.childId));
+    state.childIds.forEach(function (id) { body.append("child_ids", String(id)); });
+    body.append("child_id", String(state.childIds[0]));
     body.append("on_date", state.date);
     body.append("duration_ms", String(state.durationMs));
     var ext = extOf(state.file) || "mp4";
@@ -441,26 +599,7 @@ function bootUpload() {
       var bar = document.getElementById("film-prog-bar");
       if (bar) bar.style.width = Math.round((event.loaded / event.total) * 100) + "%";
     };
-    xhr.onload = function () {
-      if (state.aborted) return;
-      state.sending = false;
-      var data = null;
-      try { data = JSON.parse(xhr.responseText || ""); } catch (err) { data = null; }
-      if (xhr.status === 200 || xhr.status === 201) {
-        var when = data && data.date_label ? data.date_label : "";
-        var child = data && data.child ? data.child.id : state.childId;
-        var id = data && data.id ? data.id : "";
-        window.location.href = "/?child=" + child + "&vtoast=posted&vdate=" + encodeURIComponent(when) + "&vhl=" + id;
-        return;
-      }
-      if (xhr.status === 403 && !(data && data.code)) {
-        paint();
-        afterForbidden();
-        return;
-      }
-      showError(mapUpload(xhr.status, data));
-      paint();
-    };
+    xhr.onload = function () { finishSend(xhr); };
     xhr.onerror = function () {
       if (state.aborted) return;
       state.sending = false;
@@ -545,6 +684,7 @@ function bootUpload() {
   if (film && fileInput) {
     film.addEventListener("click", function () {
       if (state.sending) return;
+      if (videoApp().getAttribute("data-mode") === "edit") return;
       fileInput.click();
     });
   }
@@ -572,7 +712,8 @@ function bootUpload() {
   });
   var errorBtn = document.getElementById("video-error");
   if (errorBtn) errorBtn.addEventListener("click", function () {
-    if (!state.sending && state.file && canSubmit()) submit();
+    var editing = videoApp().getAttribute("data-mode") === "edit";
+    if (!state.sending && canSubmit() && (state.file || editing)) submit();
   });
   var childSwitch = document.getElementById("child-switch");
   if (childSwitch) childSwitch.addEventListener("click", function () { showSheet("child-sheet"); });
@@ -593,7 +734,7 @@ function bootUpload() {
     var m = document.getElementById("date-month").value;
     var d = document.getElementById("date-day").value;
     var iso = y + "-" + (m.length < 2 ? "0" + m : m) + "-" + (d.length < 2 ? "0" + d : d);
-    var child = findChild(state.childId);
+    var child = latestChild();
     var err = document.getElementById("date-sheet-err");
     if (iso > (videoApp().getAttribute("data-today") || "")) {
       if (err) {
@@ -625,6 +766,20 @@ function bootUpload() {
   });
   window.addEventListener("pagehide", function () { abortUpload(); });
   window.addEventListener("beforeunload", function () { abortUpload(); });
+  var sibRow = document.getElementById("sib-row");
+  if (sibRow) {
+    sibRow.addEventListener("click", function (event) {
+      if (state.sending) return;
+      var node = event.target;
+      while (node && node !== sibRow) {
+        if (node.getAttribute && node.getAttribute("data-child-id")) {
+          toggleChild(node.getAttribute("data-child-id"));
+          return;
+        }
+        node = node.parentNode;
+      }
+    });
+  }
   renderChildren();
   paint();
 }

@@ -1,11 +1,14 @@
 {% extends "layout.html" %}
 {% block title %}{{ video_copy.u_title }} · kids时光机{% endblock %}
 {% block content %}
-<div id="video-app" class="paper" data-mode="upload"
+<div id="video-app" class="paper" data-mode="{% if mode|default('new') == 'edit' %}edit{% else %}upload{% endif %}"
+     data-video-id="{% if video %}{{ video.id }}{% endif %}"
      data-fid="{{ family.id }}"
      data-uid="{{ user.id }}"
      data-today="{{ today }}"
-     data-child="{% if selected %}{{ selected.id }}{% endif %}"
+     data-initial-date="{% if video %}{{ video.on_date.isoformat() }}{% endif %}"
+     data-child="{% if selected_ids %}{{ selected_ids[0] }}{% endif %}"
+     data-pre-name="{{ pre_name|default('') }}"
      data-single="{{ 1 if children|length == 1 else 0 }}"
      data-max-ms="{{ max_ms }}"
      data-max-bytes="{{ max_bytes }}"
@@ -23,15 +26,23 @@
   </div>
   <div class="upbody">
     <div class="letterhead" id="letterhead">
-      <span class="avatar xl" id="child-avatar">{% if selected %}{{ selected.name|initial }}{% else %}？{% endif %}</span>
-      <div class="name" id="child-name">{% if selected %}{{ selected.name }}{% else %}{{ video_copy.child_pick }}{% endif %}</div>
-      <div class="age" id="child-age"></div>
-      {% if children|length > 1 %}
-      <button type="button" class="pick" id="child-switch">⇄ {{ video_copy.child_switch }}</button>
-      {% elif not selected %}
-      <button type="button" class="pick" id="child-switch">{{ video_copy.child_pick_tap }}</button>
-      {% endif %}
       <button type="button" class="date" id="date-open"><span id="date-label"></span></button>
+    </div>
+    {% set single = children|length == 1 %}
+    <div class="sib{% if single %} single{% endif %}" id="sib" data-kind="v">
+      <div class="slbl">
+        <span>{{ multi_child.sib_label_v }}</span>
+        <span class="hint" id="sib-hint">{% if not single %}{% if pre_name %}{{ multi_child.sib_hint_pre.format(name=pre_name) }}{% elif not selected_ids %}{{ multi_child.sib_hint_pick }}{% elif selected %}{{ multi_child.sib_hint_pre.format(name=selected.name) }}{% endif %}{% endif %}</span>
+      </div>
+      <div class="row" id="sib-row">
+        {% for child in children %}
+        {% set on = child.id in selected_ids %}
+        <button type="button" class="chip{% if on %} on{% endif %}{% if single %} locked{% endif %}" data-child-id="{{ child.id }}">
+          <span class="av c{{ loop.index0 % 3 }}">{{ child.name|initial }}<span class="ck">✓</span></span>
+          <span class="nm">{{ child.name }}</span>
+        </button>
+        {% endfor %}
+      </div>
     </div>
     <div class="filmbase" id="film-preview">
       <span class="sprockets L" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
@@ -56,19 +67,10 @@
   </div>
   <div class="wfoot">
     <button type="button" class="errline" id="video-error" hidden></button>
-    <button type="button" class="btn" id="video-submit" disabled>{{ video_copy.u_submit }}</button>
+    <button type="button" class="btn" id="video-submit" disabled>{% if mode|default('new') == 'edit' %}{{ multi_child.w_submit_edit }}{% else %}{{ video_copy.u_submit }}{% endif %}</button>
     <button type="button" class="btn text" id="video-cancel" hidden>{{ video_copy.u_cancel_up }}</button>
   </div>
 
-  <div class="sheet-mask" id="child-sheet" hidden>
-    <div class="sheet">
-      <div class="grab"></div>
-      <h4>{{ video_copy.child_sheet_title }}</h4>
-      <p class="sub">{{ video_copy.child_sheet_sub }}</p>
-      <div id="child-options"></div>
-      <button type="button" class="btn ghost" data-sheet-close>{{ video_copy.cancel }}</button>
-    </div>
-  </div>
   <div class="sheet-mask" id="date-sheet" hidden>
     <div class="sheet">
       <div class="grab"></div>
@@ -84,6 +86,8 @@
     </div>
   </div>
 </div>
+<script type="application/json" id="multi-child-copy">{{ multi_child | tojson }}</script>
 <script type="application/json" id="video-children-data">{{ children_json | safe }}</script>
+<script type="application/json" id="video-selected">{{ selected_json | safe }}</script>
 <script src="/static/video.js" defer></script>
 {% endblock %}

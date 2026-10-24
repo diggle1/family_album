@@ -16,14 +16,26 @@ from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 
-from sqlalchemy import func, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
-from app.constants import FORBIDDEN, ROLE_RANK, VIDEO
+from app.constants import FORBIDDEN, MULTI_CHILD, ROLE_RANK, VIDEO
 from app.deps import MemberCtx
-from app.models import Child, Membership, User, Video
+from app.models import Child, Membership, User, Video, VideoChild
+from app.services.assoc import (
+    ChildSetError,
+    children_payload,
+    clear_video_children,
+    ids_of,
+    linked_children,
+    parse_form_child_ids,
+    replace_video_children,
+    resolve_children,
+    video_child_ids,
+    video_still_in_family,
+)
 from app.services.children import child_in_family
 from app.services.clock import age_label, as_utc, date_label, isoformat, shanghai_today, utcnow
 from app.services.photos import sniff_image
@@ -306,7 +318,7 @@ def visible_video(db: Session, *, family_id: int, video_id: int) -> Video | None
     video = db.get(Video, video_id)
     if video is None or video.family_id != family_id or video.deleted_at is not None:
         return None
-    if child_in_family(db, family_id=family_id, child_id=video.child_id) is None:
+    if not video_still_in_family(db, video):
         return None
     return video
 
@@ -319,13 +331,17 @@ def _by_key(db: Session, *, uploader_id: int, key: str) -> Video | None:
 
 @dataclass(frozen=True)
 class ValidVideo:
-    child: Child
+    children: list[Child]
     on_date: date
     duration_ms: int
     container: str
     byte_size: int
     poster_media: str | None
     poster_ext: str | None
+
+    @property
+    def child(self) -> Child:
+        return self.children[0]
 
 
 def _parse_duration(raw: object) -> int | None:
@@ -354,6 +370,53 @@ def _parse_day(raw: object) -> date | None:
         return None
 
 
+def _resolve_upload_children(
+    db: Session,
+    *,
+    family_id: int,
+    child_raw: object,
+    child_ids_raw: list[str] | None,
+    on_date: date | None,
+) -> list[Child]:
+    """Child checks stay after the file checks and before or with the birth check."""
+    if child_ids_raw is not None:
+        try:
+            resolved = resolve_children(
+                db,
+                family_id=family_id,
+                child_ids=parse_form_child_ids(child_ids_raw),
+                legacy_child_id=None,
+                used_list=True,
+                required_detail=MULTI_CHILD["err_no_child"],
+                missing_detail=MULTI_CHILD["e_kid_gone"],
+                birth_detail=VIDEO["err_date_birth"],
+                on_date=on_date,
+            )
+        except ChildSetError as exc:
+            raise VideoError(400, exc.code, exc.detail) from exc
+        return resolved.children
+    if child_raw is None or (isinstance(child_raw, str) and child_raw.strip() == ""):
+        raise VideoError(400, "child_required", VIDEO["err_no_child"])
+    child_text = str(child_raw).strip()
+    if not child_text.isdigit():
+        raise VideoError(400, "child_not_found", VIDEO["err_no_child"])
+    try:
+        resolved = resolve_children(
+            db,
+            family_id=family_id,
+            child_ids=None,
+            legacy_child_id=int(child_text),
+            used_list=False,
+            required_detail=VIDEO["err_no_child"],
+            missing_detail=VIDEO["err_no_child"],
+            birth_detail=VIDEO["err_date_birth"],
+            on_date=on_date,
+        )
+    except ChildSetError as exc:
+        raise VideoError(400, exc.code, exc.detail) from exc
+    return resolved.children
+
+
 def validate_upload(
     db: Session,
     *,
@@ -365,6 +428,7 @@ def validate_upload(
     filename: str,
     poster_path: Path | None,
     poster_too_big: bool,
+    child_ids_raw: list[str] | None = None,
 ) -> ValidVideo:
     """First failure only. Size is enforced again in case the caller streamed a capped file."""
     try:
@@ -389,20 +453,25 @@ def validate_upload(
     parsed = container_duration_ms(video_path)
     if duration > VIDEO_MAX_DURATION_MS or (parsed is not None and parsed > VIDEO_MAX_DURATION_MS):
         raise VideoError(400, "video_duration", VIDEO["err_limit_dur"])
-    if child_raw is None or (isinstance(child_raw, str) and child_raw.strip() == ""):
-        raise VideoError(400, "child_required", VIDEO["err_no_child"])
-    child_text = str(child_raw).strip()
-    child_id = int(child_text) if child_text.isdigit() else None
-    child = child_in_family(db, family_id=family_id, child_id=child_id) if child_id is not None else None
-    if child is None:
-        raise VideoError(400, "child_not_found", VIDEO["err_no_child"])
+    _resolve_upload_children(
+        db,
+        family_id=family_id,
+        child_raw=child_raw,
+        child_ids_raw=child_ids_raw,
+        on_date=None,
+    )
     on_date = _parse_day(on_date_raw if isinstance(on_date_raw, str) else None)
     if on_date is None:
         raise VideoError(400, "date_invalid", VIDEO["err_date_future"])
     if on_date > shanghai_today():
         raise VideoError(400, "date_future", VIDEO["err_date_future"])
-    if on_date < child.birth_date:
-        raise VideoError(400, "date_before_birth", VIDEO["err_date_birth"].format(name=child.name))
+    children = _resolve_upload_children(
+        db,
+        family_id=family_id,
+        child_raw=child_raw,
+        child_ids_raw=child_ids_raw,
+        on_date=on_date,
+    )
     poster_media = None
     poster_ext = None
     if poster_too_big:
@@ -418,7 +487,7 @@ def validate_upload(
         poster_media = sniffed
         poster_ext = _POSTER_EXT[sniffed]
     return ValidVideo(
-        child=child,
+        children=children,
         on_date=on_date,
         duration_ms=duration,
         container=container,
@@ -428,15 +497,22 @@ def validate_upload(
     )
 
 
+def _audience(db: Session, video: Video) -> list[Child]:
+    return linked_children(db, family_id=video.family_id, child_ids=video_child_ids(db, video))
+
+
 def detail_payload(db: Session, video: Video, viewer: Membership, *, replayed: bool = False) -> dict:
-    child = db.get(Child, video.child_id)
-    if child is None or child.family_id != video.family_id:
+    children = _audience(db, video)
+    if not children:
         raise not_found()
+    child = children[0]
     author = _author(db, video)
     has_poster = bool(video.poster_path)
     return {
         "id": video.id,
         "child": {"id": child.id, "name": child.name},
+        "children": children_payload(children, video.on_date),
+        "child_ids": ids_of(children),
         "on_date": video.on_date.isoformat(),
         "date_label": date_label(video.on_date),
         "age_label": age_label(child.birth_date, video.on_date),
@@ -485,6 +561,7 @@ def create_video(
     filename: str,
     poster_path: Path | None,
     poster_too_big: bool,
+    child_ids_raw: list[str] | None = None,
 ) -> tuple[dict, int]:
     replay = peek_replay(db, ctx, key)
     if replay is not None:
@@ -499,6 +576,7 @@ def create_video(
         filename=filename,
         poster_path=poster_path,
         poster_too_big=poster_too_big,
+        child_ids_raw=child_ids_raw,
     )
     settings = get_settings()
     backend = settings.storage_backend if settings.storage_backend in {"local", "s3"} else "local"
@@ -530,6 +608,8 @@ def create_video(
             created_at=utcnow(),
         )
         db.add(video)
+        db.flush()
+        replace_video_children(db, video, draft.children)
         db.commit()
     except IntegrityError:
         db.rollback()
@@ -569,6 +649,7 @@ def delete_video(db: Session, ctx: MemberCtx, video_id: int) -> None:
     video.poster_path = None
     video.byte_size = 0
     video.deleted_at = utcnow()
+    clear_video_children(db, video.id)
     db.commit()
 
 
@@ -622,33 +703,132 @@ def iter_bounded(stream: object, limit: int | None):
             close()
 
 
+def can_edit_assoc(viewer: Membership, video: Video) -> bool:
+    if viewer.role == "admin":
+        return True
+    return ROLE_RANK[viewer.role] >= ROLE_RANK["uploader"] and video.uploader_id == viewer.user_id
+
+
+def update_video_assoc(
+    db: Session,
+    ctx: MemberCtx,
+    video_id: int,
+    *,
+    child_ids: list[int] | None,
+    on_date_raw: object,
+) -> dict:
+    """Change the child set and, when sent, the day. The file stays where it is."""
+    video = visible_video(db, family_id=ctx.family.id, video_id=video_id)
+    if video is None:
+        raise not_found()
+    if not can_edit_assoc(ctx.membership, video):
+        raise VideoError(403, "video_not_author", FORBIDDEN)
+    if child_ids is None:
+        raise VideoError(400, "child_required", MULTI_CHILD["err_no_child"])
+    on_date = video.on_date
+    if on_date_raw is not None:
+        parsed = _parse_day(on_date_raw if isinstance(on_date_raw, str) else None)
+        if parsed is None:
+            raise VideoError(400, "date_invalid", VIDEO["err_date_future"])
+        if parsed > shanghai_today():
+            raise VideoError(400, "date_future", VIDEO["err_date_future"])
+        on_date = parsed
+    try:
+        resolved = resolve_children(
+            db,
+            family_id=ctx.family.id,
+            child_ids=child_ids,
+            legacy_child_id=None,
+            used_list=True,
+            required_detail=MULTI_CHILD["err_no_child"],
+            missing_detail=MULTI_CHILD["e_kid_gone"],
+            birth_detail=VIDEO["err_date_birth"],
+            on_date=on_date,
+        )
+    except ChildSetError as exc:
+        raise VideoError(400, exc.code, exc.detail) from exc
+    video.on_date = on_date
+    replace_video_children(db, video, resolved.children)
+    db.commit()
+    db.refresh(video)
+    return detail_payload(db, video, ctx.membership, replayed=False)
+
+
 def _card(db: Session, video: Video, child: Child) -> dict:
     author = _author(db, video)
+    audience = _audience(db, video) or [child]
     return {
         "id": video.id,
         "duration_label": duration_label(video.duration_ms),
         "who": display_who(author),
-        "age_label": age_label(child.birth_date, video.on_date),
+        "age_label": age_label(audience[0].birth_date, video.on_date),
         "has_poster": bool(video.poster_path),
         "poster_url": f"/media/videos/{video.id}/poster" if video.poster_path else None,
+        "children": children_payload(audience, video.on_date),
     }
 
 
+def _videos_matching(db: Session, *, family_id: int, child_id: int | None) -> list[Video]:
+    stmt = select(Video).where(Video.family_id == family_id, Video.deleted_at.is_(None))
+    if child_id is not None:
+        linked = select(VideoChild.video_id).where(VideoChild.child_id == child_id)
+        unlinked = ~Video.id.in_(select(VideoChild.video_id))
+        stmt = stmt.where(or_(Video.id.in_(linked), and_(unlinked, Video.child_id == child_id)))
+    rows = [row for row in db.scalars(stmt).all() if video_still_in_family(db, row)]
+    rows.sort(key=lambda row: (as_utc(row.created_at), row.id), reverse=True)
+    return rows
+
+
 def videos_for_feed(db: Session, child: Child) -> dict[str, list[dict]]:
+    grouped: dict[str, list[dict]] = {}
+    for video in _videos_matching(db, family_id=child.family_id, child_id=child.id):
+        grouped.setdefault(video.on_date.isoformat(), []).append(_card(db, video, child))
+    return grouped
+
+
+def family_videos_for_feed(db: Session, family_id: int) -> dict[str, list[dict]]:
+    grouped: dict[str, list[dict]] = {}
+    seen: set[int] = set()
+    for video in _videos_matching(db, family_id=family_id, child_id=None):
+        if video.id in seen:
+            continue
+        seen.add(video.id)
+        anchor = _audience(db, video)[0]
+        grouped.setdefault(video.on_date.isoformat(), []).append(_card(db, video, anchor))
+    return grouped
+
+
+def video_export_sidecars(db: Session, *, family_id: int, uploader_id: int) -> list[tuple[str, bytes]]:
+    """Sidecar JSON only when a video is linked to more than one child.
+
+    A single association keeps the zip name list identical to the previous release.
+    """
+    import json
+
     rows = list(
         db.scalars(
             select(Video).where(
-                Video.family_id == child.family_id,
-                Video.child_id == child.id,
+                Video.family_id == family_id,
+                Video.uploader_id == uploader_id,
                 Video.deleted_at.is_(None),
             )
         ).all()
     )
-    rows.sort(key=lambda row: (as_utc(row.created_at), row.id), reverse=True)
-    grouped: dict[str, list[dict]] = {}
+    extras: list[tuple[str, bytes]] = []
     for video in rows:
-        grouped.setdefault(video.on_date.isoformat(), []).append(_card(db, video, child))
-    return grouped
+        if not video.storage_path:
+            continue
+        child_ids = video_child_ids(db, video)
+        if len(child_ids) <= 1:
+            continue
+        names: list[str] = []
+        for child_id in child_ids:
+            child = child_in_family(db, family_id=family_id, child_id=child_id)
+            names.append(child.name if child is not None else "（孩子已不在列表）")
+        payload = {"child_ids": child_ids, "names": names}
+        blob = (json.dumps(payload, ensure_ascii=False) + "\n").encode("utf-8")
+        extras.append((f"{video.on_date.isoformat()}_{video.id}.children.json", blob))
+    return extras
 
 
 def count_my_videos(db: Session, *, family_id: int, uploader_id: int) -> int:

@@ -11,17 +11,19 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Uplo
 from fastapi.responses import JSONResponse, RedirectResponse, Response, StreamingResponse
 from sqlalchemy.orm import Session
 
-from app.constants import FORBIDDEN, ROLE_RANK, VIDEO
+from app.constants import FORBIDDEN, MULTI_CHILD, ROLE_RANK, VIDEO
 from app.db import get_db
 from app.deps import MemberCtx, require_member
 from app.routers.pages import _flags, gate_member, render
 from app.services.children import list_children
 from app.services.clock import shanghai_today
 from app.services import videos as video_service
+from app.services.assoc import linked_children, parse_child_id_list, video_child_ids
 from app.services.videos import (
     VideoError,
     blob_exists,
     can_delete,
+    can_edit_assoc,
     create_video,
     delete_video,
     detail_payload,
@@ -33,6 +35,7 @@ from app.services.videos import (
     open_named,
     peek_replay,
     unlink_path,
+    update_video_assoc,
     visible_video,
 )
 
@@ -153,6 +156,7 @@ def _missing(request: Request, gate: MemberCtx):
 async def post_video(
     request: Request,
     child_id: str | None = Form(None),
+    child_ids: list[str] | None = Form(None),
     on_date: str | None = Form(None),
     duration_ms: str | None = Form(None),
     file: UploadFile | None = File(None),
@@ -195,6 +199,7 @@ async def post_video(
             filename=file.filename or "",
             poster_path=None if poster_too_big else poster_path,
             poster_too_big=poster_too_big,
+            child_ids_raw=child_ids,
         )
         return _json(body, status)
     finally:
@@ -214,6 +219,40 @@ def get_video(
     return _json(detail_payload(db, video, ctx.membership), 200)
 
 
+@router.patch("/api/videos/{video_id}")
+async def patch_video(
+    video_id: int,
+    request: Request,
+    ctx: MemberCtx = Depends(video_writer),
+    db: Session = Depends(get_db),
+):
+    ctype = request.headers.get("content-type", "")
+    if "multipart/form-data" in ctype or "application/octet-stream" in ctype:
+        raise VideoError(400, "video_file_immutable", "不能换片")
+    try:
+        payload = await request.json()
+    except Exception as exc:
+        raise VideoError(400, "child_required", MULTI_CHILD["err_no_child"]) from exc
+    if not isinstance(payload, dict):
+        raise VideoError(400, "child_required", MULTI_CHILD["err_no_child"])
+    if payload.get("file") or payload.get("poster") or payload.get("storage_path"):
+        raise VideoError(400, "video_file_immutable", "不能换片")
+    on_date = payload.get("on_date") if "on_date" in payload else None
+    if "child_ids" in payload:
+        child_ids = parse_child_id_list(payload.get("child_ids"))
+    elif "child_id" in payload and payload.get("child_id") is not None:
+        one = payload.get("child_id")
+        child_ids = [one] if isinstance(one, int) and not isinstance(one, bool) else None
+        if child_ids is None:
+            raise VideoError(400, "child_required", MULTI_CHILD["err_no_child"])
+    else:
+        child_ids = None
+    return _json(
+        update_video_assoc(db, ctx, video_id, child_ids=child_ids, on_date_raw=on_date),
+        200,
+    )
+
+
 @router.delete("/api/videos/{video_id}")
 def remove_video(
     video_id: int,
@@ -224,23 +263,42 @@ def remove_video(
     return _nostore(Response(status_code=204))
 
 
-@router.get("/videos/new")
-def page_new(request: Request, db: Session = Depends(get_db)):
-    gate = _gate(request, db)
-    if isinstance(gate, RedirectResponse):
-        return gate
-    if ROLE_RANK[gate.membership.role] < ROLE_RANK["uploader"]:
-        raise HTTPException(status_code=403, detail=FORBIDDEN)
+def _upload_page(
+    request: Request,
+    db: Session,
+    gate: MemberCtx,
+    *,
+    mode: str,
+    video=None,
+    payload: dict | None = None,
+):
     children = list_children(db, gate.family.id)
-    selected = None
-    raw = request.query_params.get("child")
-    if raw and raw.isdigit():
-        selected = next((child for child in children if child.id == int(raw)), None)
-    if selected is None and len(children) == 1:
-        selected = children[0]
+    preselect = False
+    selected_ids: list[int] = []
+    if payload is not None:
+        selected_ids = list(payload.get("child_ids") or [])
+    else:
+        raw = request.query_params.get("child")
+        if raw and raw.isdigit():
+            chosen = next((child for child in children if child.id == int(raw)), None)
+            if chosen is not None:
+                selected_ids = [chosen.id]
+                preselect = len(children) > 1
+        if not selected_ids and len(children) == 1:
+            selected_ids = [children[0].id]
+    selected = next((child for child in children if selected_ids and child.id == selected_ids[0]), None)
+    pre_name = ""
+    if len(children) > 1 and selected is not None and (preselect or mode == "edit"):
+        pre_name = selected.name
     children_json = [
         {"id": child.id, "name": child.name, "birth": child.birth_date.isoformat()} for child in children
     ]
+    if selected_ids:
+        back = f"/?child={selected_ids[0]}"
+    elif len(children) > 1:
+        back = "/?view=family"
+    else:
+        back = "/"
     response = render(
         request,
         "video_upload.html",
@@ -249,10 +307,16 @@ def page_new(request: Request, db: Session = Depends(get_db)):
             "family": gate.family,
             "children": children,
             "selected": selected,
+            "selected_ids": selected_ids,
+            "pre_name": pre_name,
+            "mode": mode,
+            "video": video,
+            "payload": payload,
             "today": shanghai_today().isoformat(),
             "show_nav": False,
-            "back_href": f"/?child={selected.id}" if selected is not None else "/",
+            "back_href": back,
             "children_json": json.dumps(children_json, ensure_ascii=True),
+            "selected_json": json.dumps(selected_ids),
             "max_ms": video_service.VIDEO_MAX_DURATION_MS,
             "max_bytes": video_service.VIDEO_MAX_BYTES,
             "poster_max": video_service.POSTER_MAX_BYTES,
@@ -260,6 +324,16 @@ def page_new(request: Request, db: Session = Depends(get_db)):
         },
     )
     return _nostore(response)
+
+
+@router.get("/videos/new")
+def page_new(request: Request, db: Session = Depends(get_db)):
+    gate = _gate(request, db)
+    if isinstance(gate, RedirectResponse):
+        return gate
+    if ROLE_RANK[gate.membership.role] < ROLE_RANK["uploader"]:
+        raise HTTPException(status_code=403, detail=FORBIDDEN)
+    return _upload_page(request, db, gate, mode="new")
 
 
 @router.get("/videos/{video_id}")
@@ -270,7 +344,8 @@ def page_detail(video_id: int, request: Request, db: Session = Depends(get_db)):
     video = visible_video(db, family_id=gate.family.id, video_id=video_id)
     if video is None or not blob_exists(video):
         return _missing(request, gate)
-    child = next(child for child in list_children(db, gate.family.id) if child.id == video.child_id)
+    audience = linked_children(db, family_id=gate.family.id, child_ids=video_child_ids(db, video))
+    child = audience[0]
     payload = detail_payload(db, video, gate.membership)
     response = render(
         request,
@@ -283,10 +358,28 @@ def page_detail(video_id: int, request: Request, db: Session = Depends(get_db)):
             "payload": payload,
             "who": display_who(payload["author"]),
             "can_delete": can_delete(gate.membership, video),
+            "can_edit": can_edit_assoc(gate.membership, video),
+            "audience": audience,
             "show_nav": False,
         },
     )
     return _nostore(response)
+
+
+@router.get("/videos/{video_id}/edit")
+def page_edit(video_id: int, request: Request, db: Session = Depends(get_db)):
+    gate = _gate(request, db)
+    if isinstance(gate, RedirectResponse):
+        return gate
+    if ROLE_RANK[gate.membership.role] < ROLE_RANK["uploader"]:
+        raise HTTPException(status_code=403, detail=FORBIDDEN)
+    video = visible_video(db, family_id=gate.family.id, video_id=video_id)
+    if video is None or not blob_exists(video):
+        return _missing(request, gate)
+    if not can_edit_assoc(gate.membership, video):
+        raise HTTPException(status_code=403, detail=FORBIDDEN)
+    payload = detail_payload(db, video, gate.membership)
+    return _upload_page(request, db, gate, mode="edit", video=video, payload=payload)
 
 
 def _media_headers(video, suffix: str, *, length: int, status_range: str | None) -> dict:
