@@ -16,6 +16,7 @@ from app.deps import MemberCtx, require_member
 from app.routers.pages import _flags, gate_member, render
 from app.services.children import list_children
 from app.services.clock import shanghai_today
+from app.services.assoc import journal_child_ids, linked_children
 from app.services.journals import (
     JournalError,
     create_journal,
@@ -119,21 +120,28 @@ def _write_page(
     journal=None,
 ):
     children = list_children(db, gate.family.id)
-    selected = None
-    if journal is not None:
-        selected = next((child for child in children if child.id == journal.child_id), None)
+    preselect = False
+    selected_ids: list[int] = []
+    payload = detail_payload(db, journal, gate.membership) if journal is not None else None
+    if journal is not None and payload is not None:
+        selected_ids = list(payload.get("child_ids") or [])
     else:
         raw = request.query_params.get("child")
         if raw and raw.isdigit():
-            selected = next((child for child in children if child.id == int(raw)), None)
-        if selected is None and len(children) == 1:
-            selected = children[0]
-    payload = detail_payload(db, journal, gate.membership) if journal is not None else None
+            chosen = next((child for child in children if child.id == int(raw)), None)
+            if chosen is not None:
+                selected_ids = [chosen.id]
+                preselect = len(children) > 1
+        if not selected_ids and len(children) == 1:
+            selected_ids = [children[0].id]
+    selected = next((child for child in children if child.id == (selected_ids[0] if selected_ids else -1)), None)
+    pre_name = selected.name if preselect and selected is not None else (selected.name if journal is not None and selected is not None and len(children) > 1 else "")
     photos = payload["photos"] if payload else []
     initial = {
         "body": journal.body if journal is not None else "",
         "date": journal.on_date.isoformat() if journal is not None else shanghai_today().isoformat(),
-        "childId": selected.id if selected is not None else None,
+        "childId": selected_ids[0] if selected_ids else None,
+        "childIds": selected_ids,
         "photoIds": [slot["id"] for slot in photos if slot.get("id")],
         "photos": [
             {"id": slot["id"], "url": slot["media_url"]} for slot in photos if slot.get("id")
@@ -151,6 +159,8 @@ def _write_page(
             "family": gate.family,
             "children": children,
             "selected": selected,
+            "selected_ids": selected_ids,
+            "pre_name": pre_name,
             "mode": mode,
             "journal": journal,
             "today": shanghai_today().isoformat(),
@@ -246,7 +256,8 @@ def page_detail(journal_id: int, request: Request, db: Session = Depends(get_db)
     journal = visible_journal(db, family_id=gate.family.id, journal_id=journal_id)
     if journal is None:
         return _missing(request, gate)
-    child = next(child for child in list_children(db, gate.family.id) if child.id == journal.child_id)
+    audience = linked_children(db, family_id=gate.family.id, child_ids=journal_child_ids(db, journal))
+    child = audience[0]
     payload = detail_payload(db, journal, gate.membership)
     can_edit, can_delete = rights(gate.membership, journal)
     kind = request.query_params.get("jtoast")

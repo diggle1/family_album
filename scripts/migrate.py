@@ -22,11 +22,13 @@ from app.models import (  # noqa: F401
     Family,
     Invite,
     Journal,
+    JournalChild,
     JournalPhoto,
     Membership,
     Photo,
     User,
     Video,
+    VideoChild,
 )
 
 
@@ -37,7 +39,9 @@ def main() -> None:
     else:
         print("photos.storage_backend present")
     print("journals ready")
+    print("journal_children ready")
     print("videos ready")
+    print("video_children ready")
     print("schema ready")
 
 

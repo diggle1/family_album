@@ -35,6 +35,7 @@ from app.services.export import (
     missing_header_value,
 )
 from app.services.journals import count_my_journals, export_markdown
+from app.services.videos import video_export_sidecars
 from app.services.photos import iter_stream, open_photo
 from app.routers.pages import _flags, gate_member, render
 
@@ -236,8 +237,12 @@ async def export_zip(
     items = list_my_photos(db, family_id=family_id, uploader_id=user_id)
     items.extend(list_my_videos(db, family_id=family_id, uploader_id=user_id))
     markdown = export_markdown(db, family_id=family_id, author_id=user_id)
+    sidecars = video_export_sidecars(db, family_id=family_id, uploader_id=user_id)
     db.rollback()
-    extras = [("日志.md", markdown.encode("utf-8"))] if markdown else None
+    extras: list[tuple[str, bytes]] = []
+    if markdown:
+        extras.append(("日志.md", markdown.encode("utf-8")))
+    extras.extend(sidecars)
     if not items and not extras:
         return _frameable(JSONResponse({"detail": "no_photos", "count": 0}, status_code=404))
     key = (family_id, user_id)

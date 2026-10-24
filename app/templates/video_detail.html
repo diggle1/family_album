@@ -7,7 +7,7 @@
      {% for key, value in video_copy.items() %}data-copy-{{ key }}="{{ value }}" {% endfor %}>
   <div class="wtop">
     <a class="back" href="/?child={{ child.id }}">←</a>
-    <div class="title">{{ child.name }}<span class="meta">{{ payload.age_label }}</span></div>
+    <div class="title">{% if payload.children|length > 1 %}{{ multi_child.d_kids_label }}{% else %}{{ child.name }}{% endif %}<span class="meta">{% if payload.children|length <= 1 %}{{ payload.age_label }}{% endif %}</span></div>
     {% if can_delete %}
     <button type="button" class="more-btn" data-video-more aria-label="{{ video_copy.m_delete }}">⋯</button>
     {% else %}
@@ -31,7 +31,20 @@
       </div>
     </div>
   </div>
+  {% if payload.children|length > 1 %}
+  <div class="dkids">
+    <div class="lbl">{{ multi_child.d_kids_label }}</div>
+    {% for kid in payload.children %}
+    <div class="row">{{ multi_child.d_kid_age.format(name=kid.name, age=kid.age_label) }}</div>
+    {% endfor %}
+  </div>
+  <p class="sign">{{ multi_child.d_sign_v.format(who=who, date=payload.date_label) }}</p>
+  {% else %}
   <p class="sign">{{ video_copy.d_sign.format(who=who, name=child.name, date=payload.date_label) }}</p>
+  {% endif %}
+  {% if can_edit %}
+  <p class="sign"><a href="/videos/{{ video.id }}/edit">{{ multi_child.w_submit_edit }}</a></p>
+  {% endif %}
   {% if can_delete %}
   <div class="sheet-mask" id="delete-sheet" hidden>
     <div class="sheet">

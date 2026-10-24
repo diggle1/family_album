@@ -22,9 +22,11 @@
   </div>
   {% endif %}
   <div class="dhead">
+    {% if payload.children|length <= 1 %}
     <span class="avatar xl">{{ child.name|initial }}</span>
     <div class="name">{{ child.name }}</div>
     <div class="age">{{ payload.age_label }}</div>
+    {% endif %}
     <div class="date">{{ payload.date_label }}</div>
   </div>
   <div class="dbody">{{ payload.body }}</div>
@@ -41,7 +43,17 @@
     </div>
   </div>
   {% endif %}
+  {% if payload.children|length > 1 %}
+  <div class="dkids">
+    <div class="lbl">{{ multi_child.d_kids_label }}</div>
+    {% for kid in payload.children %}
+    <div class="row">{{ multi_child.d_kid_age.format(name=kid.name, age=kid.age_label) }}</div>
+    {% endfor %}
+  </div>
+  <p class="sign">{{ multi_child.d_sign_j.format(who=who, date=payload.date_label) }}</p>
+  {% else %}
   <p class="sign">{{ journal_copy.d_sign.format(who=who, name=child.name, date=payload.date_label) }}</p>
+  {% endif %}
   {% if can_delete %}
   <div class="sheet-mask" id="delete-sheet" hidden>
     <div class="sheet">

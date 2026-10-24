@@ -17,10 +17,22 @@ from sqlalchemy import and_, delete, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.constants import FORBIDDEN, JOURNAL, JOURNAL_BODY_MAX, ROLE_RANK
+from app.constants import FORBIDDEN, JOURNAL, JOURNAL_BODY_MAX, MULTI_CHILD, ROLE_RANK
 from app.deps import MemberCtx
-from app.models import Child, Journal, JournalPhoto, Membership, Photo, User
-from app.services.children import build_timeline, child_in_family
+from app.models import Child, Journal, JournalChild, JournalPhoto, Membership, Photo, User
+from app.services.assoc import (
+    ChildSetError,
+    children_payload,
+    clear_journal_children,
+    ids_of,
+    journal_child_ids,
+    journal_still_in_family,
+    linked_children,
+    parse_child_id_list,
+    replace_journal_children,
+    resolve_children,
+)
+from app.services.children import build_timeline, child_in_family, list_children
 from app.services.clock import age_label, as_utc, date_label, isoformat, shanghai_today, utcnow, weekday_zh
 
 logger = logging.getLogger("family_album.journal")
@@ -86,10 +98,26 @@ def _parse_day(value: object) -> date | None:
 
 @dataclass(frozen=True)
 class ValidJournal:
-    child: Child
+    children: list[Child]
     on_date: date
     body: str
     photo_ids: list[int]
+
+    @property
+    def child(self) -> Child:
+        return self.children[0]
+
+
+def _child_messages(payload: dict) -> tuple[str, list[int] | None, int | None]:
+    """Return (mode, ids, legacy_id). A present child_ids array wins over child_id."""
+    if "child_ids" in payload:
+        return "list", parse_child_id_list(payload.get("child_ids")), None
+    if "child_id" not in payload or payload.get("child_id") is None:
+        return "legacy", None, None
+    parsed = _as_int(payload.get("child_id"))
+    if parsed is None:
+        return "bad_legacy", None, None
+    return "legacy", None, parsed
 
 
 def validate_payload(db: Session, *, family_id: int, payload: dict) -> ValidJournal:
@@ -107,23 +135,48 @@ def validate_payload(db: Session, *, family_id: int, payload: dict) -> ValidJour
             JOURNAL["err_too_long"].format(n=count - JOURNAL_BODY_MAX),
             {"count": count, "max": JOURNAL_BODY_MAX},
         )
-    if "child_id" not in payload or payload.get("child_id") is None:
-        raise JournalError(400, "child_required", JOURNAL["err_no_child"])
-    child_id = _as_int(payload.get("child_id"))
-    child = child_in_family(db, family_id=family_id, child_id=child_id) if child_id is not None else None
-    if child is None:
+    mode, child_ids, legacy_id = _child_messages(payload)
+    used_list = mode == "list"
+    if mode == "bad_legacy":
         raise JournalError(400, "child_not_found", JOURNAL["e_kid_gone"])
+    if used_list:
+        required = MULTI_CHILD["err_no_child"]
+        missing = MULTI_CHILD["e_kid_gone"]
+    else:
+        required = JOURNAL["err_no_child"]
+        missing = JOURNAL["e_kid_gone"]
+    try:
+        resolved = resolve_children(
+            db,
+            family_id=family_id,
+            child_ids=child_ids,
+            legacy_child_id=legacy_id,
+            used_list=used_list,
+            required_detail=required,
+            missing_detail=missing,
+            birth_detail=JOURNAL["err_date_birth"],
+        )
+    except ChildSetError as exc:
+        raise JournalError(400, exc.code, exc.detail) from exc
     on_date = _parse_day(payload.get("on_date"))
     if on_date is None:
         raise JournalError(400, "date_invalid", JOURNAL["err_date_future"])
     if on_date > shanghai_today():
         raise JournalError(400, "date_future", JOURNAL["err_date_future"])
-    if on_date < child.birth_date:
-        raise JournalError(
-            400,
-            "date_before_birth",
-            JOURNAL["err_date_birth"].format(name=child.name),
+    try:
+        resolved = resolve_children(
+            db,
+            family_id=family_id,
+            child_ids=child_ids,
+            legacy_child_id=legacy_id,
+            used_list=used_list,
+            required_detail=required,
+            missing_detail=missing,
+            birth_detail=JOURNAL["err_date_birth"],
+            on_date=on_date,
         )
+    except ChildSetError as exc:
+        raise JournalError(400, exc.code, exc.detail) from exc
     raw_photos = payload.get("photo_ids", [])
     if raw_photos is None:
         raw_photos = []
@@ -149,7 +202,12 @@ def validate_payload(db: Session, *, family_id: int, payload: dict) -> ValidJour
             JOURNAL["err_photo_foreign"],
             {"invalid_ids": invalid},
         )
-    return ValidJournal(child=child, on_date=on_date, body=normalize_body(raw_body), photo_ids=photo_ids)
+    return ValidJournal(
+        children=resolved.children,
+        on_date=on_date,
+        body=normalize_body(raw_body),
+        photo_ids=photo_ids,
+    )
 
 
 def _invalid_photo_ids(db: Session, family_id: int, photo_ids: list[int]) -> list[int]:
@@ -229,6 +287,20 @@ def _child_brief(child: Child) -> dict:
     return {"id": child.id, "name": child.name}
 
 
+def _audience(db: Session, journal: Journal) -> list[Child]:
+    return linked_children(db, family_id=journal.family_id, child_ids=journal_child_ids(db, journal))
+
+
+def _with_children(payload: dict, children: list[Child], on_date: date) -> dict:
+    briefs = children_payload(children, on_date)
+    payload["children"] = briefs
+    payload["child_ids"] = ids_of(children)
+    if children:
+        payload["child"] = _child_brief(children[0])
+        payload["age_label"] = age_label(children[0].birth_date, on_date)
+    return payload
+
+
 def detail_payload(
     db: Session,
     journal: Journal,
@@ -236,18 +308,17 @@ def detail_payload(
     *,
     replayed: bool = False,
 ) -> dict:
-    child = db.get(Child, journal.child_id)
-    # Caller already hid journals whose child left the family. Keep a guard.
-    if child is None or child.family_id != journal.family_id:
+    children = _audience(db, journal)
+    if not children:
         raise not_found()
     author = _author(db, journal)
     can_edit, can_delete = rights(viewer, journal)
-    return {
+    payload = {
         "id": journal.id,
-        "child": _child_brief(child),
+        "child": _child_brief(children[0]),
         "on_date": journal.on_date.isoformat(),
         "date_label": date_label(journal.on_date),
-        "age_label": age_label(child.birth_date, journal.on_date),
+        "age_label": age_label(children[0].birth_date, journal.on_date),
         "body": journal.body,
         "author": author,
         "photos": _slots(db, journal),
@@ -256,6 +327,7 @@ def detail_payload(
         "updated_at": _stamp(journal.updated_at),
         "replayed": replayed,
     }
+    return _with_children(payload, children, journal.on_date)
 
 
 def summary_payload(db: Session, journal: Journal, viewer: Membership, child: Child) -> dict:
@@ -263,12 +335,13 @@ def summary_payload(db: Session, journal: Journal, viewer: Membership, child: Ch
     slots = _slots(db, journal)
     valid = [slot for slot in slots if not slot["deleted"]]
     can_edit, can_delete = rights(viewer, journal)
-    return {
+    children = _audience(db, journal) or [child]
+    payload = {
         "id": journal.id,
-        "child": _child_brief(child),
+        "child": _child_brief(children[0]),
         "on_date": journal.on_date.isoformat(),
         "date_label": date_label(journal.on_date),
-        "age_label": age_label(child.birth_date, journal.on_date),
+        "age_label": age_label(children[0].birth_date, journal.on_date),
         "first_lines": journal.body.split("\n")[:3],
         "cover": valid[0] if valid else None,
         "photo_count_valid": len(valid),
@@ -277,13 +350,14 @@ def summary_payload(db: Session, journal: Journal, viewer: Membership, child: Ch
         "can_delete": can_delete,
         "updated_at": _stamp(journal.updated_at),
     }
+    return _with_children(payload, children, journal.on_date)
 
 
 def visible_journal(db: Session, *, family_id: int, journal_id: int) -> Journal | None:
     journal = db.get(Journal, journal_id)
     if journal is None or journal.family_id != family_id or journal.deleted_at is not None:
         return None
-    if child_in_family(db, family_id=family_id, child_id=journal.child_id) is None:
+    if not journal_still_in_family(db, journal):
         return None
     return journal
 
@@ -295,10 +369,10 @@ def _by_key(db: Session, *, author_id: int, key: str) -> Journal | None:
 
 
 def _apply(db: Session, journal: Journal, draft: ValidJournal) -> None:
-    journal.child_id = draft.child.id
     journal.on_date = draft.on_date
     journal.body = draft.body
     journal.updated_at = utcnow()
+    replace_journal_children(db, journal, draft.children)
     _set_photos(db, journal, draft.photo_ids)
 
 
@@ -331,6 +405,7 @@ def create_journal(db: Session, ctx: MemberCtx, key: str, payload: dict) -> tupl
     try:
         db.add(journal)
         db.flush()
+        replace_journal_children(db, journal, draft.children)
         _set_photos(db, journal, draft.photo_ids)
         db.commit()
     except IntegrityError:
@@ -374,6 +449,7 @@ def delete_journal(db: Session, ctx: MemberCtx, journal_id: int) -> None:
     journal.deleted_at = now
     journal.updated_at = now
     db.execute(delete(JournalPhoto).where(JournalPhoto.journal_id == journal.id))
+    clear_journal_children(db, journal.id)
     db.commit()
 
 
@@ -388,12 +464,14 @@ def list_journals(
     child = child_in_family(db, family_id=ctx.family.id, child_id=child_id)
     if child is None:
         raise not_found()
+    linked = select(JournalChild.journal_id).where(JournalChild.child_id == child.id)
+    unlinked = ~Journal.id.in_(select(JournalChild.journal_id))
     stmt = (
         select(Journal)
         .where(
             Journal.family_id == ctx.family.id,
-            Journal.child_id == child.id,
             Journal.deleted_at.is_(None),
+            or_(Journal.id.in_(linked), and_(unlinked, Journal.child_id == child.id)),
         )
         .order_by(Journal.on_date.desc(), Journal.id.desc())
     )
@@ -426,16 +504,18 @@ def _card(db: Session, journal: Journal, child: Child) -> dict:
     valid = [slot for slot in slots if not slot["deleted"]]
     lines = journal.body.split("\n")
     rest = " ".join(line for line in lines[1:3] if line != "")
+    audience = _audience(db, journal) or [child]
     return {
         "id": journal.id,
         "day": journal.on_date.day,
         "month": journal.on_date.month,
-        "age_label": age_label(child.birth_date, journal.on_date),
+        "age_label": age_label(audience[0].birth_date, journal.on_date),
         "quote": lines[0] if lines else "",
         "rest": rest,
         "film": valid[:3],
         "more": max(0, len(valid) - 3),
         "who": display_who(author),
+        "children": children_payload(audience, journal.on_date),
     }
 
 
@@ -447,12 +527,14 @@ def build_feed(db: Session, child: Child) -> dict:
     from app.services.videos import videos_for_feed
 
     base = build_timeline(db, child)
+    linked = select(JournalChild.journal_id).where(JournalChild.child_id == child.id)
+    unlinked = ~Journal.id.in_(select(JournalChild.journal_id))
     rows = list(
         db.scalars(
             select(Journal).where(
                 Journal.family_id == child.family_id,
-                Journal.child_id == child.id,
                 Journal.deleted_at.is_(None),
+                or_(Journal.id.in_(linked), and_(unlinked, Journal.child_id == child.id)),
             )
         ).all()
     )
@@ -501,6 +583,80 @@ def build_feed(db: Session, child: Child) -> dict:
     return base
 
 
+def _empty_day(on_date: date, *, age: str) -> dict:
+    return {
+        "taken_on": on_date.isoformat(),
+        "date_label": date_label(on_date),
+        "weekday": weekday_zh(on_date),
+        "age_label": age,
+        "photos": [],
+        "byline": "",
+        "journals": [],
+        "videos": [],
+    }
+
+
+def build_family_feed(db: Session, family_id: int) -> dict:
+    """One card per journal or video. Photos stay one-child records and are merged by day."""
+    from app.services.videos import family_videos_for_feed
+
+    children = list_children(db, family_id)
+    by_date: dict[str, dict] = {}
+    photo_count = 0
+    for child in children:
+        base = build_timeline(db, child)
+        photo_count += int(base["child"]["photo_count"])
+        for day in base["days"]:
+            bucket = by_date.get(day["taken_on"])
+            if bucket is None:
+                bucket = _empty_day(date.fromisoformat(day["taken_on"]), age="")
+                by_date[day["taken_on"]] = bucket
+            bucket["photos"].extend(day["photos"])
+            if day.get("byline"):
+                bucket["byline"] = day["byline"] if not bucket["byline"] else bucket["byline"]
+    rows = [
+        row
+        for row in db.scalars(
+            select(Journal).where(Journal.family_id == family_id, Journal.deleted_at.is_(None))
+        ).all()
+        if journal_still_in_family(db, row)
+    ]
+    rows.sort(key=lambda row: (as_utc(row.created_at), row.id), reverse=True)
+    seen: set[int] = set()
+    for journal in rows:
+        if journal.id in seen:
+            continue
+        seen.add(journal.id)
+        key = journal.on_date.isoformat()
+        bucket = by_date.get(key)
+        if bucket is None:
+            bucket = _empty_day(journal.on_date, age="")
+            by_date[key] = bucket
+        anchor = _audience(db, journal)[0]
+        bucket["journals"].append(_card(db, journal, anchor))
+    video_count = 0
+    for key, cards in family_videos_for_feed(db, family_id).items():
+        bucket = by_date.get(key)
+        if bucket is None:
+            bucket = _empty_day(date.fromisoformat(key), age="")
+            by_date[key] = bucket
+        bucket["videos"] = cards
+        video_count += len(cards)
+    days = sorted(by_date.values(), key=lambda day: day["taken_on"], reverse=True)
+    return {
+        "child": {
+            "id": None,
+            "name": "",
+            "birth_date": "",
+            "age_label": "",
+            "photo_count": photo_count,
+        },
+        "days": days,
+        "video_count": video_count,
+        "family_view": True,
+    }
+
+
 def count_my_journals(db: Session, *, family_id: int, author_id: int) -> int:
     value = db.scalar(
         select(func.count())
@@ -536,12 +692,17 @@ def export_markdown(db: Session, *, family_id: int, author_id: int) -> str | Non
         return None
     author = db.get(User, author_id)
     author_name = author.name if author is not None and author.name else "未命名"
-    child_ids = {row.child_id for row in rows}
+    wanted: set[int] = set()
+    linked_ids: dict[int, list[int]] = {}
+    for row in rows:
+        linked = journal_child_ids(db, row)
+        linked_ids[row.id] = linked
+        wanted.update(linked)
     children = {
         child.id: child
-        for child in db.scalars(select(Child).where(Child.id.in_(child_ids))).all()
+        for child in db.scalars(select(Child).where(Child.id.in_(wanted))).all()
         if child.family_id == family_id
-    }
+    } if wanted else {}
     link_rows = db.scalars(
         select(JournalPhoto)
         .where(JournalPhoto.journal_id.in_([row.id for row in rows]))
@@ -557,8 +718,11 @@ def export_markdown(db: Session, *, family_id: int, author_id: int) -> str | Non
         photos = {photo.id: photo for photo in db.scalars(select(Photo).where(Photo.id.in_(photo_ids))).all()}
     parts = ["# 成长日志", ""]
     for row in rows:
-        child = children.get(row.child_id)
-        child_line = child.name if child is not None else CHILD_GONE
+        linked = linked_ids.get(row.id) or [row.child_id]
+        child_names = [
+            children[child_id].name if child_id in children else CHILD_GONE for child_id in linked
+        ]
+        child_line = child_names[0] if len(child_names) == 1 else "、".join(child_names)
         names: list[str] = []
         for link in links.get(row.id, []):
             photo = photos.get(link.photo_id)
@@ -571,6 +735,8 @@ def export_markdown(db: Session, *, family_id: int, author_id: int) -> str | Non
         parts.append(f"作者：{author_name}")
         parts.append(f"日期：{row.on_date.isoformat()}")
         parts.append(f"孩子：{child_line}")
+        if len(linked) > 1:
+            parts.append("child_ids：" + ",".join(str(child_id) for child_id in linked))
         parts.append(f"引用：{ref_line}")
         parts.append("")
         parts.append(row.body)

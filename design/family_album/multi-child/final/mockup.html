@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>kids时光机 · 多孩子关联 v2026.10.25.1 · FINAL「兄弟姐妹条」</title>
+<style>
+:root{
+  --bg:#FBF7F2; --surface:#FFFFFF; --line:#EDE5DC;
+  --ink:#2B2420; --ink2:#6F635A; --ink3:#9A8E85;
+  --accent:#C8553D; --accent-soft:#F8E6DF;
+  --family:#2F6F6A; --family-soft:#E4F0EE;
+  --ok:#3B7D4F; --ok-soft:#E3F1E6; --err:#B3261E; --err-soft:#FBE4E2;
+  --warn:#9A6200; --warn-soft:#FFF3D6;
+  --film:#E8E2DA; --sprocket:#C8C0B6;
+  --anno:#2563EB;
+  --r:14px;
+  --font:"PingFang SC","Noto Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:#E5DFD7;color:var(--ink);padding:28px 20px 100px}
+h1.page{font-size:22px;font-weight:800;letter-spacing:.02em}
+p.lead{color:var(--ink2);font-size:13px;margin:6px 0 10px;line-height:1.55;max-width:1100px}
+.claim{display:inline-block;background:var(--accent-soft);color:var(--accent);font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px;margin-bottom:12px}
+.claim2{display:inline-block;background:var(--family-soft);color:var(--family);font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px;margin-bottom:18px;margin-left:6px}
+.nav{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:22px;max-width:1700px}
+.nav button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:8px 14px;font-size:12px;font-family:inherit;color:var(--ink2);cursor:pointer}
+.nav button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.group{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start}
+.group.hide{display:none}
+.gtitle{width:100%;font-size:15px;font-weight:800;color:var(--ink);margin-bottom:-12px}
+.frame{width:390px}
+.frame .cap{font-size:12px;color:var(--ink2);font-weight:600;margin-bottom:8px;min-height:34px;line-height:1.45}
+.phone{width:390px;height:760px;background:var(--surface);border-radius:28px;overflow:hidden;position:relative;
+  box-shadow:0 0 0 8px #1f1b18,0 18px 40px rgba(0,0,0,.18);display:flex;flex-direction:column}
+.phone.paper{background:var(--bg)}
+.status{height:28px;flex:none;font-size:12px;display:flex;justify-content:space-between;padding:6px 22px 0;color:var(--ink)}
+.scroll{flex:1;overflow:hidden;position:relative}
+.top{display:flex;align-items:center;gap:10px;padding:8px 16px 10px;flex:none}
+.top .title{font-size:18px;font-weight:700;flex:1;min-width:0}
+.top .meta{font-size:12px;color:var(--ink2);font-weight:400;display:block;margin-top:2px}
+.ib{border:0;background:transparent;font-size:20px;width:44px;height:44px;display:grid;place-items:center;font-family:inherit;cursor:pointer;color:var(--ink);flex:none}
+.avatar{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-size:15px;font-weight:700;color:#fff;flex:none;background:#E39A5B}
+.avatar.k2{background:#7FA36B}
+.avatar.k3{background:#6B8FA3}
+.avatar.sm{width:28px;height:28px;font-size:12px}
+.avatar.xl{width:56px;height:56px;font-size:22px;box-shadow:0 0 0 3px #fff,0 0 0 4px var(--line)}
+.btn{display:block;width:100%;height:48px;border-radius:12px;background:var(--accent);color:#fff;font-size:16px;font-weight:600;border:0;text-align:center;line-height:48px;font-family:inherit;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn.text{background:transparent;color:var(--ink2);font-size:14px;font-weight:600;height:40px;line-height:40px}
+.btn.danger{background:var(--err)}
+.btn[disabled]{opacity:.55}
+.hint{font-size:12px;color:var(--ink2);line-height:1.5}
+.center{display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:24px 32px;height:100%}
+.center h3{font-size:18px;margin:16px 0 8px}.center p{font-size:14px;color:var(--ink2);line-height:1.6;margin-bottom:12px}
+.illus{width:96px;height:96px;border-radius:50%;background:var(--accent-soft);display:grid;place-items:center;font-size:40px}
+.illus.mute{background:#EFE9E1}.illus.s{width:72px;height:72px;font-size:32px}
+.toast{position:absolute;left:50%;transform:translateX(-50%);bottom:96px;background:#2B2420;color:#fff;font-size:14px;padding:10px 16px;border-radius:20px;white-space:nowrap;max-width:350px;z-index:6;box-shadow:0 4px 12px rgba(0,0,0,.2)}
+.toast.top{top:60px;bottom:auto}
+.anno{position:absolute;border:1.5px dashed var(--anno);border-radius:6px;pointer-events:none;z-index:7}
+.anno-tag{position:absolute;background:var(--anno);color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap;z-index:8;pointer-events:none;line-height:1.4}
+.note{margin-top:28px;padding:16px 18px;background:#fff;border-radius:12px;border:1px solid #ddd;max-width:1240px;font-size:13px;color:var(--ink2);line-height:1.65}
+.note b{color:var(--ink)}
+.inline-warn{font-size:13px;color:var(--warn);background:var(--warn-soft);border-radius:10px;padding:8px 10px;line-height:1.5}
+.inline-err{font-size:13px;color:var(--err);background:var(--err-soft);border-radius:10px;padding:8px 10px;line-height:1.5;font-weight:600}
+
+.wtop{display:flex;align-items:center;justify-content:space-between;padding:2px 8px 0;flex:none}
+.wtop .saved{font-size:11px;color:var(--ink3)}
+.letterhead{text-align:center;padding:4px 24px 8px;flex:none}
+.letterhead .date{display:inline-flex;align-items:center;gap:6px;margin-top:4px;font-size:13px;color:var(--ink2);border-bottom:1px dashed var(--ink3);padding-bottom:2px;cursor:pointer}
+.rule{height:1px;background:var(--line);margin:0 24px;flex:none}
+.body{flex:1;overflow:hidden;padding:12px 24px 0;position:relative}
+.body .txt{font-size:17px;line-height:2;color:var(--ink);white-space:pre-wrap;word-break:break-all}
+.body .txt.ph{color:var(--ink3)}
+.count{font-size:11px;color:var(--ink3);text-align:right;padding:4px 24px 0;flex:none}
+.film{padding:8px 24px 10px;flex:none}
+.film .lbl{font-size:12px;color:var(--ink2);font-weight:600;margin-bottom:6px}
+.film .row{display:flex;gap:8px;overflow:hidden;padding:6px 8px;background:#2B2420;border-radius:6px}
+.fr{width:48px;height:48px;border-radius:3px;flex:none}
+.fr.add{background:transparent;border:1.5px dashed #8b7f77;color:#E8DED4;display:grid;place-items:center;font-size:10px;text-align:center;line-height:1.3}
+.p1{background:linear-gradient(145deg,#F2C4A0,#E8A07A)}.p2{background:linear-gradient(145deg,#B9D3C6,#7FA59A)}.p3{background:linear-gradient(145deg,#F3DFA2,#D9B65E)}
+.p4{background:linear-gradient(145deg,#C9C3E6,#9A90C9)}.p5{background:linear-gradient(145deg,#F0B8C0,#D98892)}
+.wfoot{flex:none;padding:10px 16px 14px;border-top:1px solid var(--line);background:var(--surface)}
+.wfoot .inline-err,.wfoot .inline-warn{margin-bottom:8px}
+
+/* ===== 兄弟姐妹条 ===== */
+.sib{flex:none;padding:8px 16px 10px;background:var(--bg)}
+.sib .slbl{font-size:12px;font-weight:700;color:var(--ink2);margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
+.sib .slbl .hint{font-weight:500;color:var(--ink3);font-size:11px}
+.sib .row{display:flex;gap:16px;overflow:hidden;padding:2px 4px 4px}
+.sib .chip{display:flex;flex-direction:column;align-items:center;gap:6px;width:64px;flex:none;position:relative}
+.sib .chip .av{width:56px;height:56px;border-radius:50%;display:grid;place-items:center;font-size:20px;font-weight:800;color:#fff;border:2px solid var(--line);box-sizing:border-box;position:relative}
+.sib .chip.on .av{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.sib .chip .ck{position:absolute;right:-2px;bottom:-2px;width:18px;height:18px;border-radius:50%;background:var(--accent);color:#fff;font-size:11px;font-weight:800;display:none;place-items:center;border:2px solid #fff;line-height:1}
+.sib .chip.on .ck{display:grid}
+.sib .chip .nm{font-size:12px;font-weight:700;color:var(--ink2)}
+.sib .chip.on .nm{color:var(--ink)}
+.sib .chip.last-only .av{cursor:default}
+.sib.single .slbl .hint{display:none}
+
+/* 叠头像堆 + 旁当日年龄（卡面；写页条不叠年龄） */
+.stack{display:inline-flex;align-items:center;vertical-align:middle}
+.stack .sa{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:10px;font-weight:800;color:#fff;border:2px solid #fff;margin-left:-8px;box-sizing:border-box}
+.stack .sa:first-child{margin-left:0}
+.stack .more{width:24px;height:24px;border-radius:50%;background:#EFE9E1;color:var(--ink2);font-size:10px;font-weight:800;display:grid;place-items:center;border:2px solid #fff;margin-left:-8px}
+.stack-ages{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;justify-content:flex-end}
+.stack-ages .ag{font-size:10px;font-weight:700;color:var(--accent);background:var(--accent-soft);padding:1px 6px;border-radius:999px;white-space:nowrap}
+
+.tabs2{display:flex;gap:8px;padding:0 16px 10px;flex:none}
+.tabs2 span{flex:1;text-align:center;padding:9px 0;border-radius:999px;font-size:14px;font-weight:700;color:var(--ink2)}
+.tabs2 span.on{background:var(--family);color:#fff}
+.tl{padding:6px 16px 16px;background:var(--bg);height:100%}
+.dayh{display:flex;align-items:center;gap:8px;margin:12px 0 8px;font-size:15px;font-weight:800}
+.agechip{font-size:11px;font-weight:700;color:var(--accent);background:var(--accent-soft);padding:2px 8px;border-radius:999px}
+.jcard{display:flex;gap:12px;background:#fff;border-radius:12px;padding:14px 14px 12px 0;margin:10px 0;position:relative;border:1px solid var(--line)}
+.jcard .rail{width:56px;flex:none;display:flex;flex-direction:column;align-items:center;position:relative}
+.jcard .rail::after{content:"";position:absolute;top:0;bottom:0;left:50%;width:2px;background:var(--accent);opacity:.55;transform:translateX(-50%);border-radius:1px}
+.jcard .rail .d{position:relative;z-index:1;background:#fff;text-align:center;font-size:11px;color:var(--ink2);line-height:1.3;padding:2px 0 4px}
+.jcard .rail .d b{display:block;font-size:17px;color:var(--ink);font-weight:800}
+.jcard .c{flex:1;min-width:0}
+.jcard .q{font-size:17px;font-weight:700;line-height:1.5;color:var(--ink);display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+.jcard .q::before{content:"“";color:var(--accent);margin-right:1px}
+.jcard .r{font-size:13px;color:var(--ink2);line-height:1.65;margin-top:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.mfilm{display:flex;gap:4px;margin-top:10px}
+.mfilm .m{width:52px;height:40px;border-radius:4px}
+.jcard .who{font-size:11px;color:var(--ink3);margin-top:8px;display:flex;align-items:center;gap:8px;justify-content:space-between}
+.jcard .who-col{display:flex;flex-direction:column;align-items:flex-end}
+.jcard.hl{box-shadow:0 0 0 2px var(--accent),0 6px 18px rgba(200,85,61,.18)}
+.writebtn{display:inline-flex;align-items:center;gap:4px;height:36px;padding:0 12px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-size:13px;font-weight:700;border:0;font-family:inherit}
+.fab{position:absolute;right:20px;bottom:76px;width:56px;height:56px;border-radius:50%;background:var(--family);color:#fff;font-size:28px;display:grid;place-items:center;box-shadow:0 6px 16px rgba(0,0,0,.2);z-index:3}
+.tabbar{flex:none;height:56px;border-top:1px solid var(--line);background:var(--surface);display:flex}
+.tabbar .tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;color:var(--ink3)}
+.tabbar .tab.on{color:var(--ink);font-weight:700}
+.tabbar .dot{width:4px;height:4px;border-radius:50%;background:transparent}
+.tabbar .tab.on .dot{background:var(--accent)}
+.sk{background:linear-gradient(90deg,#EFE9E1 25%,#F6F1EA 50%,#EFE9E1 75%);background-size:200% 100%;animation:sh 1.2s linear infinite;border-radius:6px}
+@keyframes sh{to{background-position:-200% 0}}
+
+.vcard{background:var(--film);border-radius:14px;padding:10px 14px;margin:10px 0;position:relative}
+.vcard .sprockets{position:absolute;top:12px;bottom:12px;width:6px;display:flex;flex-direction:column;justify-content:space-around}
+.vcard .sprockets.l{left:4px}.vcard .sprockets.r{right:4px}
+.vcard .sprockets i{width:5px;height:5px;border-radius:50%;background:var(--sprocket);display:block}
+.vcard .win{margin:0 12px;border-radius:10px;aspect-ratio:16/9;background:linear-gradient(145deg,#C9C3E6,#7FA59A);position:relative;overflow:hidden}
+.vcard .dur{position:absolute;right:8px;bottom:8px;background:rgba(43,36,32,.78);color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px}
+.vcard .meta{display:flex;align-items:flex-start;justify-content:space-between;margin:8px 12px 0;font-size:11px;color:var(--ink3)}
+.vcard .meta-col{display:flex;flex-direction:column;align-items:flex-end}
+
+.dhead{text-align:center;padding:4px 24px 10px}
+.dhead .date{font-size:12px;color:var(--ink2);margin-top:4px}
+.dbody{padding:14px 24px 8px;font-size:16px;line-height:2;white-space:pre-wrap;color:var(--ink)}
+.dkids{padding:8px 24px 4px}
+.dkids .lbl{font-size:12px;font-weight:700;color:var(--ink2);margin-bottom:6px}
+.dkids .row{display:flex;align-items:center;gap:10px;padding:6px 0;border-top:1px solid var(--line)}
+.dkids .row:first-of-type{border-top:0}
+.dkids .nm{font-size:14px;font-weight:700;flex:1}
+.dkids .ag{font-size:12px;color:var(--accent);font-weight:700}
+.sign{padding:8px 24px 20px;text-align:right;font-size:12px;color:var(--ink3);line-height:1.6}
+
+.uprev{margin:8px 24px;background:var(--film);border-radius:14px;padding:10px 14px;position:relative}
+.uprev .win{margin:0 10px;border-radius:10px;aspect-ratio:16/9;background:linear-gradient(145deg,#B9D3C6,#86AFCF);display:grid;place-items:center;color:#fff;font-size:14px;font-weight:700}
+.meter{margin:8px 24px;background:var(--surface);border-radius:12px;padding:10px 12px;border:1px solid var(--line);font-size:12px;color:var(--ink2)}
+.meter .cap{float:right;color:var(--ink3)}
+</style>
+</head>
+<body>
+<h1 class="page">kids时光机 · 多孩子关联 v2026.10.25.1 · FINAL「兄弟姐妹条」</h1>
+<p class="lead">定稿。依据 cut「多孩子关联（窄）」01:08 锁 + PM 三问。视觉：信纸头下<strong>横向可点头像条</strong>（选中描边+勾；禁点掉最后一个）；时光线<strong>叠头像堆 3+n</strong>一卡不复制，叠堆旁当日年龄角标；写页条<strong>不叠年龄</strong>。与 journal「一页信纸」、video「胶片窗」连贯。所有文案出自 <code>COPY</code>。<code>#s=状态id</code> 直达，<code>#s=all</code> 平铺。示例：果果（2023-08-15）、豆豆（2025-03-01）、安安（2021-01-10）；今天 = 2026-10-25。</p>
+<span class="claim">FINAL · 兄弟姐妹条</span><span class="claim2">全家一卡 · 叠堆全显 · 禁 0 · 年龄在卡+详情 · 硬闸无变现词</span>
+<nav class="nav" id="nav"></nav>
+<div id="stage"></div>
+<div class="note" id="foot"></div>
+
+<script>
+const COPY = {
+  tab_time:'时光', tab_family:'家人', tab_settings:'设置',
+  tl_tab_child:'孩子时光', tl_tab_family:'家人相册', tl_tab_all:'全家',
+  age_fmt:'{y}岁{m}个月',
+  date_fmt:'{y}年{mo}月{d}日 {wd}',
+  date_short:'{mo}月{d}日',
+  entry_write:'写日志', entry_video:'挂视频',
+  w_autosave:'自动存在这台设备上',
+  w_placeholder:'这一天……',
+  w_count:'{n}/2000',
+  w_photos:'引用的照片 {n}/9',
+  w_photos_add:'从相册选',
+  w_submit:'记下来', w_submit_edit:'保存修改', w_sending:'正在发…',
+  u_title:'挂一段视频', u_submit:'挂到这一天', u_sending:'传着…',
+  u_picked:'已选 · {s}s / {mb} MB', meter_cap:'60 秒 · 100 MB',
+  sib_label_j:'写给谁', sib_label_v:'挂给谁',
+  sib_hint_pre:'已选{name}，可再点兄弟姐妹',
+  sib_hint_pick:'点头像选择，至少一位',
+  sib_hint_last:'至少留一位，不能全取消',
+  sib_stack_more:'+{n}',
+  card_age_tag:'{name}{age}',
+  card_by_j:'{who}写', card_by_v:'{who}传',
+  d_sign_j:'{who}写 · {date}', d_sign_v:'{who}传 · {date}',
+  d_kid_age:'{name} · {age}', d_kids_label:'这一天写给',
+  toast_posted_j:'记下了 · {date}', toast_posted_v:'挂上了 · {date}',
+  toast_edited:'改好了',
+  err_no_child:'至少选一个孩子',
+  e_kid_gone:'有的孩子已不在家里的孩子列表里，重新选再发',
+  err_demoted_j:'你现在不能写日志了，内容已帮你留着',
+  err_demoted_v:'你现在不能挂视频了',
+  e_removed:'你已不在这个家庭里',
+  ro_meta:'只读 · 只能看',
+  cancel:'取消',
+  skel_note:'加载中',
+  empty_tl_title:'还没有照片',
+  anno_vs_check:'← 横向头像条，不是 checkbox 列表',
+  anno_no_last:'禁点掉最后一个（保 ≥1）',
+  anno_ages_card:'叠堆旁当日年龄 · 写页条不叠年龄',
+  anno_stack_full:'孩视图叠堆仍显全部关联'
+};
+const f=(s,o)=>s.replace(/\{(\w+)\}/g,(_,k)=>o&&k in o?o[k]:'{'+k+'}');
+const C=(k,o)=>f(COPY[k],o);
+function age(birth,day){const [by,bm,bd]=birth,[y,m,d]=day;let mm=(y-by)*12+(m-bm);if(d<bd)mm--;const yy=Math.floor(mm/12),mo=((mm%12)+12)%12;return C('age_fmt',{y:yy,m:mo});}
+const WD=['周日','周一','周二','周三','周四','周五','周六'];
+const dfmt=(y,mo,d)=>C('date_fmt',{y,mo,d,wd:WD[new Date(y,mo-1,d).getDay()]});
+const GUO={id:'guo',n:'果果',a:'果',birth:[2023,8,15],cls:''};
+const DOU={id:'dou',n:'豆豆',a:'豆',birth:[2025,3,1],cls:'k2'};
+const ANN={id:'ann',n:'安安',a:'安',birth:[2021,1,10],cls:'k3'};
+const KIDS3=[GUO,DOU,ANN];
+const KIDS2=[GUO,DOU];
+const TODAY=[2026,10,25];
+const TEXT='今天姐妹俩第一次一起穿好了鞋，左右没穿反。\n出门前果果站在门口说"我自己来"，豆豆在旁边学着蹲。\n奶奶在旁边一直忍着没伸手。';
+const T_DOU='豆豆今天叫了第一声"姐姐"。\n果果愣了一下，然后把自己的饼干掰了一半给她。';
+const T_ANN='安安在幼儿园学会了折飞机，回家折给弟弟妹妹看。';
+
+const status='<div class="status"><span>9:41</span><span>kids时光机</span></div>';
+const tab='<div class="tabbar"><div class="tab on"><span>'+C('tab_time')+'</span><span class="dot"></span></div><div class="tab"><span>'+C('tab_family')+'</span><span class="dot"></span></div><div class="tab"><span>'+C('tab_settings')+'</span><span class="dot"></span></div></div>';
+const frame=(cap,ph)=>`<div class="frame"><div class="cap">${cap}</div>${ph}</div>`;
+function phone(inner,{toast,toastTop,tabbar,paper,extra}={}){
+  return `<div class="phone${paper?' paper':''}">${status}${inner}${tabbar?tab:''}${toast?`<div class="toast${toastTop?' top':''}">${toast}</div>`:''}${extra||''}</div>`;
+}
+const anno=(css,tag,tcss)=>`<div class="anno" style="${css}"></div>${tag?`<div class="anno-tag" style="${tcss}">${tag}</div>`:''}`;
+
+/** 兄弟姐妹条：写页不叠年龄；禁点掉最后一个 */
+function sibBar(o={}){
+  const kids=o.kids||KIDS2;
+  const sel=new Set(o.sel||[]);
+  const kind=o.v?'v':'j';
+  const single=!!o.single || kids.length===1;
+  let hint='';
+  if(single) hint='';
+  else if(o.lastOnly) hint=C('sib_hint_last');
+  else if(o.pre) hint=C('sib_hint_pre',{name:o.pre});
+  else if(sel.size===0) hint=C('sib_hint_pick');
+  else hint=C('sib_hint_pre',{name:[...sel].map(id=>kids.find(k=>k.id===id)?.n).filter(Boolean)[0]||''});
+  const chips=kids.map(k=>{
+    const on=sel.has(k.id);
+    const lastOnly=o.lastOnly && on && sel.size===1;
+    return `<div class="chip${on?' on':''}${single?' locked':''}${lastOnly?' last-only':''}"><div class="av ${k.cls}">${k.a}<span class="ck">✓</span></div><div class="nm">${k.n}</div></div>`;
+  }).join('');
+  return `<div class="sib${single?' single':''}"><div class="slbl"><span>${C(kind==='v'?'sib_label_v':'sib_label_j')}</span><span class="hint">${hint}</span></div><div class="row">${chips}</div></div>`;
+}
+function stack(kids,max=3){
+  const show=kids.slice(0,max);
+  const more=kids.length-max;
+  return `<span class="stack">${show.map(k=>`<span class="sa ${k.cls}" style="background:${k.cls==='k2'?'#7FA36B':k.cls==='k3'?'#6B8FA3':'#E39A5B'}">${k.a}</span>`).join('')}${more>0?`<span class="more">${C('sib_stack_more',{n:more})}</span>`:''}</span>`;
+}
+/** 卡面叠堆旁当日年龄（不铺满名签贴） */
+function stackWithAges(kids,day,max=3){
+  const day_=day||TODAY;
+  const tags=kids.slice(0,3).map(k=>`<span class="ag">${C('card_age_tag',{name:k.n,age:age(k.birth,day_)})}</span>`).join('');
+  const more=kids.length>3?`<span class="ag">+${kids.length-3}</span>`:'';
+  return `<div class="who-col">${stack(kids,max)}<div class="stack-ages">${tags}${more}</div></div>`;
+}
+
+function writePage(o={}){
+  const day=o.day||TODAY;
+  const kids=o.kids||KIDS2;
+  const sel=o.sel!==undefined?o.sel:(o.single?[kids[0].id]:[]);
+  const bar=sibBar({kids,sel,pre:o.pre,single:o.single,v:0,lastOnly:o.lastOnly});
+  const dateEl=`<div class="date">📅 ${dfmt(...day)} ›</div>`;
+  let txt;
+  if(o.text===undefined||o.text==='') txt=`<div class="txt ph">${C('w_placeholder')}</div>`;
+  else txt=`<div class="txt">${o.text}</div>`;
+  const ph=o.photos||[];
+  const film=o.noFilm?'':`<div class="film"><div class="lbl">${C('w_photos',{n:ph.length})}</div><div class="row">${ph.map(p=>`<div class="fr ${p}"></div>`).join('')}${ph.length<9?`<div class="fr add">＋<br>${C('w_photos_add')}</div>`:''}</div></div>`;
+  const n=o.count!==undefined?o.count:(o.text?o.text.replace(/\n/g,'').length:0);
+  const foot=`<div class="wfoot">${o.footMsg||''}<button class="btn"${o.btnDis?' disabled':''}>${o.btn||C(o.edit?'w_submit_edit':'w_submit')}</button></div>`;
+  return phone(`<div class="wtop"><button class="ib">✕</button><span class="saved">✓ ${C('w_autosave')}</span><span style="width:44px"></span></div>
+   <div class="letterhead"><div>${dateEl}</div></div>${bar}<div class="rule"></div>
+   <div class="body">${txt}</div><div class="count">${C('w_count',{n})}</div>${film}${foot}`,{paper:1,toast:o.toast,toastTop:o.toastTop,extra:o.extra});
+}
+
+function uploadPage(o={}){
+  const day=o.day||TODAY;
+  const kids=o.kids||KIDS2;
+  const sel=o.sel!==undefined?o.sel:(o.single?[kids[0].id]:[]);
+  const bar=sibBar({kids,sel,pre:o.pre,single:o.single,v:1,lastOnly:o.lastOnly});
+  const dateEl=`<div class="date">📅 ${dfmt(...day)} ›</div>`;
+  const foot=`<div class="wfoot">${o.footMsg||''}<button class="btn"${o.btnDis?' disabled':''}>${o.btn||C(o.edit?'w_submit_edit':'u_submit')}</button></div>`;
+  return phone(`<div class="wtop"><button class="ib">✕</button><span style="font-size:15px;font-weight:700;flex:1;text-align:center">${C('u_title')}</span><span style="width:44px"></span></div>
+   <div class="letterhead"><div>${dateEl}</div></div>${bar}
+   <div class="uprev"><div class="win">${o.coverPh||'▶ 预览'}</div></div>
+   <div class="meter"><span class="cap">${C('meter_cap')}</span>${C('u_picked',{s:o.s||12,mb:o.mb||8.2})}</div>
+   <div style="flex:1"></div>${foot}`,{paper:1,extra:o.extra});
+}
+
+function jcard(o){
+  const day=o.day||TODAY;
+  const kids=o.kids||[GUO];
+  const lines=(o.text||TEXT).split('\n'); const q=lines[0], rest=lines.slice(1).join(' ');
+  const ph=o.photos||[];
+  const right=kids.length>1?stackWithAges(kids,day):(kids.length===1?`<span class="agechip">${age(kids[0].birth,day)}</span>`:'');
+  return `<div class="jcard${o.hl?' hl':''}"><div class="rail"><div class="d"><b>${day[2]}</b>${day[1]}月</div></div><div class="c"><div class="q">${q}</div>${rest?`<div class="r">${rest}</div>`:''}
+   ${ph.length?`<div class="mfilm">${ph.slice(0,3).map(p=>`<div class="m ${p}"></div>`).join('')}</div>`:''}
+   <div class="who"><span>${C('card_by_j',{who:o.who||'妈妈'})}</span>${right}</div></div></div>`;
+}
+function vcard(o){
+  const day=o.day||TODAY;
+  const kids=o.kids||[GUO];
+  const right=kids.length>1?`<div class="meta-col">${stackWithAges(kids,day)}</div>`:(kids.length===1?`<span class="agechip">${age(kids[0].birth,day)}</span>`:'');
+  return `<div class="vcard${o.hl?' hl':''}"><div class="sprockets l">${'<i></i>'.repeat(5)}</div><div class="sprockets r">${'<i></i>'.repeat(5)}</div>
+   <div class="win"><span class="dur">${o.dur||'0:12'}</span></div>
+   <div class="meta"><span>${C('card_by_v',{who:o.who||'爸爸'})}</span>${right}</div></div>`;
+}
+function timeline(inner,{ro,title,fab=true,tabOn=0}={}){
+  const t=title||'果果';
+  const tabs=tabOn===1
+    ?`<div class="tabs2"><span>${C('tl_tab_child')}</span><span class="on">${C('tl_tab_all')}</span></div>`
+    :`<div class="tabs2"><span class="on">${C('tl_tab_child')}</span><span>${C('tl_tab_all')}</span></div>`;
+  return `<div class="top"><button class="ib">←</button><div class="title">${t}${ro?`<div class="meta">${C('ro_meta')}</div>`:''}</div>${ro?'':`<button class="writebtn">✎ ${C('entry_write')}</button>`}<div class="avatar sm">我</div></div>
+   ${tabs}<div class="scroll"><div class="tl">${inner}</div></div>${ro||!fab?'':'<div class="fab">＋</div>'}`;
+}
+
+function detail(o={}){
+  const day=o.day||TODAY;
+  const kids=o.kids||[GUO,DOU];
+  const ph=o.photos||['p1','p4'];
+  const kidRows=kids.map(k=>`<div class="row"><div class="avatar sm ${k.cls}">${k.a}</div><div class="nm">${k.n}</div><div class="ag">${age(k.birth,day)}</div></div>`).join('');
+  return phone(`<div class="wtop"><button class="ib">←</button><span></span><button class="ib">⋯</button></div>
+   <div class="scroll" style="overflow:hidden"><div class="dhead"><div class="date">${dfmt(...day)}</div></div><div class="rule"></div>
+   <div class="dbody">${o.text||TEXT}</div>
+   ${ph.length?`<div class="film" style="padding-top:4px"><div class="row">${ph.map(p=>`<div class="fr ${p}"></div>`).join('')}</div></div>`:''}
+   <div class="dkids"><div class="lbl">${C('d_kids_label')}</div>${kidRows}</div>
+   <div class="sign">${C('d_sign_j',{who:o.who||'妈妈',date:C('date_short',{mo:day[1],d:day[2]})})}</div></div>`,{paper:1,toast:o.toast});
+}
+
+function detailVideo(o={}){
+  const day=o.day||TODAY;
+  const kids=o.kids||[GUO,DOU];
+  const kidRows=kids.map(k=>`<div class="row"><div class="avatar sm ${k.cls}">${k.a}</div><div class="nm">${k.n}</div><div class="ag">${age(k.birth,day)}</div></div>`).join('');
+  return phone(`<div class="wtop"><button class="ib">←</button><span></span><button class="ib">⋯</button></div>
+   <div class="uprev" style="margin-top:8px"><div class="win" style="position:relative"><span class="dur" style="position:absolute;right:8px;bottom:8px;background:rgba(43,36,32,.78);color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px">0:12</span></div></div>
+   <div class="dkids"><div class="lbl">${C('d_kids_label')}</div>${kidRows}</div>
+   <div class="sign">${C('d_sign_v',{who:o.who||'爸爸',date:C('date_short',{mo:day[1],d:day[2]})})}</div>
+   <div style="flex:1"></div>`,{paper:1});
+}
+
+const S=[
+ ['write','1 写日志 · 预选加选',()=>
+   frame('从果果页进入：果果已描边预选＋勾；旁可点加选豆豆（AC-M5b）；写页条不叠年龄',writePage({sel:['guo'],pre:'果果',text:TEXT,photos:['p1','p4'],extra:anno('top:108px;left:16px;width:358px;height:100px',C('anno_vs_check'),'top:88px;left:20px')}))
+  +frame('点旁头像加选豆豆：两人皆描边+勾；一条挂两个，不拆条',writePage({sel:['guo','dou'],pre:'果果',text:TEXT,photos:['p1','p4']}))
+  +frame('其他入口（全家/FAB）：多孩不预选，提示「点头像选择，至少一位」',writePage({sel:[],text:'',photos:[]}))
+  +frame('单孩子家庭：条上只一枚且已选，无换/加暗示',writePage({kids:[GUO],single:1,sel:['guo'],text:TEXT,photos:['p1']}))],
+
+ ['upload','2 挂视频 · 同条',()=>
+   frame('从果果页挂视频：预选果果，可加选兄弟姐妹；片窗沿用胶片窗；条不叠年龄',uploadPage({sel:['guo'],pre:'果果'}))
+  +frame('加选豆豆后可「挂到这一天」；仍不可换片',uploadPage({sel:['guo','dou'],pre:'果果'}))
+  +frame('单孩：只一枚头像，无加选暗示',uploadPage({kids:[GUO],single:1,sel:['guo']}))],
+
+ ['tl_family','3 全家时光线 · 一卡',()=>
+   frame('全家视图：姐妹同挂一条日志 → 只一张引语卡 + 叠堆+当日年龄角标；禁止复制两张卡（AC-M1）',phone(timeline(
+     `<div class="dayh">10月25日 周日</div>`+jcard({day:TODAY,text:TEXT,photos:['p1','p4'],kids:[GUO,DOU],hl:1})+vcard({kids:[GUO,DOU],who:'爸爸'})+jcard({day:[2026,10,20],text:T_ANN,kids:[ANN],who:'妈妈'}),
+     {title:'我们家',tabOn:1}),{tabbar:1,extra:anno('top:280px;left:200px;width:160px;height:70px',C('anno_ages_card'),'top:250px;left:160px')}))
+  +frame('三孩叠堆：最多 3 枚；更多用 +n（示意四孩时 +1）',phone(timeline(
+     `<div class="dayh">10月25日</div>`+jcard({day:TODAY,text:TEXT,photos:['p1'],kids:[GUO,DOU,ANN,{id:'x',n:'圆圆',a:'圆',cls:'',birth:[2024,1,1]}],who:'妈妈'}),
+     {title:'我们家',tabOn:1}),{tabbar:1}))],
+
+ ['tl_child','4 孩子时光线 · 叠堆全显',()=>
+   frame('果果视图：可见「挂果果+豆豆」的那条；叠堆仍显两人（过滤只决定出不出这条）',phone(timeline(
+     `<div class="dayh">10月25日</div>`+jcard({day:TODAY,text:TEXT,photos:['p1','p4'],kids:[GUO,DOU]})+`<div class="dayh">10月20日</div>`+jcard({day:[2026,10,20],text:'今天果果自己穿好了鞋。',kids:[GUO]}),
+     {title:'果果'}),{tabbar:1,extra:anno('top:200px;left:200px;width:150px;height:60px',C('anno_stack_full'),'top:170px;left:140px')}))
+  +frame('豆豆视图：同条可见、叠堆仍果+豆；不见「只挂安安」的条目',phone(timeline(
+     `<div class="dayh">10月25日</div>`+jcard({day:TODAY,text:TEXT,photos:['p1','p4'],kids:[GUO,DOU]})+`<div class="dayh" style="color:var(--ink3);font-weight:600;font-size:12px">（安安专属条不在此）</div>`,
+     {title:'豆豆'}),{tabbar:1}))
+  +frame('安安视图：不见姐妹那条；只见自己的',phone(timeline(
+     `<div class="dayh">10月20日</div>`+jcard({day:[2026,10,20],text:T_ANN,kids:[ANN]}),
+     {title:'安安'}),{tabbar:1}))],
+
+ ['detail','5 详情 · 名+当日年龄',()=>
+   frame('日志详情：文末列出每位关联孩子 + 按记录日算年龄（果果 3岁2个月 · 豆豆 1岁7个月）',detail({kids:[GUO,DOU],day:TODAY}))
+  +frame('视频详情：片窗下列出关联孩子+当日年龄；仍可页内播',detailVideo({kids:[GUO,DOU]}))
+  +frame('改日期到 2025-10-25 后年龄重算（示意编辑后详情）',detail({kids:[GUO,DOU],day:[2025,10,25],text:TEXT}))],
+
+ ['edit','6 编辑扩成多选',()=>
+   frame('存量单关联打开编辑：条上仅果果已选；可点加选豆豆（AC-M5）',writePage({edit:1,sel:['guo'],pre:'果果',text:T_DOU,photos:[]}))
+  +frame('加选后「保存修改」；视频编辑同构——可改关联，不可换片',uploadPage({edit:1,sel:['guo','dou'],pre:'果果',btn:C('w_submit_edit')}))
+  +frame('禁点掉最后一个：只剩一人时再点不取消，提示「至少留一位」',writePage({edit:1,sel:['guo'],lastOnly:1,text:T_DOU,photos:[],extra:anno('top:108px;left:16px;width:80px;height:90px',C('anno_no_last'),'top:88px;left:90px')}))],
+
+ ['success','7 成功',()=>
+   frame('日志记下成功：全家时光线一卡 + Toast「记下了」',phone(timeline(
+     `<div class="dayh">10月25日 周日</div>`+jcard({day:TODAY,text:TEXT,photos:['p1','p4'],kids:[GUO,DOU],hl:1}),
+     {title:'我们家',tabOn:1}),{tabbar:1,toast:C('toast_posted_j',{date:C('date_short',{mo:10,d:25})})}))
+  +frame('视频挂上成功 Toast',phone(timeline(
+     `<div class="dayh">10月25日</div>`+vcard({kids:[GUO,DOU],who:'爸爸',hl:1}),
+     {title:'我们家',tabOn:1}),{tabbar:1,toast:C('toast_posted_v',{date:C('date_short',{mo:10,d:25})})}))
+  +frame('编辑改关联成功：详情 + Toast「改好了」',detail({kids:[GUO,DOU],toast:C('toast_edited')}))],
+
+ ['err_no_child','8 路径1/3 未选',()=>
+   frame('路径1 未选孩子点「记下来」：不可提交；按钮上方「至少选一个孩子」（cut 原句）',writePage({sel:[],text:TEXT,photos:['p1'],btnDis:1,footMsg:`<div class="inline-warn">${C('err_no_child')}</div>`}))
+  +frame('路径3 编辑去掉全部（若绕过条上禁点）：同句拦提交',writePage({edit:1,sel:[],text:TEXT,photos:['p1'],btnDis:1,footMsg:`<div class="inline-warn">${C('err_no_child')}</div>`}))
+  +frame('视频侧同句',uploadPage({sel:[],btnDis:1,footMsg:`<div class="inline-warn">${C('err_no_child')}</div>`}))],
+
+ ['err_gone','9 路径2 孩子已移出',()=>
+   frame('选了已移出/不存在的孩子：拒提交；条回可用集合 + 行内错',writePage({sel:['guo'],pre:'果果',text:TEXT,photos:['p1'],footMsg:`<div class="inline-err">${C('e_kid_gone')}</div>`}))
+  +frame('视频同错',uploadPage({sel:['guo','dou'],footMsg:`<div class="inline-err">${C('e_kid_gone')}</div>`}))],
+
+ ['err_perm','10 路径4 只读/403',()=>
+   frame('只读长辈：时光线可读叠堆卡；零写入口、无 FAB、无 ✎',phone(timeline(
+     `<div class="dayh">10月25日</div>`+jcard({day:TODAY,text:TEXT,photos:['p1'],kids:[GUO,DOU]}),
+     {ro:1,title:'果果'}),{tabbar:1}))
+  +frame('提交时已降只读（403）：不假装成功；内容留着',writePage({sel:['guo','dou'],text:TEXT,photos:['p1'],btnDis:1,footMsg:`<div class="inline-warn">${C('err_demoted_j')}</div>`}))
+  +frame('移出：Toast 后回现有家庭/登录页',phone(`<div class="center"><div class="illus mute">🏠</div><h3>还没有家庭</h3><p>（现有家庭页，原样）</p></div>`,{toast:C('e_removed'),toastTop:1}))],
+
+ ['empty_load','11 空 / 加载',()=>
+   frame('加载：时光线骨架（竖线位+叠堆位占位）',phone(`<div class="top"><button class="ib">←</button><div class="title">果果</div><button class="writebtn">✎ ${C('entry_write')}</button></div><div class="tabs2"><span class="on">${C('tl_tab_child')}</span><span>${C('tl_tab_all')}</span></div><div class="scroll"><div class="tl">${[0,1].map(()=>`<div class="jcard"><div class="rail"><div class="d"><div class="sk" style="width:24px;height:30px"></div></div></div><div class="c"><div class="sk" style="height:18px;width:80%"></div><div class="sk" style="height:12px;width:95%;margin-top:10px"></div><div style="display:flex;gap:6px;margin-top:10px;align-items:center"><div class="sk" style="width:24px;height:24px;border-radius:50%"></div><div class="sk" style="width:24px;height:24px;border-radius:50%"></div></div></div></div>`).join('')}</div></div>`,{tabbar:1}))
+  +frame('空态（沿用主线）：顶栏仍有写入口；选孩子在写页条上完成',phone(timeline(`<div class="center" style="height:520px"><div class="illus mute">🌱</div><h3>${C('empty_tl_title')}</h3></div>`,{title:'果果'}),{tabbar:1}))]
+];
+
+const nav=document.getElementById('nav'),stage=document.getElementById('stage');
+nav.innerHTML=S.map(s=>`<button type="button" data-show="${s[0]}">${s[1]}</button>`).join('');
+stage.innerHTML=S.map(s=>`<div class="group hide" id="${s[0]}"><div class="gtitle">${s[1]}</div>${s[2]()}</div>`).join('');
+window.FRAME_COUNT=document.querySelectorAll('.frame').length;
+document.getElementById('foot').innerHTML='<b>FINAL 方向：</b>兄弟姐妹条（横向大圆头像+名；选中描边+勾；禁点掉最后一个）· 时光线叠头像堆 3+n + 旁当日年龄 · 全家一卡不复制 · 孩视图叠堆仍显全部关联 · 写页条不叠年龄。<br><b>硬闸：</b>关联 ≥1 可多选；禁 0；上限=本家全部；照片不动；导出 UI 不改；只读零写入口；COPY 无「会员|开通|朋友圈|发动态」。<br><b>文案：</b>全部来自 <code>COPY</code>（'+Object.keys(COPY).length+' keys），与 spec.md 同步。帧数：'+window.FRAME_COUNT+'。<br><b>自检禁词：</b>会员、开通、朋友圈、发动态（COPY 区须 0）。';
+function show(id){if(id==='all'){document.querySelectorAll('.group').forEach(g=>{g.classList.remove('hide');g.style.marginBottom='36px';});return;}if(!document.getElementById(id))id=S[0][0];document.querySelectorAll('.group').forEach(g=>g.classList.toggle('hide',g.id!==id));nav.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.show===id));}
+nav.addEventListener('click',e=>{const b=e.target.closest('button[data-show]');if(!b)return;show(b.dataset.show);history.replaceState(null,'','#s='+b.dataset.show);});
+show(location.hash.replace(/^#(s=)?/,''));
+</script>
+</body>
+</html>

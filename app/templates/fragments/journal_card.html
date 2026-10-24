@@ -13,6 +13,28 @@
       {% if item.more %}<span class="more">{{ journal_copy.card_more.format(n=item.more) }}</span>{% endif %}
     </div>
     {% endif %}
-    <div class="who">{{ journal_copy.card_by.format(who=item.who) }}</div>
+    <div class="who">
+      <span>{{ multi_child.card_by_j.format(who=item.who) }}</span>
+      {% if item.children|length > 1 %}
+      <span class="who-col">
+        <span class="stack">
+          {% for kid in item.children[:3] %}
+          <span class="sa c{{ loop.index0 % 3 }}">{{ kid.name|initial }}</span>
+          {% endfor %}
+          {% if item.children|length > 3 %}
+          <span class="more">{{ multi_child.sib_stack_more.format(n=item.children|length - 3) }}</span>
+          {% endif %}
+        </span>
+        <span class="stack-ages">
+          {% for kid in item.children[:3] %}
+          <span class="ag">{{ multi_child.card_age_tag.format(name=kid.name, age=kid.age_label) }}</span>
+          {% endfor %}
+          {% if item.children|length > 3 %}
+          <span class="ag">+{{ item.children|length - 3 }}</span>
+          {% endif %}
+        </span>
+      </span>
+      {% endif %}
+    </div>
   </div>
 </a>

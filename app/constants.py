@@ -130,4 +130,5 @@ JOURNAL_BODY_WARN = 1900
 
 # Journal and video sentences are re-exported. This file stays the export copy surface.
 from app.journal_copy import JOURNAL as JOURNAL
+from app.multi_child_copy import MULTI_CHILD as MULTI_CHILD
 from app.video_copy import VIDEO as VIDEO

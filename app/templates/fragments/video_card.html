@@ -10,5 +10,26 @@
       <span class="dur">{{ item.duration_label }}</span>
     </div>
   </div>
-  <div class="filmmeta"><b>{{ video_copy.card_by.format(who=item.who) }}</b> · {{ item.age_label }}</div>
+  <div class="filmmeta">
+    <b>{{ multi_child.card_by_v.format(who=item.who) }}</b>
+    {% if item.children|default([])|length > 1 %}
+    <span class="who-col">
+      <span class="stack">
+        {% for kid in item.children[:3] %}
+        <span class="sa c{{ loop.index0 % 3 }}">{{ kid.name|initial }}</span>
+        {% endfor %}
+        {% if item.children|length > 3 %}
+        <span class="more">{{ multi_child.sib_stack_more.format(n=item.children|length - 3) }}</span>
+        {% endif %}
+      </span>
+      <span class="stack-ages">
+        {% for kid in item.children[:3] %}
+        <span class="ag">{{ multi_child.card_age_tag.format(name=kid.name, age=kid.age_label) }}</span>
+        {% endfor %}
+      </span>
+    </span>
+    {% else %}
+    · {{ item.age_label }}
+    {% endif %}
+  </div>
 </a>
