@@ -393,6 +393,7 @@ def test_temp_file_removed_when_client_cancels_mid_transfer(monkeypatch: pytest.
     monkeypatch.setattr(export_service, "READ_CHUNK", 8)
     path = tmp_path / "export-partial.zip"
     path.write_bytes(b"PK" + b"x" * 200)
+    full_size = path.stat().st_size
     response = stream_zip(path)
     sent: list[bytes] = []
 
@@ -424,7 +425,7 @@ def test_temp_file_removed_when_client_cancels_mid_transfer(monkeypatch: pytest.
 
     anyio.run(run)
     assert sent
-    assert sum(len(part) for part in sent) < path.stat().st_size if path.exists() else True
+    assert sum(len(part) for part in sent) < full_size
     assert sum(len(part) for part in sent) < 208
     assert not path.exists()
     assert list(tmp_path.iterdir()) == []

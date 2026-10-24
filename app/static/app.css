@@ -255,6 +255,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
   position: absolute; inset: 0; background: rgba(43, 36, 32, .4);
   z-index: 6; display: flex; align-items: flex-end;
 }
+#export-sheet { width: 100%; }
 .export-sheet.sheet-center { text-align: center; }
 .export-sheet.sheet-center .free-line { justify-content: center; }
 .export-sheet.sheet-center .illus { margin: 8px auto 0; }
