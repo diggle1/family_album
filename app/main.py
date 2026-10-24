@@ -9,7 +9,8 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from urllib.parse import quote, urlparse
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, Request
+from starlette.exceptions import HTTPException
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
@@ -23,6 +24,7 @@ from app.gate import StorageGateMiddleware
 from app.http import safe_next, wants_json
 from app.migrate_schema import migrate_schema
 from app.routers import auth, children, deploy, family, me, pages, photos, export
+from app.services.export import sweep_temp_dir
 from app.storage.errors import StorageError
 from app.storage.factory import probe_code
 from app.storage.respond import storage_block_response
@@ -44,6 +46,10 @@ async def lifespan(_app: FastAPI):
     except Exception as exc:
         logger.warning("database migrate failed error=%s", type(exc).__name__)
         _app.state.db_error = "DB_DOWN"
+    try:
+        sweep_temp_dir()
+    except Exception:
+        logger.warning("export temp sweep failed")
 
     async def _probe() -> None:
         try:
@@ -107,7 +113,7 @@ class SecurityMiddleware:
         await self.app(scope, receive, send_with_headers)
 
 
-app = FastAPI(title="kids时光机", version="2026.10.24.1", lifespan=lifespan)
+app = FastAPI(title="kids时光机", version="2026.10.24.2", lifespan=lifespan)
 app.add_middleware(StorageGateMiddleware)
 app.add_middleware(SecurityMiddleware)
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
@@ -147,8 +153,19 @@ async def http_error(request: Request, exc: HTTPException):
     detail = exc.detail if isinstance(exc.detail, str) else "请求无法完成"
     if wants_json(request):
         response = JSONResponse({"detail": detail}, status_code=exc.status_code)
-        if exc.status_code == 403:
+        if exc.status_code in {403, 404}:
             response.headers["Cache-Control"] = "no-store"
+        if exc.status_code == 403 and request.url.path == "/api/export/my-photos.zip":
+            response.headers["X-Frame-Options"] = "SAMEORIGIN"
+        return response
+    if exc.status_code == 404:
+        response = templates.TemplateResponse(
+            request,
+            "error.html",
+            {"show_nav": False, "toast": None, "message": detail, "next": "/"},
+            status_code=404,
+        )
+        response.headers["Cache-Control"] = "no-store"
         return response
     if exc.status_code == 403:
         response = templates.TemplateResponse(

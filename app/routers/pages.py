@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
@@ -685,6 +686,7 @@ def photo_page(photo_id: int, request: Request, toast: str | None = None, db: Se
             "child": child,
             "date_label": date_label(photo.taken_on),
             "weekday": weekday_zh(photo.taken_on),
+            "suffix": Path(photo.storage_path or "").suffix.lower(),
             "show_nav": True,
             "tab": "people" if photo.kind == "self" else "timeline",
             "toast": toast_text(toast),

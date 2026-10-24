@@ -154,7 +154,7 @@ def test_t2_copy_has_free_line_and_no_banned_words(client: TestClient):
 
     for state, needle in (
         ("packing", "正在打包你的照片…"),
-        ("success", "打包好了"),
+        ("success", "已下载"),
         ("failure", "没打包成"),
         ("confirm", "开始导出"),
     ):
@@ -165,7 +165,7 @@ def test_t2_copy_has_free_line_and_no_banned_words(client: TestClient):
         _assert_clean(sheet.text, state)
     success = client.get("/fragments/export/sheet?state=success")
     assert "永久免费" in success.text
-    assert "保存 ZIP" in success.text
+    assert "重新下载" in success.text
     failure = client.get("/fragments/export/sheet?state=failure")
     assert "网络不稳或服务忙，稍后再试。" in failure.text
     assert "重试" in failure.text
@@ -179,7 +179,7 @@ def test_t2_copy_has_free_line_and_no_banned_words(client: TestClient):
     photo = name.rsplit("_", 1)[1].split(".")[0]
     viewer = client.get(f"/photos/{photo}")
     assert "保存原图" in viewer.text
-    assert "原图已保存" in viewer.text
+    assert "原图已下载" in viewer.text
     _assert_clean(viewer.text, "photo")
 
 
@@ -334,7 +334,7 @@ def test_t7_zip_reads_storage_backend_after_switch_to_s3(client: TestClient, mon
         assert _stored(packed.content, f"2026-10-22_{photo_id}.jpg") == JPEG
 
 
-def test_read_failure_is_503_without_zip_bytes(client: TestClient, monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
+def test_one_missing_original_is_partial_zip_with_list(client: TestClient, monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
     monkeypatch.setattr(export_service, "temp_dir", lambda: tmp_path)
     child_id = _family(client, "gone@example.com", "丢失", "丢失家")
     created = upload(client, kind="child", child_id=child_id, taken_on="2026-10-22")
@@ -351,10 +351,23 @@ def test_read_failure_is_503_without_zip_bytes(client: TestClient, monkeypatch: 
         (get_settings().photo_dir / row.storage_path).unlink()
     finally:
         session.close()
-    failed = client.get("/api/export/my-photos.zip")
-    assert failed.status_code == 503
-    assert failed.json() == {"detail": "export_failed"}
-    assert not failed.content.startswith(b"PK")
+    import base64
+    import json
+
+    packed = client.get("/api/export/my-photos.zip")
+    assert packed.status_code == 200
+    assert packed.content.startswith(b"PK")
+    names = _names(packed.content)
+    assert "缺失清单.txt" in names
+    assert f"2026-10-23_{second.json()['id']}.jpg" in names
+    assert f"2026-10-22_{created.json()['id']}.jpg" not in names
+    raw = packed.headers["x-export-missing"]
+    decoded = json.loads(base64.urlsafe_b64decode(raw + "=" * (-len(raw) % 4)))
+    assert decoded["total"] == 1
+    assert decoded["items"] == [{"date": "2026-10-22", "owner": "挂在 果果"}]
+    assert packed.headers["x-export-packed"] == "1"
+    text = _stored(packed.content, "缺失清单.txt").decode("utf-8-sig")
+    assert text == "2026-10-22 · 挂在 果果\n"
     assert list(tmp_path.iterdir()) == []
 
 

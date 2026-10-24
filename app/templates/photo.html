@@ -9,9 +9,9 @@
   <button type="button" class="more-btn" data-photo-more aria-label="更多" aria-expanded="false">⋯</button>
 </div>
 <div class="menu" id="photo-menu" hidden>
-  <a href="/media/{{ photo.id }}/download" download="photo-{{ photo.id }}" data-save-original="{{ export_copy.toast_saved }}">
-    {{ export_copy.save_original }}
-    <small>{{ export_copy.save_original_note }}</small>
+  <a href="/media/{{ photo.id }}/download" download="photo-{{ photo.id }}{{ suffix }}" data-save-original="{{ export_copy.toast_photo }}" data-save-fail="{{ export_copy.toast_photo_fail }}">
+    {{ export_copy.v_menu }}
+    <small>{{ export_copy.v_menu_sub }}</small>
   </a>
 </div>
 {% if photo.kind == 'self' %}

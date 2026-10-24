@@ -1,0 +1,87 @@
+<div class="sheet" id="upload-sheet">
+  <div class="grab"></div>
+  <h4>{{ export_copy.up_title }}</h4>
+  <p class="sub">{{ export_copy.up_sub }}</p>
+  {% if error %}<div class="banner err">{{ error }}</div>{% endif %}
+  {% if not kind %}
+  <form method="get" action="/upload" id="choose"{% if upload_inplace %} data-inplace{% endif %}>
+    {% if selected %}<input type="hidden" name="child" value="{{ selected.id }}">{% endif %}
+    <label class="opt">
+      <input type="radio" name="kind" value="child" required>
+      <span class="ic a">🧒</span>
+      <span><b>{{ export_copy.up_a }}</b><small>{{ export_copy.up_a_sub }}</small></span>
+    </label>
+    <label class="opt fam">
+      <input type="radio" name="kind" value="self">
+      <span class="ic f">👤</span>
+      <span><b>{{ export_copy.up_b }}</b><small>{{ export_copy.up_b_sub }}</small></span>
+    </label>
+    <button class="btn" id="continue" type="submit">{{ export_copy.up_go }}</button>
+  </form>
+  {% if upload_inplace %}
+  <form method="post" action="/api/photos" enctype="multipart/form-data" id="upload-file" hidden>
+    <input type="hidden" name="kind" value="">
+    {% if children|length >= 2 %}
+    <label class="field"><span>哪个孩子</span>
+      <select class="input" name="child_id">
+        {% for item in children %}
+        <option value="{{ item.id }}" {% if selected and item.id == selected.id %}selected{% endif %}>{{ item.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    {% elif selected %}
+    <input type="hidden" name="child_id" value="{{ selected.id }}">
+    {% endif %}
+    <label class="field"><span>拍摄日期</span>
+      <input class="input" type="date" name="taken_on" value="{{ today }}">
+    </label>
+    <label class="field"><span>照片</span>
+      <input class="input" type="file" name="file" accept="image/jpeg,image/png,image/webp" required>
+    </label>
+    <p class="inline-hint" data-upload-failed hidden>{{ export_copy.upload_sheet_failed }}</p>
+    <button class="btn" type="submit">上传</button>
+  </form>
+  {% endif %}
+  {% if upload_inplace %}
+  <button class="btn ghost" type="button" data-upload-close>{{ export_copy.cancel }}</button>
+  {% else %}
+  <a class="btn ghost" href="/">{{ export_copy.cancel }}</a>
+  {% endif %}
+  {% else %}
+  <div class="opt on{% if kind == 'self' %} fam{% endif %}">
+    <span class="ic {{ 'f' if kind == 'self' else 'a' }}">{{ "👤" if kind == "self" else "🧒" }}</span>
+    <span><b>{{ export_copy.up_b if kind == "self" else export_copy.up_a }}</b>
+      <small>{{ export_copy.up_b_sub if kind == "self" else export_copy.up_a_sub }}</small>
+    </span>
+  </div>
+  <form method="post" action="/upload" enctype="multipart/form-data" class="stack">
+    <input type="hidden" name="kind" value="{{ kind }}">
+    {% if kind == "child" %}
+      {% if children|length >= 2 %}
+      <label class="field"><span>哪个孩子</span>
+        <select class="input" name="child_id" required>
+          {% for item in children %}
+          <option value="{{ item.id }}" {% if selected and item.id == selected.id %}selected{% endif %}>{{ item.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      {% elif selected %}
+      <input type="hidden" name="child_id" value="{{ selected.id }}">
+      <p class="hint">将挂到 {{ selected.name }} 的时光线。</p>
+      {% endif %}
+      <label class="field"><span>拍摄日期</span>
+        <input class="input" type="date" name="taken_on" required value="{{ today }}">
+      </label>
+    {% else %}
+      <label class="field"><span>拍摄日期（可空，默认今天）</span>
+        <input class="input" type="date" name="taken_on" value="{{ today }}">
+      </label>
+    {% endif %}
+    <label class="field"><span>照片</span>
+      <input class="input" type="file" name="file" accept="image/jpeg,image/png,image/webp" required>
+    </label>
+    <button class="btn{% if kind == 'self' %} family{% endif %}" type="submit">上传</button>
+  </form>
+  <a class="btn ghost" href="/upload{% if selected %}?child={{ selected.id }}{% endif %}">重新选择</a>
+  {% endif %}
+</div>

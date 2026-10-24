@@ -4,51 +4,83 @@
 {% if count == 0 %}
 <div class="top">
   <a class="back" href="/family/settings">‹</a>
-  <div class="title">{{ export_copy.sheet_title }}
+  <div class="title">{{ export_copy.row_title }}
     <span class="meta">{{ role_note }}</span>
   </div>
 </div>
-<div class="center" id="export-empty">
-  <div class="illus muted" aria-hidden="true">📭</div>
-  <h3>{{ export_copy.empty_title }}</h3>
-  <p>{{ export_copy.empty_body }}</p>
-  <a class="btn export-cta" href="/">{{ export_copy.empty_cta }}</a>
-  <p class="hint export-note">{{ export_copy.empty_note }}</p>
-</div>
+{% include "fragments/export_empty.html" %}
 {% else %}
 <div class="top">
   <div class="title">设置<div class="meta">{{ family.name }} · {{ role_label }}</div></div>
 </div>
-<div class="sec">{{ export_copy.section }}</div>
+<div class="sec">我的数据</div>
 <div class="list">
-  <div class="li">
+  <button class="li" type="button" data-export-row>
     <span class="ic-round" aria-hidden="true">⬇</span>
     <span class="t">
       <b>{{ export_copy.row_title }}</b>
-      <small>{{ export_copy.row_sub }}</small>
+      <small id="export-row-sub">{{ export_copy.row_sub_idle }}</small>
     </span>
-    <span class="badge-free">{{ export_copy.badge }}</span>
+    <span class="badge-free">{{ export_copy.free }}</span>
     <span class="chev" aria-hidden="true">›</span>
-  </div>
+  </button>
 </div>
 {% endif %}
 {% endblock %}
 {% block overlay %}
-{% if count > 0 %}
-<div class="sheet-mask" id="export-mask">
+{% if count == 0 and can_upload %}
+<div class="sheet-mask" id="upload-mask" hidden>
+  {% include "fragments/upload_sheet.html" %}
+</div>
+{% elif count > 0 %}
+<div class="sheet-mask" id="export-mask"
+     data-header-wait-ms="{{ export_header_wait_ms }}"
+     data-blob-max-bytes="{{ export_blob_max_bytes }}"
+     data-uid="{{ user.id }}"
+     {% for key, attr in copy_attrs %}data-copy-{{ attr }}="{{ export_copy[key] }}" {% endfor %}>
   <div id="export-sheet">
     {% with state="confirm" %}
     {% include "fragments/export_sheet.html" %}
     {% endwith %}
   </div>
 </div>
+<template id="export-confirm-tpl">
+  {% with state="confirm" %}
+  {% include "fragments/export_sheet.html" %}
+  {% endwith %}
+</template>
 <template id="export-packing-tpl">
   {% with state="packing" %}
   {% include "fragments/export_sheet.html" %}
   {% endwith %}
 </template>
+<template id="export-downloading-tpl">
+  {% with state="downloading" %}
+  {% include "fragments/export_sheet.html" %}
+  {% endwith %}
+</template>
+<template id="export-success-tpl">
+  {% with state="success" %}
+  {% include "fragments/export_sheet.html" %}
+  {% endwith %}
+</template>
 <template id="export-failure-tpl">
   {% with state="failure" %}
+  {% include "fragments/export_sheet.html" %}
+  {% endwith %}
+</template>
+<template id="export-dlfail-tpl">
+  {% with state="dlfail" %}
+  {% include "fragments/export_sheet.html" %}
+  {% endwith %}
+</template>
+<template id="export-allmissing-tpl">
+  {% with state="allmissing" %}
+  {% include "fragments/export_sheet.html" %}
+  {% endwith %}
+</template>
+<template id="export-big-tpl">
+  {% with state="big" %}
   {% include "fragments/export_sheet.html" %}
   {% endwith %}
 </template>

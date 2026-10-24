@@ -1,0 +1,15 @@
+{% if can_upload %}
+<div class="center" id="export-empty">
+  <div class="illus muted" aria-hidden="true">📭</div>
+  <h3>{{ export_copy.empty_up_title }}</h3>
+  <a class="btn export-cta" href="/upload" data-export-upload>{{ export_copy.empty_up_btn }}</a>
+</div>
+{% else %}
+<div class="center" id="export-empty">
+  <div class="illus muted" aria-hidden="true">📭</div>
+  <h3>{{ export_copy.empty_ro_title }}</h3>
+  <p>{{ export_copy.empty_ro_p|safe }}</p>
+  <a class="btn export-cta" href="/">{{ export_copy.empty_ro_btn }}</a>
+  <p class="hint export-note">{{ export_copy.empty_ro_free }}</p>
+</div>
+{% endif %}
