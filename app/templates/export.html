@@ -1,0 +1,46 @@
+{% extends "layout.html" %}
+{% block title %}导出我的照片 · kids时光机{% endblock %}
+{% block content %}
+{% if count == 0 %}
+<div class="top">
+  <a class="back" href="/family/settings">‹</a>
+  <div class="title">{{ export_copy.sheet_title }}
+    <span class="meta">{{ role_note }}</span>
+  </div>
+</div>
+<div class="center" id="export-empty">
+  <div class="illus muted" aria-hidden="true">📭</div>
+  <h3>{{ export_copy.empty_title }}</h3>
+  <p>{{ export_copy.empty_body }}</p>
+  <a class="btn export-cta" href="/">{{ export_copy.empty_cta }}</a>
+  <p class="hint export-note">{{ export_copy.empty_note }}</p>
+</div>
+{% else %}
+<div class="top">
+  <div class="title">设置<div class="meta">{{ family.name }} · {{ role_label }}</div></div>
+</div>
+<div class="sec">{{ export_copy.section }}</div>
+<div class="list">
+  <div class="li">
+    <span class="ic-round" aria-hidden="true">⬇</span>
+    <span class="t">
+      <b>{{ export_copy.row_title }}</b>
+      <small>{{ export_copy.row_sub }}</small>
+    </span>
+    <span class="badge-free">{{ export_copy.badge }}</span>
+    <span class="chev" aria-hidden="true">›</span>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+{% block overlay %}
+{% if count > 0 %}
+<div class="sheet-mask" id="export-mask">
+  <div id="export-sheet">
+    {% with state="confirm" %}
+    {% include "fragments/export_sheet.html" %}
+    {% endwith %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}

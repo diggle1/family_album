@@ -6,6 +6,13 @@
   <div class="title">{% if photo.kind == 'self' %}本人照片{% else %}孩子照片{% endif %}
     <span class="meta">{{ date_label }} {{ weekday }} · {{ owner_name }} 上传</span>
   </div>
+  <button type="button" class="more-btn" data-photo-more aria-label="更多" aria-expanded="false">⋯</button>
+</div>
+<div class="menu" id="photo-menu" hidden>
+  <a href="/media/{{ photo.id }}/download" download="photo-{{ photo.id }}" data-save-original="{{ export_copy.toast_saved }}">
+    {{ export_copy.save_original }}
+    <small>{{ export_copy.save_original_note }}</small>
+  </a>
 </div>
 {% if photo.kind == 'self' %}
 <div class="fam-bar">家人相册 · {{ owner_name }}</div>

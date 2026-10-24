@@ -30,6 +30,18 @@
     <a class="btn ghost" href="/family/members">家庭成员</a>
   </div>
   {% endif %}
+  <div class="sec" id="my-data">{{ export_copy.section }}</div>
+  <div class="list">
+    <a class="li" id="export-entry" href="/family/export">
+      <span class="ic-round" aria-hidden="true">⬇</span>
+      <span class="t">
+        <b>{{ export_copy.row_title }}</b>
+        <small>{{ export_copy.row_sub }}</small>
+      </span>
+      <span class="badge-free">{{ export_copy.badge }}</span>
+      <span class="chev" aria-hidden="true">›</span>
+    </a>
+  </div>
   <div class="sec">我的资料</div>
   <form method="post" action="/profile" class="stack">
     <input type="hidden" name="next" value="/family/settings">

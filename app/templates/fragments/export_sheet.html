@@ -1,0 +1,31 @@
+<div class="sheet export-sheet{% if state != 'confirm' %} sheet-center{% endif %}">
+  <div class="grab"></div>
+  {% if state == 'packing' %}
+  <div class="spinner" aria-hidden="true"></div>
+  <h4>{{ export_copy.packing }}</h4>
+  <p class="sub">{{ export_copy.packing_note }}</p>
+  {% elif state == 'success' %}
+  <div class="illus ok" aria-hidden="true">✓</div>
+  <h4>{{ export_copy.success_title }}</h4>
+  <p class="sub">{{ export_copy.success_sub.format(count=count) }}</p>
+  <div class="free-line ok">✓ {{ export_copy.free_line }}</div>
+  <button class="btn" type="button" id="export-save" data-export-save data-filename="{{ export_copy.zip_filename }}">{{ export_copy.save_zip }}</button>
+  <a class="btn ghost" href="/family/settings">{{ export_copy.done }}</a>
+  {% elif state == 'failure' %}
+  <div class="illus err" aria-hidden="true">!</div>
+  <h4>{{ export_copy.fail_title }}</h4>
+  <p class="sub">{{ export_copy.fail_body }}</p>
+  <button class="btn" type="button" data-export-action="retry">{{ export_copy.retry }}</button>
+  <a class="btn ghost" href="/family/settings">{{ export_copy.close }}</a>
+  {% else %}
+  <h4>{{ export_copy.sheet_title }}</h4>
+  <p class="sub">{{ export_copy.sheet_sub }}</p>
+  <div class="summary">
+    <b>{{ count }}</b> 张
+    <span>{{ export_copy.summary.format(count=count) }}<br>{{ export_copy.exclude }}</span>
+  </div>
+  <div class="free-line">✓ {{ export_copy.free_line }}</div>
+  <button class="btn" type="button" data-export-action="start">{{ export_copy.start }}</button>
+  <a class="btn ghost" href="/family/settings">{{ export_copy.cancel }}</a>
+  {% endif %}
+</div>

@@ -22,7 +22,7 @@ from app.db import engine
 from app.gate import StorageGateMiddleware
 from app.http import safe_next, wants_json
 from app.migrate_schema import migrate_schema
-from app.routers import auth, children, deploy, family, me, pages, photos
+from app.routers import auth, children, deploy, family, me, pages, photos, export
 from app.storage.errors import StorageError
 from app.storage.factory import probe_code
 from app.storage.respond import storage_block_response
@@ -107,7 +107,7 @@ class SecurityMiddleware:
         await self.app(scope, receive, send_with_headers)
 
 
-app = FastAPI(title="kids时光机", version="2026.10.23.2", lifespan=lifespan)
+app = FastAPI(title="kids时光机", version="2026.10.24.1", lifespan=lifespan)
 app.add_middleware(StorageGateMiddleware)
 app.add_middleware(SecurityMiddleware)
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
@@ -116,6 +116,7 @@ app.include_router(me.router)
 app.include_router(family.router)
 app.include_router(children.router)
 app.include_router(photos.router)
+app.include_router(export.router)
 app.include_router(pages.router)
 app.include_router(deploy.router)
 

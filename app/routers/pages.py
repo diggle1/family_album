@@ -664,7 +664,7 @@ def invite_accept(token: str, request: Request, db: Session = Depends(get_db)):
 
 
 @router.get("/photos/{photo_id}")
-def photo_page(photo_id: int, request: Request, db: Session = Depends(get_db)):
+def photo_page(photo_id: int, request: Request, toast: str | None = None, db: Session = Depends(get_db)):
     gate = gate_member(request, db)
     if isinstance(gate, RedirectResponse):
         return gate
@@ -687,6 +687,7 @@ def photo_page(photo_id: int, request: Request, db: Session = Depends(get_db)):
             "weekday": weekday_zh(photo.taken_on),
             "show_nav": True,
             "tab": "people" if photo.kind == "self" else "timeline",
+            "toast": toast_text(toast),
         },
     )
 
