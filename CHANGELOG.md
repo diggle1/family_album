@@ -12,6 +12,7 @@
 - 打包超时（`EXPORT_BUILD_TIMEOUT_S`，默认 120，可用同名环境变量覆盖）或任一张读失败：终止打包线程，503 `{"detail":"export_failed"}`，不发出 ZIP 字节。临时文件在回传完成、客户端中断、失败三条路径删除。
 - 大图溢出菜单「保存原图」。`GET /media/{id}/download` 为附件。别家 id 与不存在的 id 都是同一个 404；非成员仍是 403。`GET /media/{id}` 仍是 inline。
 - 响应 `Cache-Control: private, no-store`。读取走 `store_for(photo.storage_backend)`。
+- BUG-1：断网、下载中途掉线，或响应头还没回来时，打包中和失败 Sheet 是页面里预置的 `<template>`，失败 Sheet 立刻出现，不再请求服务器。等响应头超过 130 秒（大于服务端 `EXPORT_BUILD_TIMEOUT_S` 的 120 秒）算失败；拿到响应头之后，15 秒没有新字节也算失败。重试在本地重新发起导出。
 
 ### 不做
 
