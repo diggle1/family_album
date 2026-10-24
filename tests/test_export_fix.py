@@ -1016,15 +1016,17 @@ def test_zip_member_403_is_sameorigin_without_leaking(client: TestClient):
 def test_big_cancel_ignores_stale_dl_and_keeps_confirm():
     script = _SCRIPT.read_text(encoding="utf-8")
     cancel = script.split("function cancelPack", 1)[1].split("function onRow", 1)[0]
-    assert 'phase === "big"' in cancel
     assert "invalidateDl()" in cancel
     assert "restoreConfirm()" in cancel
+    assert 'phase === "big"' not in cancel
     iframe = script.split("function openIframe", 1)[1].split("function startBig", 1)[0]
     assert "activeDl === dl" in iframe
     assert "finishPackFailed()" in iframe
     sheet = Path("app/templates/fragments/export_sheet.html").read_text(encoding="utf-8")
     big = sheet.split("state == 'big'", 1)[1].split("{% else %}", 1)[0]
-    assert 'data-export-action="cancel"' in big
+    assert big.count("<button") == 1
+    assert "export_copy.done" in big
+    assert 'data-export-action="cancel"' not in big
 
 
 def test_no_photos_reloads_empty_state_for_blob_and_iframe():

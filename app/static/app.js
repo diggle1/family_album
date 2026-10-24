@@ -749,12 +749,6 @@
   }
 
   function cancelPack() {
-    if (phase === "big") {
-      invalidateDl();
-      restoreConfirm();
-      fetch("/api/export/cancel", { method: "POST", credentials: "same-origin" }).then(function () {}, function () {});
-      return;
-    }
     if (phase !== "packing") return;
     userStop = true;
     phase = "stopping";
