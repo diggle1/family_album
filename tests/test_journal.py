@@ -167,6 +167,197 @@ def test_draft_undiscard_restores_within_4s():
     assert "20000" in source
 
 
+def test_success_navigation_does_not_restore_draft():
+    """AC-J5: pagehide after a successful submit must not write the draft back."""
+    source = Path("app/static/journal.js").read_text(encoding="utf-8")
+    finish = source.split("function finishSuccess", 1)[1].split("function handleResult", 1)[0]
+    save = source.split("function saveDraftNow", 1)[1].split("function scheduleSave", 1)[0]
+    hide = source.split('addEventListener("pagehide"', 1)[1].split('addEventListener("offline"', 1)[0]
+    assert "suppressDraftSave = true" in finish
+    assert finish.index("suppressDraftSave = true") < finish.index("localStorage.removeItem")
+    assert finish.index("localStorage.removeItem") < finish.index("location.href")
+    assert "suppressDraftSave" in save
+    assert "saveDraftNow()" in hide
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("node not installed")
+    script = r"""
+const fs = require("fs");
+const vm = require("vm");
+const code = fs.readFileSync(process.argv[1], "utf8");
+const KEY = "kids.journal.draft.7.3.new";
+
+function storage() {
+  const mem = new Map();
+  return {
+    getItem(k) { return mem.has(k) ? mem.get(k) : null; },
+    setItem(k, v) { mem.set(k, String(v)); },
+    removeItem(k) { mem.delete(k); },
+    key(i) { return Array.from(mem.keys())[i] || null; },
+    get length() { return mem.size; },
+  };
+}
+
+function el(id) {
+  const node = {
+    id: id || "",
+    hidden: id === "draft-bar",
+    disabled: false,
+    readOnly: false,
+    value: "",
+    textContent: "",
+    className: "",
+    type: "",
+    parentNode: null,
+    children: [],
+    attrs: {},
+    listeners: {},
+    classList: null,
+  };
+  const names = new Set();
+  node.classList = {
+    add() { Array.from(arguments).forEach((name) => names.add(name)); },
+    remove() { Array.from(arguments).forEach((name) => names.delete(name)); },
+    toggle(name, force) {
+      const on = force === undefined ? !names.has(name) : !!force;
+      if (on) names.add(name); else names.delete(name);
+      return on;
+    },
+    contains(name) { return names.has(name); },
+  };
+  node.setAttribute = (k, v) => { node.attrs[k] = String(v); };
+  node.getAttribute = (k) => (Object.prototype.hasOwnProperty.call(node.attrs, k) ? node.attrs[k] : null);
+  node.removeAttribute = (k) => { delete node.attrs[k]; };
+  node.addEventListener = (type, fn) => { (node.listeners[type] = node.listeners[type] || []).push(fn); };
+  node.dispatch = (type) => { (node.listeners[type] || []).forEach((fn) => fn({ target: node })); };
+  node.appendChild = (child) => { child.parentNode = node; node.children.push(child); return child; };
+  node.remove = () => {};
+  node.querySelector = () => null;
+  node.querySelectorAll = () => [];
+  node.closest = () => null;
+  node.focus = () => {};
+  node.click = () => node.dispatch("click");
+  return node;
+}
+
+function boot(store, fetchImpl) {
+  const ids = {};
+  function add(id) { const node = el(id); ids[id] = node; return node; }
+  const app = add("journal-app");
+  Object.assign(app.attrs, {
+    "data-mode": "new",
+    "data-fid": "7",
+    "data-uid": "3",
+    "data-today": "2026-10-24",
+    "data-body-max": "2000",
+    "data-body-warn": "1900",
+    "data-copy-draft_label": "上次没写完",
+    "data-copy-w_submit": "记下来",
+    "data-copy-w_sending": "正在发…",
+    "data-copy-w_count": "{n}/2000",
+    "data-copy-date_fmt": "{y}年{mo}月{d}日 {wd}",
+  });
+  add("journal-initial").textContent = JSON.stringify({
+    body: "今天学会走路了", date: "2026-10-24", childId: 1, photoIds: [], photos: [],
+  });
+  add("journal-children-data").textContent = JSON.stringify([{ id: 1, name: "果果", birth: "2024-07-12" }]);
+  const field = add("journal-body");
+  const bar = add("draft-bar");
+  const tag = add("draft-tag");
+  const submit = add("journal-submit");
+  add("journal-count");
+  add("film-row");
+  add("child-name");
+  add("child-avatar");
+  add("date-label");
+  const docListeners = {};
+  const winListeners = {};
+  const document = {
+    visibilityState: "visible",
+    body: el("body"),
+    getElementById(id) { return ids[id] || null; },
+    createElement() { return el(""); },
+    querySelector() { return null; },
+    querySelectorAll() { return []; },
+    addEventListener(type, fn) { (docListeners[type] = docListeners[type] || []).push(fn); },
+  };
+  let href = "http://localhost/journals/new";
+  const location = { pathname: "/journals/new", search: "" };
+  const fireHide = () => {
+    document.visibilityState = "hidden";
+    (docListeners.visibilitychange || []).forEach((fn) => fn());
+    (winListeners.pagehide || []).forEach((fn) => fn());
+  };
+  Object.defineProperty(location, "href", {
+    configurable: true,
+    get() { return href; },
+    set(value) { href = String(value); fireHide(); },
+  });
+  const sandbox = {
+    console, setTimeout, clearTimeout, AbortController, fetch: fetchImpl,
+    document, localStorage: store, location,
+    crypto: { randomUUID: () => "11111111-1111-4111-8111-111111111111" },
+    module: { exports: {} }, exports: {},
+    addEventListener(type, fn) { (winListeners[type] = winListeners[type] || []).push(fn); },
+  };
+  sandbox.window = sandbox;
+  vm.runInNewContext(code, sandbox, { filename: "journal.js" });
+  (docListeners.DOMContentLoaded || []).forEach((fn) => fn());
+  return { field, bar, tag, submit, fireHide };
+}
+
+function okFetch() {
+  return Promise.resolve({
+    status: 201,
+    text: () => Promise.resolve(JSON.stringify({
+      id: 9, child: { id: 1, name: "果果" }, date_label: "10月24日", body: "今天学会走路了",
+    })),
+  });
+}
+
+(async () => {
+  const saved = storage();
+  const page = boot(saved, okFetch);
+  page.field.value = "改了一个字";
+  page.field.dispatch("input");
+  page.submit.click();
+  await new Promise((resolve) => setTimeout(resolve, 400));
+  const again = boot(saved, okFetch);
+  const seeded = storage();
+  seeded.setItem(KEY, JSON.stringify({
+    v: 1, body: "没写完的一句", date: "2026-10-24", childId: 1, photoIds: [],
+    idemKey: "11111111-1111-4111-8111-111111111111", savedAt: 1,
+  }));
+  const shown = boot(seeded, okFetch);
+  const leaving = storage();
+  const open = boot(leaving, okFetch);
+  open.fireHide();
+  process.stdout.write(JSON.stringify({
+    afterSuccess: saved.getItem(KEY),
+    hidden: again.bar.hidden,
+    banner: again.tag.textContent,
+    seededHidden: shown.bar.hidden,
+    seededBanner: shown.tag.textContent,
+    leftBody: JSON.parse(leaving.getItem(KEY)).body,
+  }));
+})().catch((err) => { console.error(err); process.exit(1); });
+"""
+    completed = subprocess.run(
+        [node, "-e", script, str(Path("app/static/journal.js").resolve())],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert completed.returncode == 0, completed.stderr or completed.stdout
+    report = json.loads(completed.stdout)
+    assert report["afterSuccess"] is None
+    assert report["hidden"] is True
+    assert report["banner"] == ""
+    assert report["seededHidden"] is False
+    assert report["seededBanner"] == "上次没写完"
+    assert report["leftBody"] == "今天学会走路了"
+
+
 def test_js_404_without_code_is_retryable():
     source = Path("app/static/journal.js").read_text(encoding="utf-8")
     assert "status === 404 && !(data && data.code)" in source

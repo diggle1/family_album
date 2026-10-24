@@ -66,6 +66,7 @@ if (typeof document !== "undefined") {
   var pendingDiscard = null;
   var discardTimer = null;
   var saveTimer = null;
+  var suppressDraftSave = false;
   var photoUrls = {};
   var state = {
     body: "",
@@ -238,7 +239,7 @@ if (typeof document !== "undefined") {
   }
 
   function saveDraftNow() {
-    if (!app() || state.locked || pendingDiscard) return;
+    if (suppressDraftSave || !app() || state.locked || pendingDiscard) return;
     if (mode() !== "new" && mode() !== "edit") return;
     var key = draftKey();
     if (isBlank(state.body) && state.photoIds.length === 0) {
@@ -251,7 +252,7 @@ if (typeof document !== "undefined") {
   }
 
   function scheduleSave() {
-    if (state.locked) return;
+    if (suppressDraftSave || state.locked) return;
     if (saveTimer) clearTimeout(saveTimer);
     saveTimer = setTimeout(saveDraftNow, 300);
   }
@@ -504,6 +505,11 @@ if (typeof document !== "undefined") {
   }
 
   function finishSuccess(data) {
+    suppressDraftSave = true;
+    if (saveTimer) {
+      clearTimeout(saveTimer);
+      saveTimer = null;
+    }
     localStorage.removeItem(draftKey());
     pendingDiscard = null;
     var child = data && data.child ? data.child.id : state.childId;
