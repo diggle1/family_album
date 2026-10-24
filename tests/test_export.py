@@ -183,6 +183,26 @@ def test_t2_copy_has_free_line_and_no_banned_words(client: TestClient):
     _assert_clean(viewer.text, "photo")
 
 
+def test_failure_and_packing_sheets_are_local_templates(client: TestClient):
+    child_id = _family(client, "local-sheet@example.com", "小满", "本地家")
+    assert upload(client, kind="child", child_id=child_id, taken_on="2026-10-22").status_code == 201
+    page = client.get("/family/export")
+    assert page.status_code == 200
+    assert '<template id="export-failure-tpl">' in page.text
+    assert '<template id="export-packing-tpl">' in page.text
+    assert "没打包成" in page.text
+    assert "网络不稳或服务忙，稍后再试。" in page.text
+    assert "重试" in page.text
+    assert "正在打包你的照片…" in page.text
+    script = Path("app/static/app.js").read_text(encoding="utf-8")
+    assert "export-failure-tpl" in script
+    assert "HEADER_WAIT_MS = 130000" in script
+    assert "READ_STALL_MS = 15000" in script
+    assert "state=failure" not in script
+    assert "state=packing" not in script
+    _assert_clean(page.text, "local-templates")
+
+
 def test_t3_non_member_is_403_before_empty_count(client: TestClient):
     child_id = _family(client, "owner@example.com", "家长", "家长家")
     created = upload(client, kind="child", child_id=child_id, taken_on="2026-10-22")

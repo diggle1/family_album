@@ -42,5 +42,15 @@
     {% endwith %}
   </div>
 </div>
+<template id="export-packing-tpl">
+  {% with state="packing" %}
+  {% include "fragments/export_sheet.html" %}
+  {% endwith %}
+</template>
+<template id="export-failure-tpl">
+  {% with state="failure" %}
+  {% include "fragments/export_sheet.html" %}
+  {% endwith %}
+</template>
 {% endif %}
 {% endblock %}

@@ -28,11 +28,23 @@
   var blobUrl = null;
   var current = null;
   var ZIP_NAME = "kids-shiguangji-my-photos.zip";
+  // Headers only arrive after the server finishes the temp zip (up to 120s).
+  var HEADER_WAIT_MS = 130000;
+  // After headers, fail when no new bytes arrive for this long.
+  var READ_STALL_MS = 15000;
 
-  function swapSheet(state) {
+  function showTemplate(id) {
+    var target = document.getElementById("export-sheet");
+    var tpl = document.getElementById(id);
+    if (!target || !tpl || !tpl.content) return false;
+    target.replaceChildren(tpl.content.cloneNode(true));
+    return true;
+  }
+
+  function swapSuccess() {
     var target = document.getElementById("export-sheet");
     if (!target || !window.htmx) return Promise.reject(new Error("sheet"));
-    return window.htmx.ajax("GET", "/fragments/export/sheet?state=" + encodeURIComponent(state), {
+    return window.htmx.ajax("GET", "/fragments/export/sheet?state=success", {
       target: target,
       swap: "innerHTML"
     });
@@ -40,18 +52,34 @@
 
   function readZip(response) {
     if (!response.ok) return Promise.reject(new Error("status"));
+    var rawLength = response.headers.get("content-length");
+    var expectedSize = rawLength === null ? null : Number(rawLength);
     if (!response.body || !response.body.getReader) {
       return response.blob().then(function (blob) {
-        if (!blob) throw new Error("body");
+        if (!blob || (expectedSize !== null && blob.size !== expectedSize)) throw new Error("body");
         return blob;
       });
     }
     var reader = response.body.getReader();
     var parts = [];
+    var received = 0;
     function pump() {
-      return reader.read().then(function (step) {
-        if (step.done) return new Blob(parts, { type: "application/zip" });
+      return new Promise(function (resolve, reject) {
+        var timer = setTimeout(function () { reject(new Error("stall")); }, READ_STALL_MS);
+        reader.read().then(function (step) {
+          clearTimeout(timer);
+          resolve(step);
+        }, function (err) {
+          clearTimeout(timer);
+          reject(err);
+        });
+      }).then(function (step) {
+        if (step.done) {
+          if (!received || (expectedSize !== null && received !== expectedSize)) throw new Error("short");
+          return new Blob(parts, { type: "application/zip" });
+        }
         parts.push(step.value);
+        received += step.value.byteLength || step.value.length || 0;
         return pump();
       });
     }
@@ -63,30 +91,57 @@
       URL.revokeObjectURL(blobUrl);
       blobUrl = null;
     }
-    return swapSheet("failure");
+    showTemplate("export-failure-tpl");
   }
 
   function pack() {
     if (current) current.abort();
     var controller = new AbortController();
     current = controller;
-    var timer = setTimeout(function () { controller.abort(); }, 130000);
-    swapSheet("packing").then(function () {
-      return fetch("/api/export/my-photos.zip", {
-        credentials: "same-origin",
-        cache: "no-store",
-        signal: controller.signal
-      });
-    }).then(readZip).then(function (blob) {
-      clearTimeout(timer);
-      if (current !== controller) return;
+    var mode = "open";
+    var headerTimer = 0;
+
+    function cleanup() {
+      clearTimeout(headerTimer);
+      window.removeEventListener("offline", onOffline);
+    }
+
+    function finishFail() {
+      cleanup();
+      if (current !== controller || mode === "done" || mode === "fail") return;
+      mode = "fail";
+      try { controller.abort(); } catch (e) { /* already aborted */ }
+      failSheet();
+    }
+
+    function onOffline() {
+      finishFail();
+    }
+
+    window.addEventListener("offline", onOffline);
+    if (!showTemplate("export-packing-tpl")) {
+      finishFail();
+      return;
+    }
+    headerTimer = setTimeout(finishFail, HEADER_WAIT_MS);
+    fetch("/api/export/my-photos.zip", {
+      credentials: "same-origin",
+      cache: "no-store",
+      signal: controller.signal
+    }).then(function (response) {
+      clearTimeout(headerTimer);
+      if (current !== controller || mode !== "open") return;
+      return readZip(response);
+    }).then(function (blob) {
+      if (current !== controller || mode !== "open") return;
+      if (!blob) throw new Error("body");
+      mode = "done";
+      cleanup();
       if (blobUrl) URL.revokeObjectURL(blobUrl);
       blobUrl = URL.createObjectURL(blob);
-      return swapSheet("success");
+      return swapSuccess().catch(function () { failSheet(); });
     }).catch(function () {
-      clearTimeout(timer);
-      if (current !== controller) return;
-      return failSheet();
+      finishFail();
     });
   }
 
