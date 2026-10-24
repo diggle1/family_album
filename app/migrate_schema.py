@@ -2,6 +2,11 @@
 
 SQLAlchemy create_all does not add columns to a table that already exists.
 Upgrades from v2026.10.23.1 have to run this.
+
+v2026.10.24.3 adds journals and journal_photos. create_all builds them once
+the models are imported. It does not alter older tables. Rolling back to
+v2026.10.24.2 does not drop them: that release never imports the models, so
+its create_all leaves the rows where they are. Do not DROP TABLE.
 """
 
 from __future__ import annotations

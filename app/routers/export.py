@@ -32,6 +32,7 @@ from app.services.export import (
     list_my_photos,
     missing_header_value,
 )
+from app.services.journals import count_my_journals, export_markdown
 from app.services.photos import iter_stream, open_photo
 from app.routers.pages import _flags, gate_member, render
 
@@ -231,8 +232,10 @@ async def export_zip(
     user_id = ctx.user.id
     # `d` is only the download filename. It is not a filter.
     items = list_my_photos(db, family_id=family_id, uploader_id=user_id)
+    markdown = export_markdown(db, family_id=family_id, author_id=user_id)
     db.rollback()
-    if not items:
+    extras = [("日志.md", markdown.encode("utf-8"))] if markdown else None
+    if not items and not extras:
         return _frameable(JSONResponse({"detail": "no_photos", "count": 0}, status_code=404))
     key = (family_id, user_id)
     cancel = threading.Event()
@@ -265,7 +268,7 @@ async def export_zip(
                 tg.start_soon(watch)
                 try:
                     outcome["result"] = await anyio.to_thread.run_sync(
-                        lambda: build_zip(items, cancel=cancel)
+                        lambda: build_zip(items, cancel=cancel, extras=extras)
                     )
                 except Exception as exc:
                     outcome["error"] = exc
@@ -328,8 +331,12 @@ def download_original(
 def _page(request: Request, db: Session):
     gate = gate_member(request, db)
     if isinstance(gate, RedirectResponse):
-        return gate, None
-    return gate, count_my_photos(db, family_id=gate.membership.family_id, uploader_id=gate.user.id)
+        return gate, None, None
+    family_id = gate.membership.family_id
+    user_id = gate.user.id
+    photos = count_my_photos(db, family_id=family_id, uploader_id=user_id)
+    journals = count_my_journals(db, family_id=family_id, author_id=user_id)
+    return gate, photos, journals
 
 
 def _upload_context(db: Session, gate) -> dict:
@@ -347,14 +354,17 @@ def _upload_context(db: Session, gate) -> dict:
 
 @router.get("/family/export")
 def export_page(request: Request, db: Session = Depends(get_db)):
-    gate, count = _page(request, db)
+    gate, count, journals = _page(request, db)
     if isinstance(gate, RedirectResponse):
         return gate
-    assert count is not None
+    assert count is not None and journals is not None
+    export_empty = count == 0 and journals == 0
     context = {
         **_flags(gate.user, gate.membership),
         "family": gate.family,
         "count": count,
+        "journal_count": journals,
+        "export_empty": export_empty,
         "state": "confirm",
         "show_nav": True,
         "tab": "settings",
@@ -362,7 +372,7 @@ def export_page(request: Request, db: Session = Depends(get_db)):
         "export_blob_max_bytes": export_service.blob_max_bytes(),
         "copy_attrs": _COPY_ATTRS,
     }
-    if count == 0 and gate.membership.role in {"admin", "uploader"}:
+    if export_empty and gate.membership.role in {"admin", "uploader"}:
         context.update(_upload_context(db, gate))
     response = render(request, "export.html", context)
     return _private(response)
@@ -370,11 +380,11 @@ def export_page(request: Request, db: Session = Depends(get_db)):
 
 @router.get("/fragments/export/sheet")
 def export_sheet(request: Request, state: str = "confirm", db: Session = Depends(get_db)):
-    gate, count = _page(request, db)
+    gate, count, journals = _page(request, db)
     if isinstance(gate, RedirectResponse):
         return gate
-    assert count is not None
-    if count == 0:
+    assert count is not None and journals is not None
+    if count == 0 and journals == 0:
         response = render(
             request,
             "fragments/export_empty.html",

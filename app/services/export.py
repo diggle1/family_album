@@ -382,7 +382,14 @@ def _zip_info(name: str, taken_on: date | None) -> zipfile.ZipInfo:
     return info
 
 
-def _fill_zip(path: Path, items: list[ExportItem], cancel: threading.Event, slot: _StreamSlot) -> BuildResult:
+def _fill_zip(
+    path: Path,
+    items: list[ExportItem],
+    cancel: threading.Event,
+    slot: _StreamSlot,
+    extras: list[tuple[str, bytes]] | None = None,
+) -> BuildResult:
+    extra_files = list(extras or [])
     missing: list[dict[str, str]] = []
     packed = 0
     with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_STORED, allowZip64=True) as archive:
@@ -408,12 +415,16 @@ def _fill_zip(path: Path, items: list[ExportItem], cancel: threading.Event, slot
             finally:
                 slot.close()
             packed += 1
-        if packed == 0 and missing:
+        if packed == 0 and missing and not extra_files:
             raise ExportAllMissing(missing)
         if missing:
             lines = [f"{row['date']} · {row['owner']}" for row in missing]
             text = "\ufeff" + "\n".join(lines) + "\n"
             archive.writestr(_zip_info(_MISSING_NAME, None), text.encode("utf-8"))
+        for name, blob in extra_files:
+            if cancel.is_set():
+                raise ExportCancelled()
+            archive.writestr(_zip_info(name, None), blob)
     return BuildResult(path=path, packed=packed, missing=missing)
 
 
@@ -421,9 +432,11 @@ def build_zip(
     items: list[ExportItem],
     timeout_s: float | None = None,
     cancel: threading.Event | None = None,
+    extras: list[tuple[str, bytes]] | None = None,
 ) -> BuildResult:
     """Write a complete zip. Raises ExportFailed or ExportAllMissing without leaving the temp file."""
-    if not items:
+    extra_files = list(extras or [])
+    if not items and not extra_files:
         raise ExportFailed("empty")
     limit = timeout_seconds() if timeout_s is None else max(0.0, float(timeout_s))
     if cancel is None:
@@ -443,7 +456,7 @@ def build_zip(
     def run() -> None:
         ok = False
         try:
-            outcome["result"] = _fill_zip(path, items, cancel, slot)
+            outcome["result"] = _fill_zip(path, items, cancel, slot, extra_files)
             ok = True
         except ExportAllMissing as exc:
             outcome["all_missing"] = exc

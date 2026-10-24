@@ -21,6 +21,8 @@ from app.models import (  # noqa: F401
     Child,
     Family,
     Invite,
+    Journal,
+    JournalPhoto,
     Membership,
     Photo,
     User,
@@ -33,6 +35,7 @@ def main() -> None:
         print("added photos.storage_backend default local")
     else:
         print("photos.storage_backend present")
+    print("journals ready")
     print("schema ready")
 
 
