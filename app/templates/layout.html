@@ -14,7 +14,11 @@
       {% block content %}{% endblock %}
     </main>
     {% if show_fab|default(false) %}
-    <a class="fab{% if fab_family|default(false) %} family{% endif %}" id="fab" href="{{ fab_href|default('/upload') }}" aria-label="上传">＋</a>
+      {% if fab_menu|default(false) %}
+      <button type="button" class="fab{% if fab_family|default(false) %} family{% endif %}" id="fab" data-fab-open aria-label="{{ video_copy.fab_sheet }}">＋</button>
+      {% else %}
+      <a class="fab{% if fab_family|default(false) %} family{% endif %}" id="fab" href="{{ fab_href|default('/upload') }}" aria-label="上传">＋</a>
+      {% endif %}
     {% endif %}
     {% if show_nav|default(false) %}
     <nav class="tabbar">

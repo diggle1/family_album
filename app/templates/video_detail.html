@@ -1,0 +1,78 @@
+{% extends "layout.html" %}
+{% block title %}{{ child.name }} · kids时光机{% endblock %}
+{% block content %}
+<div id="video-app" class="paper" data-mode="detail"
+     data-video-id="{{ video.id }}"
+     data-child-id="{{ child.id }}"
+     {% for key, value in video_copy.items() %}data-copy-{{ key }}="{{ value }}" {% endfor %}>
+  <div class="wtop">
+    <a class="back" href="/?child={{ child.id }}">←</a>
+    <div class="title">{{ child.name }}<span class="meta">{{ payload.age_label }}</span></div>
+    {% if can_delete %}
+    <button type="button" class="more-btn" data-video-more aria-label="{{ video_copy.m_delete }}">⋯</button>
+    {% else %}
+    <span class="wtop-gap"></span>
+    {% endif %}
+  </div>
+  {% if can_delete %}
+  <div class="menu" id="video-menu" hidden>
+    <button type="button" data-video-delete>{{ video_copy.m_delete }}</button>
+  </div>
+  {% endif %}
+  <div class="detail-body">
+    <div class="filmbase">
+      <span class="sprockets L" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+      <span class="sprockets R" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+      <div class="filmwin player">
+        <video id="player" controls playsinline preload="metadata"
+               {% if payload.has_poster %}poster="{{ payload.poster_url }}"{% endif %}
+               src="{{ payload.media_url }}"></video>
+        <div class="ph" id="player-ph" hidden>{{ video_copy.cover_ph }}</div>
+      </div>
+    </div>
+  </div>
+  <p class="sign">{{ video_copy.d_sign.format(who=who, name=child.name, date=payload.date_label) }}</p>
+  {% if can_delete %}
+  <div class="sheet-mask" id="delete-sheet" hidden>
+    <div class="sheet">
+      <div class="grab"></div>
+      <h4>{{ video_copy.del_title }}</h4>
+      <p class="sub">{{ video_copy.del_sub }}</p>
+      <p class="inline-err" id="delete-error" hidden></p>
+      <div class="row">
+        <button type="button" class="btn ghost" data-delete-keep>{{ video_copy.del_keep }}</button>
+        <button type="button" class="btn danger" data-delete-ok>{{ video_copy.del_ok }}</button>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% if can_delete %}
+<script src="/static/video.js" defer></script>
+{% endif %}
+<script>
+  document.getElementById("player").addEventListener("error", function () {
+    var win = document.querySelector(".filmwin.player");
+    if (!win) return;
+    var video = document.getElementById("player");
+    if (video) video.hidden = true;
+    var ph = document.getElementById("player-ph");
+    if (ph) ph.hidden = false;
+    var sign = document.querySelector(".sign");
+    if (sign) sign.hidden = true;
+    var title = document.createElement("h3");
+    title.className = "nf-title";
+    title.textContent = document.getElementById("video-app").getAttribute("data-copy-not_found") || "";
+    var back = document.createElement("a");
+    back.className = "btn ghost";
+    back.href = "/";
+    back.textContent = document.getElementById("video-app").getAttribute("data-copy-back_tl") || "";
+    var box = document.querySelector(".detail-body");
+    if (box) {
+      box.innerHTML = "";
+      box.appendChild(title);
+      box.appendChild(back);
+    }
+  });
+</script>
+{% endblock %}

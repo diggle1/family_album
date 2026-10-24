@@ -7,6 +7,10 @@ v2026.10.24.3 adds journals and journal_photos. create_all builds them once
 the models are imported. It does not alter older tables. Rolling back to
 v2026.10.24.2 does not drop them: that release never imports the models, so
 its create_all leaves the rows where they are. Do not DROP TABLE.
+
+v2026.10.24.4 adds videos the same way. Rolling back to v2026.10.24.3 does
+not import Video, so create_all leaves that table and its rows in place.
+Do not DROP TABLE.
 """
 
 from __future__ import annotations

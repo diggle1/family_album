@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import uuid
+from pathlib import Path
 from typing import Any
 
 import boto3
@@ -31,6 +32,8 @@ _FORBIDDEN = {
 }
 
 _IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
+_VIDEO_TYPES = {"video/mp4", "video/quicktime"}
+_KEEP_TYPES = _IMAGE_TYPES | _VIDEO_TYPES
 
 
 def _missing_key(exc: Exception) -> bool:
@@ -100,6 +103,40 @@ class S3Store:
         except Exception as exc:
             raise map_s3_error(exc) from exc
 
+    def put_file(self, key: str, source: Path, content_type: str) -> None:
+        """Upload a file from disk. Single PUT first; multipart only if that fails.
+
+        The body is a file object, not a bytes blob.
+        """
+        self._require_config()
+        name = safe_object_key(key)
+        client = self._client()
+        try:
+            with Path(source).open("rb") as handle:
+                client.put_object(
+                    Bucket=self.settings.s3_bucket,
+                    Key=name,
+                    Body=handle,
+                    ContentType=content_type,
+                )
+            return
+        except StorageError:
+            raise
+        except Exception as exc:
+            logger.warning("s3 single put failed error=%s", type(exc).__name__)
+            first = exc
+        try:
+            client.upload_file(
+                str(source),
+                self.settings.s3_bucket,
+                name,
+                ExtraArgs={"ContentType": content_type},
+            )
+        except StorageError:
+            raise
+        except Exception as exc:
+            raise map_s3_error(exc) from first
+
     def open(self, key: str) -> tuple[object, str]:
         self._require_config()
         name = safe_object_key(key)
@@ -112,7 +149,24 @@ class S3Store:
                 raise FileNotFoundError(name) from exc
             raise map_s3_error(exc) from exc
         ctype = str(obj.get("ContentType") or "")
-        if ctype not in _IMAGE_TYPES:
+        if ctype not in _KEEP_TYPES:
+            ctype = media_type_for(name)
+        return obj["Body"], ctype
+
+    def open_range(self, key: str, start: int, end: int | None = None) -> tuple[object, str]:
+        self._require_config()
+        name = safe_object_key(key)
+        spec = f"bytes={start}-" if end is None else f"bytes={start}-{end}"
+        try:
+            obj = self._client().get_object(Bucket=self.settings.s3_bucket, Key=name, Range=spec)
+        except StorageError:
+            raise
+        except Exception as exc:
+            if _missing_key(exc):
+                raise FileNotFoundError(name) from exc
+            raise map_s3_error(exc) from exc
+        ctype = str(obj.get("ContentType") or "")
+        if ctype not in _KEEP_TYPES:
             ctype = media_type_for(name)
         return obj["Body"], ctype
 

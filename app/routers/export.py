@@ -28,8 +28,10 @@ from app.services.export import (
     PackSlot,
     build_zip,
     count_my_photos,
+    count_my_videos,
     export_filename_day,
     list_my_photos,
+    list_my_videos,
     missing_header_value,
 )
 from app.services.journals import count_my_journals, export_markdown
@@ -232,6 +234,7 @@ async def export_zip(
     user_id = ctx.user.id
     # `d` is only the download filename. It is not a filter.
     items = list_my_photos(db, family_id=family_id, uploader_id=user_id)
+    items.extend(list_my_videos(db, family_id=family_id, uploader_id=user_id))
     markdown = export_markdown(db, family_id=family_id, author_id=user_id)
     db.rollback()
     extras = [("日志.md", markdown.encode("utf-8"))] if markdown else None
@@ -331,12 +334,13 @@ def download_original(
 def _page(request: Request, db: Session):
     gate = gate_member(request, db)
     if isinstance(gate, RedirectResponse):
-        return gate, None, None
+        return gate, None, None, None
     family_id = gate.membership.family_id
     user_id = gate.user.id
     photos = count_my_photos(db, family_id=family_id, uploader_id=user_id)
     journals = count_my_journals(db, family_id=family_id, author_id=user_id)
-    return gate, photos, journals
+    videos = count_my_videos(db, family_id=family_id, uploader_id=user_id)
+    return gate, photos, journals, videos
 
 
 def _upload_context(db: Session, gate) -> dict:
@@ -354,11 +358,11 @@ def _upload_context(db: Session, gate) -> dict:
 
 @router.get("/family/export")
 def export_page(request: Request, db: Session = Depends(get_db)):
-    gate, count, journals = _page(request, db)
+    gate, count, journals, videos = _page(request, db)
     if isinstance(gate, RedirectResponse):
         return gate
-    assert count is not None and journals is not None
-    export_empty = count == 0 and journals == 0
+    assert count is not None and journals is not None and videos is not None
+    export_empty = count == 0 and journals == 0 and videos == 0
     context = {
         **_flags(gate.user, gate.membership),
         "family": gate.family,
@@ -380,11 +384,11 @@ def export_page(request: Request, db: Session = Depends(get_db)):
 
 @router.get("/fragments/export/sheet")
 def export_sheet(request: Request, state: str = "confirm", db: Session = Depends(get_db)):
-    gate, count, journals = _page(request, db)
+    gate, count, journals, videos = _page(request, db)
     if isinstance(gate, RedirectResponse):
         return gate
-    assert count is not None and journals is not None
-    if count == 0 and journals == 0:
+    assert count is not None and journals is not None and videos is not None
+    if count == 0 and journals == 0 and videos == 0:
         response = render(
             request,
             "fragments/export_empty.html",

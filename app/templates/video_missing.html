@@ -1,0 +1,13 @@
+{% extends "layout.html" %}
+{% block title %}{{ video_copy.not_found }} · kids时光机{% endblock %}
+{% block content %}
+<div class="center">
+  <div class="filmbase nf-film">
+    <span class="sprockets L" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
+    <span class="sprockets R" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
+    <div class="filmwin"><div class="ph">{{ video_copy.cover_ph }}</div></div>
+  </div>
+  <h3>{{ video_copy.not_found }}</h3>
+  <a class="btn ghost" href="/">{{ video_copy.back_tl }}</a>
+</div>
+{% endblock %}

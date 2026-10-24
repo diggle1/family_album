@@ -1,0 +1,89 @@
+{% extends "layout.html" %}
+{% block title %}{{ video_copy.u_title }} · kids时光机{% endblock %}
+{% block content %}
+<div id="video-app" class="paper" data-mode="upload"
+     data-fid="{{ family.id }}"
+     data-uid="{{ user.id }}"
+     data-today="{{ today }}"
+     data-child="{% if selected %}{{ selected.id }}{% endif %}"
+     data-single="{{ 1 if children|length == 1 else 0 }}"
+     data-max-ms="{{ max_ms }}"
+     data-max-bytes="{{ max_bytes }}"
+     data-poster-max="{{ poster_max }}"
+     data-weekdays="{{ weekdays }}"
+     data-age-under="不足1个月"
+     data-age-month="个月"
+     data-age-year="岁"
+     data-back="{{ back_href }}"
+     {% for key, value in video_copy.items() %}data-copy-{{ key }}="{{ value }}" {% endfor %}>
+  <div class="wtop">
+    <a class="back" href="{{ back_href }}" data-video-close>✕</a>
+    <div class="title">{{ video_copy.u_title }}<span class="meta">{{ video_copy.u_limit_hint }}</span></div>
+    <span class="wtop-gap"></span>
+  </div>
+  <div class="upbody">
+    <div class="letterhead" id="letterhead">
+      <span class="avatar xl" id="child-avatar">{% if selected %}{{ selected.name|initial }}{% else %}？{% endif %}</span>
+      <div class="name" id="child-name">{% if selected %}{{ selected.name }}{% else %}{{ video_copy.child_pick }}{% endif %}</div>
+      <div class="age" id="child-age"></div>
+      {% if children|length > 1 %}
+      <button type="button" class="pick" id="child-switch">⇄ {{ video_copy.child_switch }}</button>
+      {% elif not selected %}
+      <button type="button" class="pick" id="child-switch">{{ video_copy.child_pick_tap }}</button>
+      {% endif %}
+      <button type="button" class="date" id="date-open"><span id="date-label"></span></button>
+    </div>
+    <div class="filmbase" id="film-preview">
+      <span class="sprockets L" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+      <span class="sprockets R" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+      <div class="filmwin" id="film-win">
+        <img id="poster-img" alt="" hidden>
+        <div class="ph" id="film-ph">{{ video_copy.u_pick }}</div>
+        <span class="dur" id="film-dur" hidden></span>
+        <div class="prog" id="film-prog" hidden><i id="film-prog-bar"></i></div>
+      </div>
+    </div>
+    <p class="hint" id="cancel-note">{{ video_copy.u_cancel_note }}</p>
+    <div class="meter" id="meter">
+      <div class="row"><span class="sel" id="meter-sel">{{ video_copy.meter_unpicked }}</span><span class="cap">{{ video_copy.meter_cap }}</span></div>
+      <div class="tracks">
+        <div class="tr" id="meter-dur"><i id="meter-dur-bar"></i></div>
+        <div class="tr" id="meter-size"><i id="meter-size-bar"></i></div>
+      </div>
+    </div>
+    <p class="inline-warn" id="keep-open" hidden>{{ video_copy.u_keep_open }}</p>
+    <input id="video-file" type="file" accept="video/*" hidden>
+  </div>
+  <div class="wfoot">
+    <button type="button" class="errline" id="video-error" hidden></button>
+    <button type="button" class="btn" id="video-submit" disabled>{{ video_copy.u_submit }}</button>
+    <button type="button" class="btn text" id="video-cancel" hidden>{{ video_copy.u_cancel_up }}</button>
+  </div>
+
+  <div class="sheet-mask" id="child-sheet" hidden>
+    <div class="sheet">
+      <div class="grab"></div>
+      <h4>{{ video_copy.child_sheet_title }}</h4>
+      <p class="sub">{{ video_copy.child_sheet_sub }}</p>
+      <div id="child-options"></div>
+      <button type="button" class="btn ghost" data-sheet-close>{{ video_copy.cancel }}</button>
+    </div>
+  </div>
+  <div class="sheet-mask" id="date-sheet" hidden>
+    <div class="sheet">
+      <div class="grab"></div>
+      <h4>{{ video_copy.date_sheet_title }}</h4>
+      <div class="dpick">
+        <select id="date-year"></select>
+        <select id="date-month"></select>
+        <select id="date-day"></select>
+      </div>
+      <p class="hint" id="date-hint">{{ video_copy.date_age_follow }}</p>
+      <p class="inline-err" id="date-sheet-err" hidden></p>
+      <button type="button" class="btn" id="date-ok">{{ video_copy.date_sheet_ok }}</button>
+    </div>
+  </div>
+</div>
+<script type="application/json" id="video-children-data">{{ children_json | safe }}</script>
+<script src="/static/video.js" defer></script>
+{% endblock %}

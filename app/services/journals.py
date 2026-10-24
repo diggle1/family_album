@@ -444,6 +444,8 @@ def build_feed(db: Session, child: Child) -> dict:
 
     Journals are newest first. Photo order stays on the existing timeline.
     """
+    from app.services.videos import videos_for_feed
+
     base = build_timeline(db, child)
     rows = list(
         db.scalars(
@@ -458,6 +460,7 @@ def build_feed(db: Session, child: Child) -> dict:
     by_date = {day["taken_on"]: day for day in base["days"]}
     for day in base["days"]:
         day["journals"] = []
+        day["videos"] = []
     for journal in rows:
         key = journal.on_date.isoformat()
         bucket = by_date.get(key)
@@ -470,11 +473,31 @@ def build_feed(db: Session, child: Child) -> dict:
                 "photos": [],
                 "byline": "",
                 "journals": [],
+                "videos": [],
             }
             by_date[key] = bucket
         bucket["journals"].append(_card(db, journal, child))
+    video_count = 0
+    for key, cards in videos_for_feed(db, child).items():
+        bucket = by_date.get(key)
+        if bucket is None:
+            on_date = date.fromisoformat(key)
+            bucket = {
+                "taken_on": key,
+                "date_label": date_label(on_date),
+                "weekday": weekday_zh(on_date),
+                "age_label": age_label(child.birth_date, on_date),
+                "photos": [],
+                "byline": "",
+                "journals": [],
+                "videos": [],
+            }
+            by_date[key] = bucket
+        bucket["videos"] = cards
+        video_count += len(cards)
     days = sorted(by_date.values(), key=lambda day: day["taken_on"], reverse=True)
     base["days"] = days
+    base["video_count"] = video_count
     return base
 
 

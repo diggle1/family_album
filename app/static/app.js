@@ -1012,4 +1012,25 @@
       });
     }
   });
+
+  document.addEventListener("click", function (event) {
+    var opener = event.target.closest("[data-fab-open]");
+    var sheet = document.getElementById("fab-sheet");
+    if (opener && sheet) {
+      event.preventDefault();
+      var child = document.querySelector("[data-child-id]");
+      var id = child ? child.getAttribute("data-child-id") || "" : "";
+      var photo = sheet.querySelector("[data-fab-photo]");
+      var video = sheet.querySelector("[data-fab-video]");
+      if (photo && id) photo.setAttribute("href", "/upload?child=" + id);
+      if (video && id) video.setAttribute("href", "/videos/new?child=" + id);
+      sheet.hidden = false;
+      return;
+    }
+    if (event.target.closest("[data-fab-close]")) {
+      if (sheet) sheet.hidden = true;
+      return;
+    }
+    if (sheet && !sheet.hidden && event.target === sheet) sheet.hidden = true;
+  });
 })();
