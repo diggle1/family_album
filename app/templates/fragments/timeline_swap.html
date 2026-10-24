@@ -1,4 +1,4 @@
 {% include "fragments/stage_inner.html" %}
 {% if can_upload %}
-<a id="fab" class="fab" href="/upload?child={{ child.id }}" hx-swap-oob="outerHTML" aria-label="上传">＋</a>
+<button type="button" id="fab" class="fab" data-fab-open hx-swap-oob="outerHTML" aria-label="{{ video_copy.fab_sheet }}">＋</button>
 {% endif %}

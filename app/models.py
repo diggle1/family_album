@@ -147,6 +147,41 @@ class JournalPhoto(Base):
     photo_id: Mapped[int] = mapped_column(index=True)
 
 
+class Video(Base):
+    """One short video for exactly one child on one calendar day.
+
+    Soft-delete clears the file names and keeps the row so the idempotency key
+    cannot be reused. child_id has no foreign key, same as journals.
+    """
+
+    __tablename__ = "videos"
+    __table_args__ = (
+        UniqueConstraint("uploader_id", "client_request_id", name="uq_video_uploader_key"),
+        CheckConstraint(
+            "deleted_at IS NOT NULL OR (byte_size > 0 AND length(storage_path) > 0)",
+            name="ck_video_blob",
+        ),
+        Index("ix_video_family_child_date", "family_id", "child_id", "on_date"),
+        Index("ix_video_uploader", "uploader_id"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    family_id: Mapped[int] = mapped_column(ForeignKey("families.id"))
+    uploader_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    # No FK: a future child delete must not be blocked by a video row.
+    child_id: Mapped[int] = mapped_column()
+    on_date: Mapped[date] = mapped_column(Date)
+    duration_ms: Mapped[int] = mapped_column()
+    byte_size: Mapped[int] = mapped_column()
+    container: Mapped[str] = mapped_column(String(8))
+    storage_path: Mapped[str] = mapped_column(String(80))
+    poster_path: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    storage_backend: Mapped[str] = mapped_column(String(16), default="local")
+    client_request_id: Mapped[str] = mapped_column(String(36))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
 class AuthCode(Base):
     __tablename__ = "auth_codes"
 

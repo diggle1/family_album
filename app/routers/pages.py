@@ -11,7 +11,7 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.auth import set_session
-from app.constants import FORBIDDEN, JOURNAL, ROLE_LABEL, ROLE_NOTE
+from app.constants import FORBIDDEN, JOURNAL, ROLE_LABEL, ROLE_NOTE, VIDEO
 from app.db import get_db
 from app.deps import MemberCtx, optional_user
 from app.http import client_ip, safe_next, toast_text
@@ -155,6 +155,17 @@ def home(
     return _timeline_response(request, db, user, membership, family, children, current, toast)
 
 
+def _video_toast(params) -> str | None:
+    kind = params.get("vtoast")
+    if kind == "deleted":
+        return VIDEO["toast_deleted"]
+    if kind == "posted":
+        vdate = params.get("vdate") or ""
+        if re.fullmatch(r"\d{1,2}月\d{1,2}日", vdate):
+            return VIDEO["toast_posted"].format(date=vdate)
+    return None
+
+
 def _journal_toast(params) -> str | None:
     kind = params.get("jtoast")
     if kind == "edited":
@@ -182,9 +193,11 @@ def _timeline_response(request, db, user, membership, family, children, current,
             "timeline": timeline,
             "show_nav": True,
             "show_fab": flags["can_upload"],
+            "fab_menu": flags["can_upload"],
             "fab_href": f"/upload?child={current.id}",
             "tab": "timeline",
-            "toast": _journal_toast(request.query_params) or toast_text(toast),
+            "highlight_video": request.query_params.get("vhl") or "",
+            "toast": _video_toast(request.query_params) or _journal_toast(request.query_params) or toast_text(toast),
         },
     )
 
@@ -207,6 +220,7 @@ def timeline_fragment(request: Request, child: int, db: Session = Depends(get_db
             "children": children,
             "child": found,
             "timeline": build_feed(db, found),
+            "highlight_video": request.query_params.get("vhl") or "",
         },
     )
 

@@ -2,11 +2,12 @@ from pathlib import Path
 
 from fastapi.templating import Jinja2Templates
 
-from app.constants import EXPORT, JOURNAL
+from app.constants import EXPORT, JOURNAL, VIDEO
 
 templates = Jinja2Templates(directory=str(Path(__file__).resolve().parent / "templates"))
 templates.env.globals["export_copy"] = EXPORT
 templates.env.globals["journal_copy"] = JOURNAL
+templates.env.globals["video_copy"] = VIDEO
 
 
 def _initial(name: str | None) -> str:

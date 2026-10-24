@@ -27,7 +27,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app import constants
-from app.models import Child, Photo
+from app.models import Child, Photo, Video
 from app.storage import factory as storage_factory
 
 logger = logging.getLogger("family_album.export")
@@ -213,6 +213,48 @@ def list_my_photos(db: Session, *, family_id: int, uploader_id: int) -> list[Exp
     return items
 
 
+def list_my_videos(db: Session, *, family_id: int, uploader_id: int) -> list[ExportItem]:
+    """This member's videos. Named like photos: {on_date}_{id}{ext} at the zip root."""
+    rows = db.execute(
+        select(Video, Child.name)
+        .outerjoin(Child, (Child.id == Video.child_id) & (Child.family_id == family_id))
+        .where(
+            Video.family_id == family_id,
+            Video.uploader_id == uploader_id,
+            Video.deleted_at.is_(None),
+        )
+        .order_by(Video.on_date.asc(), Video.id.asc())
+    ).all()
+    items: list[ExportItem] = []
+    for video, child_name in rows:
+        if not video.storage_path:
+            continue
+        items.append(
+            ExportItem(
+                photo_id=video.id,
+                taken_on=video.on_date,
+                storage_path=video.storage_path,
+                storage_backend=video.storage_backend or "local",
+                kind="video",
+                child_name=child_name if isinstance(child_name, str) and child_name else None,
+            )
+        )
+    return items
+
+
+def count_my_videos(db: Session, *, family_id: int, uploader_id: int) -> int:
+    value = db.scalar(
+        select(func.count())
+        .select_from(Video)
+        .where(
+            Video.family_id == family_id,
+            Video.uploader_id == uploader_id,
+            Video.deleted_at.is_(None),
+        )
+    )
+    return int(value or 0)
+
+
 def count_my_photos(db: Session, *, family_id: int, uploader_id: int) -> int:
     value = db.scalar(
         select(func.count())
@@ -223,6 +265,8 @@ def count_my_photos(db: Session, *, family_id: int, uploader_id: int) -> int:
 
 
 def owner_label(item: ExportItem) -> str:
+    if item.kind == "video" and item.child_name:
+        return f"挂在 {item.child_name}"
     if item.kind == "child" and item.child_name:
         return f"挂在 {item.child_name}"
     return "记在我名下"

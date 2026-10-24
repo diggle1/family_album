@@ -4,3 +4,16 @@
 {% block content %}
 {% include "fragments/stage_inner.html" %}
 {% endblock %}
+{% block overlay %}
+{% if can_upload %}
+<div class="sheet-mask" id="fab-sheet" hidden>
+  <div class="sheet" role="dialog" aria-label="{{ video_copy.fab_sheet }}">
+    <div class="grab"></div>
+    <h4>{{ video_copy.fab_sheet }}</h4>
+    <a class="btn ghost" data-fab-photo href="/upload?child={{ child.id }}">{{ video_copy.fab_photo }}</a>
+    <a class="btn" data-fab-video href="/videos/new?child={{ child.id }}">{{ video_copy.fab_video }}</a>
+    <button type="button" class="btn text" data-fab-close>{{ video_copy.cancel }}</button>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

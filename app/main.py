@@ -23,8 +23,9 @@ from app.db import engine
 from app.gate import StorageGateMiddleware
 from app.http import safe_next, wants_json
 from app.migrate_schema import migrate_schema
-from app.routers import auth, children, deploy, family, journals, me, pages, photos, export
+from app.routers import auth, children, deploy, family, journals, me, pages, photos, export, videos
 from app.services.journals import JournalError
+from app.services.videos import VideoError, sweep_video_partials
 from app.services.export import sweep_temp_dir
 from app.storage.errors import StorageError
 from app.storage.factory import probe_code
@@ -51,6 +52,10 @@ async def lifespan(_app: FastAPI):
         sweep_temp_dir()
     except Exception:
         logger.warning("export temp sweep failed")
+    try:
+        sweep_video_partials()
+    except Exception:
+        logger.warning("video partial sweep failed")
 
     async def _probe() -> None:
         try:
@@ -114,7 +119,7 @@ class SecurityMiddleware:
         await self.app(scope, receive, send_with_headers)
 
 
-app = FastAPI(title="kids时光机", version="2026.10.24.3", lifespan=lifespan)
+app = FastAPI(title="kids时光机", version="2026.10.24.4", lifespan=lifespan)
 app.add_middleware(StorageGateMiddleware)
 app.add_middleware(SecurityMiddleware)
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
@@ -125,6 +130,7 @@ app.include_router(children.router)
 app.include_router(photos.router)
 app.include_router(export.router)
 app.include_router(journals.router)
+app.include_router(videos.router)
 app.include_router(pages.router)
 app.include_router(deploy.router)
 
@@ -148,6 +154,36 @@ async def database_failed(request: Request, exc: OperationalError):
     logger.warning("database request failed error=%s", type(exc).__name__)
     request.app.state.db_error = "DB_DOWN"
     return storage_block_response(request, "DB_DOWN")
+
+
+@app.exception_handler(VideoError)
+async def video_failed(request: Request, exc: VideoError):
+    path = request.url.path
+    if wants_json(request) or path.startswith("/api/") or path.startswith("/media/"):
+        response = JSONResponse({"detail": exc.detail, "code": exc.code}, status_code=exc.status)
+    elif exc.status == 403:
+        response = templates.TemplateResponse(
+            request,
+            "403.html",
+            {"show_nav": False, "toast": None},
+            status_code=403,
+        )
+    elif exc.status == 404:
+        response = templates.TemplateResponse(
+            request,
+            "video_missing.html",
+            {"show_nav": False, "toast": None, "family": None, "user": None},
+            status_code=404,
+        )
+    else:
+        response = templates.TemplateResponse(
+            request,
+            "error.html",
+            {"show_nav": False, "toast": None, "message": exc.detail, "next": "/"},
+            status_code=exc.status,
+        )
+    response.headers["Cache-Control"] = "private, no-store"
+    return response
 
 
 @app.exception_handler(JournalError)

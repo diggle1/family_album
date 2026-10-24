@@ -26,6 +26,7 @@ from app.models import (  # noqa: F401
     Membership,
     Photo,
     User,
+    Video,
 )
 
 
@@ -36,6 +37,7 @@ def main() -> None:
     else:
         print("photos.storage_backend present")
     print("journals ready")
+    print("videos ready")
     print("schema ready")
 
 

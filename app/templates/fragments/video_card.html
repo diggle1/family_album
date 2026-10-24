@@ -1,0 +1,14 @@
+<a class="vcard{% if highlight_video|default('')|string == item.id|string %} hl{% endif %}" href="/videos/{{ item.id }}">
+  <div class="filmbase">
+    <span class="sprockets L" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+    <span class="sprockets R" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+    <div class="filmwin">
+      {% if item.has_poster %}
+      <img src="{{ item.poster_url }}" alt="">
+      {% endif %}
+      <div class="ph{% if item.has_poster %} under{% endif %}">{{ video_copy.cover_ph }}</div>
+      <span class="dur">{{ item.duration_label }}</span>
+    </div>
+  </div>
+  <div class="filmmeta"><b>{{ video_copy.card_by.format(who=item.who) }}</b> · {{ item.age_label }}</div>
+</a>

@@ -128,5 +128,6 @@ EXPORT = {
 JOURNAL_BODY_MAX = 2000
 JOURNAL_BODY_WARN = 1900
 
-# Journal sentences are re-exported from journal_copy. This file stays the export copy surface.
+# Journal and video sentences are re-exported. This file stays the export copy surface.
 from app.journal_copy import JOURNAL as JOURNAL
+from app.video_copy import VIDEO as VIDEO

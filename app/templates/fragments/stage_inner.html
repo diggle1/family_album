@@ -5,12 +5,17 @@
   <div class="sk line short"></div>
   <div class="sk block"></div>
 </div>
-<div class="feed">
+<p class="sr-only">{{ video_copy.skel_note }}</p>
+<div class="feed" data-child-id="{{ child.id }}">
   <div class="top">
     <span class="avatar kid">{{ child.name|initial }}</span>
     <div class="title">{{ timeline.child.name }}<span class="meta">{{ timeline.child.age_label }} · {{ timeline.child.photo_count }} 张</span></div>
+    {% if membership and membership.role == 'viewer' %}
+    <span class="rochip">{{ video_copy.ro_meta }}</span>
+    {% endif %}
     {% if can_upload %}
     <a class="write-pill" href="/journals/new?child={{ child.id }}">✎ {{ journal_copy.entry_write }}</a>
+    <a class="write-pill video-pill" href="/videos/new?child={{ child.id }}" aria-label="{{ video_copy.tl_hang.format(kid=child.name) }}">＋ {{ video_copy.entry_video }}</a>
     {% endif %}
     <a class="avatar sm me" href="/family/settings">{{ user.name|initial }}</a>
   </div>
@@ -35,15 +40,20 @@
   {% if timeline.days %}
     {% for day in timeline.days %}
     <section class="day">
-      {% for item in day.journals %}
-      {% include "fragments/journal_card.html" %}
-      {% endfor %}
-      {% if day.photos %}
+      {% if day.photos or day.videos %}
       <div class="day-h">
         <b>{{ day.date_label }}</b>
         <span>{{ day.weekday }}</span>
         <span class="age">{{ day.age_label }}</span>
       </div>
+      {% endif %}
+      {% for item in day.journals %}
+      {% include "fragments/journal_card.html" %}
+      {% endfor %}
+      {% for item in day.videos %}
+      {% include "fragments/video_card.html" %}
+      {% endfor %}
+      {% if day.photos %}
       {% set n = day.photos|length %}
       {% set shown = day.photos[:3] if n >= 3 else day.photos %}
       <div class="pics n{{ 3 if n >= 3 else n }}">
@@ -61,14 +71,18 @@
   {% else %}
   <div class="center compact">
     <div class="illus">📷</div>
-    <h3>还没有照片</h3>
+    <h3>{{ video_copy.empty_tl_title }}</h3>
     {% if can_upload %}
     <p>把第一张挂到孩子的这一天。</p>
-    <a class="btn" href="/upload?kind=child&amp;child={{ child.id }}">上传第一张</a>
+    <a class="btn" href="/upload?kind=child&amp;child={{ child.id }}">{{ video_copy.empty_tl_btn }}</a>
+    <a class="btn ghost" href="/videos/new?child={{ child.id }}">{{ video_copy.empty_v_btn }}</a>
     {% else %}
     <p>照片会按天出现在这里。</p>
     {% endif %}
   </div>
+  {% endif %}
+  {% if can_upload and timeline.days and timeline.video_count == 0 %}
+  <p class="vempty"><a href="/videos/new?child={{ child.id }}">{{ video_copy.empty_v_title }} · {{ video_copy.empty_v_btn }}</a></p>
   {% endif %}
   <div class="pad-bottom"></div>
 </div>
