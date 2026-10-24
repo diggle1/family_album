@@ -1,0 +1,18 @@
+<a class="jcard" href="/journals/{{ item.id }}" data-journal-id="{{ item.id }}">
+  <div class="rail">
+    <div class="d"><b>{{ item.day }}</b>{{ item.month }}月<i>{{ item.age_label }}</i></div>
+  </div>
+  <div class="c">
+    {% if item.quote %}<div class="q">{{ item.quote }}</div>{% endif %}
+    {% if item.rest %}<div class="r">{{ item.rest }}</div>{% endif %}
+    {% if item.film %}
+    <div class="mfilm">
+      {% for ph in item.film %}
+      <span class="m"><img src="{{ ph.media_url }}" alt=""></span>
+      {% endfor %}
+      {% if item.more %}<span class="more">{{ journal_copy.card_more.format(n=item.more) }}</span>{% endif %}
+    </div>
+    {% endif %}
+    <div class="who">{{ journal_copy.card_by.format(who=item.who) }}</div>
+  </div>
+</a>

@@ -1,0 +1,14 @@
+{% for day in page.days %}
+<div class="pkday">{{ day.date_label }}</div>
+<div class="pgrid3">
+  {% for photo in day.photos %}
+  <button type="button" class="pk" data-photo-id="{{ photo.id }}">
+    <img src="{{ photo.media_url }}" alt="">
+    <span class="n"></span>
+  </button>
+  {% endfor %}
+</div>
+{% endfor %}
+{% if page.next %}
+<button type="button" class="btn ghost" data-picker-more data-before="{{ page.next }}">{{ page.days[-1].date_label }}</button>
+{% endif %}

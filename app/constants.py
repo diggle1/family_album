@@ -123,3 +123,10 @@ EXPORT = {
     "toast_photo": "原图已下载",
     "toast_photo_fail": "没下载成，再点一次试试",
 }
+
+# Unicode code points, newlines excluded. The write page reads these into data attributes.
+JOURNAL_BODY_MAX = 2000
+JOURNAL_BODY_WARN = 1900
+
+# Journal sentences are re-exported from journal_copy. This file stays the export copy surface.
+from app.journal_copy import JOURNAL as JOURNAL

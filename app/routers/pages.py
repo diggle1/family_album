@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from urllib.parse import quote
 
@@ -10,7 +11,7 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.auth import set_session
-from app.constants import FORBIDDEN, ROLE_LABEL, ROLE_NOTE
+from app.constants import FORBIDDEN, JOURNAL, ROLE_LABEL, ROLE_NOTE
 from app.db import get_db
 from app.deps import MemberCtx, optional_user
 from app.http import client_ip, safe_next, toast_text
@@ -24,6 +25,7 @@ from app.services.children import (
     list_children,
     require_child,
 )
+from app.services.journals import build_feed
 from app.services.clock import date_label, shanghai_today, weekday_zh
 from app.services.families import (
     accept_invite,
@@ -153,9 +155,22 @@ def home(
     return _timeline_response(request, db, user, membership, family, children, current, toast)
 
 
+def _journal_toast(params) -> str | None:
+    kind = params.get("jtoast")
+    if kind == "edited":
+        return JOURNAL["toast_edited"]
+    if kind == "deleted":
+        return JOURNAL["toast_deleted"]
+    if kind == "posted":
+        jdate = params.get("jdate") or ""
+        if re.fullmatch(r"\d{1,2}月\d{1,2}日", jdate):
+            return JOURNAL["toast_posted"].format(date=jdate)
+    return None
+
+
 def _timeline_response(request, db, user, membership, family, children, current, toast):
     flags = _flags(user, membership)
-    timeline = build_timeline(db, current)
+    timeline = build_feed(db, current)
     return render(
         request,
         "timeline.html",
@@ -169,7 +184,7 @@ def _timeline_response(request, db, user, membership, family, children, current,
             "show_fab": flags["can_upload"],
             "fab_href": f"/upload?child={current.id}",
             "tab": "timeline",
-            "toast": toast_text(toast),
+            "toast": _journal_toast(request.query_params) or toast_text(toast),
         },
     )
 
@@ -191,7 +206,7 @@ def timeline_fragment(request: Request, child: int, db: Session = Depends(get_db
             **flags,
             "children": children,
             "child": found,
-            "timeline": build_timeline(db, found),
+            "timeline": build_feed(db, found),
         },
     )
 

@@ -1,0 +1,46 @@
+{% extends "layout.html" %}
+{% block title %}{{ journal_copy.not_found }} · kids时光机{% endblock %}
+{% block content %}
+<div class="center"
+     id="journal-app"
+     data-mode="{% if recover_edit %}recover{% else %}missing{% endif %}"
+     data-fid="{% if family %}{{ family.id }}{% endif %}"
+     data-uid="{% if user %}{{ user.id }}{% endif %}"
+     data-journal-id="{{ requested_id }}"
+     {% for key, value in journal_copy.items() %}data-copy-{{ key }}="{{ value }}" {% endfor %}>
+  <div class="illus muted">🔍</div>
+  <h3>{{ journal_copy.not_found }}</h3>
+  <a class="btn ghost" href="/">{{ journal_copy.back_tl }}</a>
+  <div class="sheet-mask" id="deleted-sheet" hidden>
+    <div class="sheet">
+      <div class="grab"></div>
+      <h4>{{ journal_copy.err_deleted }}</h4>
+      <p class="sub">{{ journal_copy.err_deleted_sub }}</p>
+      <button type="button" class="btn" data-deleted-go>{{ journal_copy.err_deleted_go }}</button>
+      <a class="btn text" href="/">{{ journal_copy.back_tl }}</a>
+    </div>
+  </div>
+  <div class="sheet-mask" id="keep-sheet" hidden>
+    <div class="sheet">
+      <div class="grab"></div>
+      <h4>{{ journal_copy.err_deleted }}</h4>
+      <p class="sub">{{ journal_copy.keep_sub }}</p>
+      <button type="button" class="keep on" data-keep="edit">
+        <b>{{ journal_copy.keep_edit }}</b>
+        <small data-keep-edit-meta></small>
+        <span data-keep-edit-body></span>
+      </button>
+      <button type="button" class="keep" data-keep="new">
+        <b>{{ journal_copy.keep_new }}</b>
+        <small data-keep-new-meta></small>
+        <span data-keep-new-body></span>
+      </button>
+      <p class="hint">{{ journal_copy.keep_note }}</p>
+      <button type="button" class="btn" data-keep-ok>{{ journal_copy.keep_ok }}</button>
+    </div>
+  </div>
+</div>
+{% if recover_edit %}
+<script src="/static/journal.js" defer></script>
+{% endif %}
+{% endblock %}

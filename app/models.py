@@ -11,6 +11,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     String,
+    Text,
     UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column
@@ -103,6 +104,47 @@ class Photo(Base):
     # not the env at request time. create_all does not add it to an existing table.
     storage_backend: Mapped[str] = mapped_column(String(16), default="local", server_default="local")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class Journal(Base):
+    """A family note for one child on one calendar day. Soft-delete keeps the idempotency key."""
+
+    __tablename__ = "journals"
+    __table_args__ = (
+        UniqueConstraint("author_id", "client_request_id", name="uq_journal_author_key"),
+        CheckConstraint(
+            "deleted_at IS NOT NULL OR length(body) > 0",
+            name="ck_journal_body",
+        ),
+        Index("ix_journal_family_child_date", "family_id", "child_id", "on_date"),
+        Index("ix_journal_author", "author_id"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    family_id: Mapped[int] = mapped_column(ForeignKey("families.id"))
+    author_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    # No FK: deleting a child must not be blocked by a journal, and the row stays for export.
+    child_id: Mapped[int] = mapped_column(index=True)
+    on_date: Mapped[date] = mapped_column(Date)
+    body: Mapped[str] = mapped_column(Text)
+    client_request_id: Mapped[str] = mapped_column(String(36))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class JournalPhoto(Base):
+    """Ordered photo references. photo_id has no FK so a deleted photo leaves the journal intact."""
+
+    __tablename__ = "journal_photos"
+    __table_args__ = (
+        UniqueConstraint("journal_id", "photo_id", name="uq_journal_photo"),
+        CheckConstraint("position BETWEEN 0 AND 8", name="ck_journal_photo_pos"),
+    )
+
+    journal_id: Mapped[int] = mapped_column(ForeignKey("journals.id"), primary_key=True)
+    position: Mapped[int] = mapped_column(primary_key=True)
+    photo_id: Mapped[int] = mapped_column(index=True)
 
 
 class AuthCode(Base):

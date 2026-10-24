@@ -9,7 +9,7 @@
   <script src="/static/app.js" defer></script>
 </head>
 <body>
-  <div class="app">
+  <div class="app"{% if user %} data-uid="{{ user.id }}"{% endif %}>
     <main class="scroll" {% block main_attrs %}{% endblock %}>
       {% block content %}{% endblock %}
     </main>

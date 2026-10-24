@@ -9,6 +9,9 @@
   <div class="top">
     <span class="avatar kid">{{ child.name|initial }}</span>
     <div class="title">{{ timeline.child.name }}<span class="meta">{{ timeline.child.age_label }} · {{ timeline.child.photo_count }} 张</span></div>
+    {% if can_upload %}
+    <a class="write-pill" href="/journals/new?child={{ child.id }}">✎ {{ journal_copy.entry_write }}</a>
+    {% endif %}
     <a class="avatar sm me" href="/family/settings">{{ user.name|initial }}</a>
   </div>
   {% if children|length >= 2 %}
@@ -32,6 +35,10 @@
   {% if timeline.days %}
     {% for day in timeline.days %}
     <section class="day">
+      {% for item in day.journals %}
+      {% include "fragments/journal_card.html" %}
+      {% endfor %}
+      {% if day.photos %}
       <div class="day-h">
         <b>{{ day.date_label }}</b>
         <span>{{ day.weekday }}</span>
@@ -48,6 +55,7 @@
         {% endfor %}
       </div>
       <div class="byline">{{ day.byline }}</div>
+      {% endif %}
     </section>
     {% endfor %}
   {% else %}

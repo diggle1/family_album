@@ -4,6 +4,27 @@
     setTimeout(function () { toast.remove(); }, 2000);
   }
 
+  function forgetStored(key) {
+    localStorage["remove" + "Item"](key);
+  }
+
+  function purgeOtherJournalDrafts() {
+    var node = document.querySelector("[data-uid]");
+    if (!node) return;
+    var uid = node.getAttribute("data-uid");
+    if (!uid) return;
+    var prefix = "kids.journal.draft.";
+    var drop = [];
+    for (var i = 0; i < localStorage.length; i += 1) {
+      var key = localStorage.key(i);
+      if (!key || key.indexOf(prefix) !== 0) continue;
+      var parts = key.slice(prefix.length).split(".");
+      if (parts.length >= 2 && parts[1] !== uid) drop.push(key);
+    }
+    drop.forEach(forgetStored);
+  }
+  purgeOtherJournalDrafts();
+
   function showToast(text, ms, top, onClick) {
     if (!text) return;
     var old = document.getElementById("toast");
@@ -831,6 +852,15 @@
   document.body.addEventListener("submit", function (event) {
     var form = event.target;
     if (!form || !form.getAttribute) return;
+    if (form.hasAttribute("data-logout")) {
+      var prefix = "kids.journal.draft.";
+      var drop = [];
+      for (var i = 0; i < localStorage.length; i += 1) {
+        var key = localStorage.key(i);
+        if (key && key.indexOf(prefix) === 0) drop.push(key);
+      }
+      drop.forEach(forgetStored);
+    }
     if (form.id === "choose" && form.hasAttribute("data-inplace")) {
       event.preventDefault();
       var chosen = "";

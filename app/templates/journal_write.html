@@ -1,0 +1,113 @@
+{% extends "layout.html" %}
+{% block title %}{{ journal_copy.entry_write }} · kids时光机{% endblock %}
+{% block content %}
+<div id="journal-app" class="paper"
+     data-mode="{{ mode }}"
+     data-fid="{{ family.id }}"
+     data-uid="{{ user.id }}"
+     data-today="{{ today }}"
+     data-body-max="{{ body_max }}"
+     data-body-warn="{{ body_warn }}"
+     data-near-fmt="{{ near_fmt }}"
+     data-journal-id="{% if journal %}{{ journal.id }}{% endif %}"
+     data-updated-at="{% if journal %}{{ journal.updated_at.isoformat() }}{% endif %}"
+     data-single="{{ 1 if children|length == 1 else 0 }}"
+     {% for key, value in journal_copy.items() %}data-copy-{{ key }}="{{ value }}" {% endfor %}>
+  <div class="wtop">
+    <a class="back" href="{{ back_href }}" data-close-write>✕</a>
+    <span class="saved">✓ {{ journal_copy.w_autosave }}</span>
+    <span class="wtop-gap"></span>
+  </div>
+  <div class="letterhead" id="letterhead">
+    <span class="avatar xl" id="child-avatar">{% if selected %}{{ selected.name|initial }}{% else %}？{% endif %}</span>
+    <div class="name" id="child-name">{% if selected %}{{ selected.name }}{% else %}{{ journal_copy.child_pick }}{% endif %}</div>
+    <div class="age" id="child-age"></div>
+    {% if children|length > 1 %}
+    <button type="button" class="pick" id="child-switch">⇄ {{ journal_copy.child_switch }}</button>
+    {% elif not selected %}
+    <button type="button" class="pick" id="child-switch">{{ journal_copy.child_pick_tap }}</button>
+    {% endif %}
+    <button type="button" class="date" id="date-open"><span id="date-label"></span></button>
+    <p class="hint err" id="date-msg" hidden></p>
+  </div>
+  <div class="draftbar" id="draft-bar" hidden>
+    <span class="tag" id="draft-tag"></span>
+    <button type="button" class="tb go" id="draft-resume">{{ journal_copy.draft_resume }}</button>
+    <button type="button" class="tb no" id="draft-discard">{{ journal_copy.draft_discard }}</button>
+  </div>
+  <textarea id="journal-body" class="jbody" rows="8" placeholder="{{ journal_copy.w_placeholder.format(name=selected.name if selected else '') }}"></textarea>
+  <div class="jcount" id="journal-count"></div>
+  <div class="film">
+    <div class="lbl"><span id="film-label"></span></div>
+    <div class="row" id="film-row"></div>
+  </div>
+  <div class="wfoot">
+    <button type="button" class="errline" id="journal-error" hidden></button>
+    <button type="button" class="btn" id="journal-submit">{{ submit_label }}</button>
+  </div>
+
+  <div class="sheet-mask" id="child-sheet" hidden>
+    <div class="sheet">
+      <div class="grab"></div>
+      <h4>{{ journal_copy.child_sheet_title }}</h4>
+      <p class="sub">{{ journal_copy.child_sheet_sub }}</p>
+      <div id="child-options"></div>
+      <button type="button" class="btn ghost" data-sheet-close>{{ journal_copy.cancel }}</button>
+    </div>
+  </div>
+  <div class="sheet-mask" id="date-sheet" hidden>
+    <div class="sheet">
+      <div class="grab"></div>
+      <h4>{{ journal_copy.date_sheet_title }}</h4>
+      <div class="dpick">
+        <select id="date-year"></select>
+        <select id="date-month"></select>
+        <select id="date-day"></select>
+      </div>
+      <p class="hint" id="date-hint">{{ journal_copy.date_age_follow }}</p>
+      <p class="inline-err" id="date-sheet-err" hidden></p>
+      <button type="button" class="btn" id="date-ok">{{ journal_copy.date_sheet_ok }}</button>
+    </div>
+  </div>
+  <div class="sheet-mask" id="picker-sheet" hidden>
+    <div class="sheet sheet-tall">
+      <div class="grab"></div>
+      <h4>{{ journal_copy.pick_title }}</h4>
+      <p class="sub">{{ journal_copy.pick_sub }}</p>
+      <div id="picker-body"></div>
+      <button type="button" class="btn" id="picker-done"></button>
+    </div>
+  </div>
+  <div class="sheet-mask" id="deleted-sheet" hidden>
+    <div class="sheet">
+      <div class="grab"></div>
+      <h4>{{ journal_copy.err_deleted }}</h4>
+      <p class="sub">{{ journal_copy.err_deleted_sub }}</p>
+      <button type="button" class="btn" data-deleted-go>{{ journal_copy.err_deleted_go }}</button>
+      <a class="btn text" href="{{ back_href }}">{{ journal_copy.back_tl }}</a>
+    </div>
+  </div>
+  <div class="sheet-mask" id="keep-sheet" hidden>
+    <div class="sheet">
+      <div class="grab"></div>
+      <h4>{{ journal_copy.err_deleted }}</h4>
+      <p class="sub">{{ journal_copy.keep_sub }}</p>
+      <button type="button" class="keep on" data-keep="edit">
+        <b>{{ journal_copy.keep_edit }}</b>
+        <small data-keep-edit-meta></small>
+        <span data-keep-edit-body></span>
+      </button>
+      <button type="button" class="keep" data-keep="new">
+        <b>{{ journal_copy.keep_new }}</b>
+        <small data-keep-new-meta></small>
+        <span data-keep-new-body></span>
+      </button>
+      <p class="hint">{{ journal_copy.keep_note }}</p>
+      <button type="button" class="btn" data-keep-ok>{{ journal_copy.keep_ok }}</button>
+    </div>
+  </div>
+</div>
+<script type="application/json" id="journal-children-data">{{ children_json | safe }}</script>
+<script type="application/json" id="journal-initial">{{ initial_json | safe }}</script>
+<script src="/static/journal.js" defer></script>
+{% endblock %}
