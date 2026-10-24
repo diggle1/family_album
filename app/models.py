@@ -35,6 +35,8 @@ class Family(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(40))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    # Site root the admin gives elders. Empty means paste is blocked. Nullable, no default.
+    family_access_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
 
 
 class Membership(Base):

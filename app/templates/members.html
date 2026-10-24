@@ -31,6 +31,16 @@
         <span class="role-note"><span class="dotp {{ member.role }}"></span>{{ role_notes[member.role] }}</span>
       </div>
       <span class="badge {{ member.role }}">{{ role_labels[member.role] }}</span>
+      {% if is_admin and member.role == 'viewer' %}
+      <button type="button" class="act" data-elders-open
+              data-kind="member"
+              data-target-id="{{ member.user_id }}"
+              data-greeting="{{ member.greeting }}"
+              data-family="{{ family.name }}"
+              data-entry="{{ entry_url }}"
+              data-invite=""
+              data-has-url="{{ '1' if entry_url else '0' }}">{{ elders.copy_entry }}</button>
+      {% endif %}
     </div>
     {% if is_admin %}
     <form class="role-form" method="post" action="/family/members/{{ member.user_id }}/role">
@@ -56,9 +66,65 @@
         <span class="role-note"><span class="dotp {{ invite.role }}"></span>{{ role_notes[invite.role] }}</span>
       </div>
       <span class="badge {{ invite.role }}">{{ role_labels[invite.role] }}</span>
+      {% if is_admin %}
+      <button type="button" class="act" data-elders-open
+              data-kind="invite"
+              data-target-id="{{ invite.id }}"
+              data-greeting="{{ invite.greeting }}"
+              data-family="{{ family.name }}"
+              data-entry="{{ entry_url }}"
+              data-invite="{{ invite.invite_url }}"
+              data-has-url="{{ '1' if entry_url else '0' }}">{{ elders.copy_entry }}</button>
+      {% endif %}
     </div>
     <p class="pad hint">把链接发给对方（本版不发邮件）：<a href="{{ invite.accept_path }}">{{ invite.accept_path }}</a></p>
     {% endfor %}
   </div>
 </div>
+{% endblock %}
+{% block overlay %}
+{% if is_admin %}
+<div class="elders-mask" id="elders-mask" hidden
+     data-copy-toast-copied="{{ elders.toast_copied }}"
+     data-copy-err-403="{{ elders.err_403 }}"
+     data-copy-empty-url-hint="{{ elders.empty_url_hint }}"
+     data-copy-inv-expired-title="{{ elders.inv_expired_title }}"
+     data-copy-inv-expired-sub="{{ elders.inv_expired_sub }}">
+  <div class="slip" role="dialog" aria-label="{{ elders.slip_tag }}">
+    <div class="warnbox" data-slip-warn hidden></div>
+    <div data-slip-empty hidden>
+      <div class="warnbox">{{ elders.empty_url_hint }}</div>
+    </div>
+    <div class="to" data-slip-to></div>
+    <div class="fam" data-slip-family></div>
+    <div class="tag" data-slip-ready>{{ elders.slip_tag }}</div>
+    <div class="tag" data-slip-empty hidden>门口笺 · 未就绪</div>
+    <div class="lines">
+      <div>{{ elders.slip_l1 }}</div>
+      <div>{{ elders.slip_l2 }}</div>
+      <div>{{ elders.slip_l3 }}</div>
+    </div>
+    <div class="foot" data-slip-foot>
+      <div data-slip-ready>
+        <div class="lbl">{{ elders.slip_url_lbl }}</div>
+        <div class="url" data-slip-entry></div>
+        <div class="inv" data-slip-invite-block hidden>
+          <div class="lbl">{{ elders.slip_inv_lbl }}</div>
+          <div class="url" data-slip-invite></div>
+        </div>
+      </div>
+      <div class="strike" data-slip-empty hidden>
+        <div class="lbl">{{ elders.slip_url_lbl }}</div>
+        <div class="url muted">（未填写）</div>
+      </div>
+    </div>
+    <textarea id="elders-fallback" hidden readonly></textarea>
+    <div class="actions">
+      <button class="btn" type="button" data-slip-copy>{{ elders.copy_cta }}</button>
+      <a class="btn ghost" data-slip-go hidden href="/family/settings">{{ elders.empty_url_go }}</a>
+      <button class="btn text" type="button" data-slip-cancel>{{ elders.copy_cancel }}</button>
+    </div>
+  </div>
+</div>
+{% endif %}
 {% endblock %}

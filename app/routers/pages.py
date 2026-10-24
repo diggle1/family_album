@@ -11,7 +11,7 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.auth import set_session
-from app.constants import FORBIDDEN, JOURNAL, ROLE_LABEL, ROLE_NOTE, VIDEO
+from app.constants import ELDERS_NO_APP, FORBIDDEN, JOURNAL, ROLE_LABEL, ROLE_NOTE, VIDEO
 from app.db import get_db
 from app.deps import MemberCtx, optional_user
 from app.http import client_ip, safe_next, toast_text
@@ -27,12 +27,13 @@ from app.services.children import (
 )
 from app.services.journals import build_family_feed, build_feed
 from app.services.clock import date_label, shanghai_today, weekday_zh
+from app.services.elders import EldersError, greeting_for, invite_absolute, normalize_access_url
 from app.services.families import (
     accept_invite,
     create_family,
     create_invite,
+    invite_view,
     list_members,
-    preview_invite,
     set_role,
 )
 from app.services.photos import create_photo, self_album
@@ -450,6 +451,15 @@ def members_page(request: Request, toast: str | None = None, db: Session = Depen
 def _members(request, db, gate: MemberCtx, *, error: str | None = None, toast: str | None = None, status_code: int = 200):
     data = list_members(db, family_id=gate.family.id, include_invites=gate.membership.role == "admin")
     admin_count = sum(1 for item in data["members"] if item["role"] == "admin")
+    entry_url = ""
+    if gate.membership.role == "admin":
+        entry_url = (gate.family.family_access_url or "").strip()
+        for item in data["members"]:
+            if item["role"] == "viewer":
+                item["greeting"] = greeting_for(item.get("relation_label"))
+        for item in data.get("invites", []):
+            item["greeting"] = greeting_for(None)
+            item["invite_url"] = invite_absolute(entry_url, item["token"]) if entry_url else ""
     return render(
         request,
         "members.html",
@@ -461,6 +471,7 @@ def _members(request, db, gate: MemberCtx, *, error: str | None = None, toast: s
             "admin_count": admin_count,
             "role_labels": ROLE_LABEL,
             "role_notes": ROLE_NOTE,
+            "entry_url": entry_url,
             "error": error,
             "show_nav": True,
             "tab": "settings",
@@ -508,17 +519,16 @@ def members_role(
     return RedirectResponse("/family/members", status_code=303)
 
 
-@router.get("/family/settings")
-def settings_page(request: Request, toast: str | None = None, db: Session = Depends(get_db)):
-    gate = gate_member(request, db)
-    if isinstance(gate, RedirectResponse):
-        return gate
+def _settings(request, db, gate: MemberCtx, *, toast: str | None = None, access_error: str | None = None, status_code: int = 200):
     children = list_children(db, gate.family.id)
     member_count = len(list_members(db, family_id=gate.family.id, include_invites=False)["members"])
     cards = []
     for child in children:
         timeline = build_timeline(db, child)
         cards.append({"child": child, "age_label": timeline["child"]["age_label"], "photo_count": timeline["child"]["photo_count"]})
+    shown = toast_text(toast)
+    if request.query_params.get("saved") == "url":
+        shown = ELDERS_NO_APP["url_saved"]
     return render(
         request,
         "settings.html",
@@ -529,10 +539,40 @@ def settings_page(request: Request, toast: str | None = None, db: Session = Depe
             "member_count": member_count,
             "show_nav": True,
             "tab": "settings",
-            "toast": toast_text(toast),
+            "toast": shown,
             "error": None,
+            "access_error": access_error,
         },
+        status_code=status_code,
     )
+
+
+@router.get("/family/settings")
+def settings_page(request: Request, toast: str | None = None, db: Session = Depends(get_db)):
+    gate = gate_member(request, db)
+    if isinstance(gate, RedirectResponse):
+        return gate
+    return _settings(request, db, gate, toast=toast)
+
+
+@router.post("/family/settings/access-url")
+def settings_access_url(
+    request: Request,
+    family_access_url: str = Form(""),
+    db: Session = Depends(get_db),
+):
+    gate = gate_member(request, db)
+    if isinstance(gate, RedirectResponse):
+        return gate
+    if gate.membership.role != "admin":
+        raise HTTPException(status_code=403, detail=FORBIDDEN)
+    try:
+        cleaned = normalize_access_url(family_access_url)
+    except EldersError:
+        return _settings(request, db, gate, access_error=ELDERS_NO_APP["url_help"], status_code=400)
+    gate.family.family_access_url = cleaned
+    db.commit()
+    return RedirectResponse("/family/settings?saved=url", status_code=303)
 
 
 @router.get("/people")
@@ -679,27 +719,44 @@ async def upload_save(
     return response
 
 
+def _invite_login_href(token: str) -> str:
+    return "/?next=" + quote(f"/invites/{token}", safe="/")
+
+
+def _invite_open_context(db: Session, token: str, invite) -> dict:
+    family = get_family(db, invite.family_id)
+    role_label = ELDERS_NO_APP["inv_role"] if invite.role == "viewer" else ROLE_NOTE.get(invite.role, "")
+    return {
+        "token": token,
+        "family_name": family.name if family else "",
+        "role_label": role_label,
+        "login_href": _invite_login_href(token),
+        "error": None,
+    }
+
+
 @router.get("/invites/{token}")
 def invite_page(token: str, request: Request, db: Session = Depends(get_db)):
-    invite = preview_invite(db, token)
+    state, invite = invite_view(db, token)
     user = optional_user(request, db)
-    if invite is None:
+    if state == "expired":
+        return render(request, "invite.html", {"mode": "expired", "token": token}, status_code=400)
+    if state != "open" or invite is None:
         return render(request, "invite.html", {"mode": "invalid", "token": token}, status_code=400)
+    context = _invite_open_context(db, token, invite)
     if user is None:
-        return render(request, "invite.html", {"mode": "login", "token": token, "email": invite.email})
+        return render(request, "invite.html", {"mode": "login", **context})
     if user.email != invite.email:
-        return render(request, "invite.html", {"mode": "mismatch", "token": token}, status_code=400)
-    family = get_family(db, invite.family_id)
+        return render(
+            request,
+            "invite.html",
+            {"mode": "mismatch", "token": token, "login_href": context["login_href"]},
+            status_code=400,
+        )
     return render(
         request,
         "invite.html",
-        {
-            "mode": "ready",
-            "token": token,
-            "family_name": family.name if family else "",
-            "role_label": ROLE_LABEL.get(invite.role, ""),
-            **_flags(user, get_membership(db, user.id)),
-        },
+        {"mode": "ready", **_flags(user, get_membership(db, user.id)), **context},
     )
 
 
@@ -711,12 +768,26 @@ def invite_accept(token: str, request: Request, db: Session = Depends(get_db)):
     try:
         result = accept_invite(db, user, token)
     except HTTPException as exc:
-        return render(
-            request,
-            "invite.html",
-            {"mode": "invalid", "token": token, "error": str(exc.detail)},
-            status_code=exc.status_code,
-        )
+        state, invite = invite_view(db, token)
+        if state == "expired":
+            return render(request, "invite.html", {"mode": "expired", "token": token}, status_code=exc.status_code)
+        if state == "open" and invite is not None and user.email != invite.email:
+            return render(
+                request,
+                "invite.html",
+                {"mode": "mismatch", "token": token, "login_href": _invite_login_href(token)},
+                status_code=exc.status_code,
+            )
+        if state == "open" and invite is not None and user.email == invite.email:
+            context = _invite_open_context(db, token, invite)
+            context["error"] = str(exc.detail)
+            return render(
+                request,
+                "invite.html",
+                {"mode": "ready", **_flags(user, get_membership(db, user.id)), **context},
+                status_code=exc.status_code,
+            )
+        return render(request, "invite.html", {"mode": "invalid", "token": token}, status_code=exc.status_code)
     if result["needs_profile"]:
         return RedirectResponse("/profile?next=" + quote("/", safe=""), status_code=303)
     return RedirectResponse("/", status_code=303)

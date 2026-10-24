@@ -3,13 +3,14 @@ from pathlib import Path
 
 from fastapi.templating import Jinja2Templates
 
-from app.constants import EXPORT, JOURNAL, MULTI_CHILD, VIDEO
+from app.constants import ELDERS_NO_APP, EXPORT, JOURNAL, MULTI_CHILD, VIDEO
 
 templates = Jinja2Templates(directory=str(Path(__file__).resolve().parent / "templates"))
 templates.env.globals["export_copy"] = EXPORT
 templates.env.globals["journal_copy"] = JOURNAL
 templates.env.globals["video_copy"] = VIDEO
 templates.env.globals["multi_child"] = MULTI_CHILD
+templates.env.globals["elders"] = ELDERS_NO_APP
 
 
 def _initial(name: str | None) -> str:
