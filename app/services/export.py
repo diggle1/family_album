@@ -13,6 +13,7 @@ import json
 import logging
 import os
 import re
+import stat
 import tempfile
 import threading
 import time
@@ -118,7 +119,18 @@ class PackSlot:
 
 
 def temp_dir() -> Path:
-    path = Path(tempfile.gettempdir()) / "family-album-export"
+    """Directory for export zips.
+
+    EXPORT_TEMP_DIR overrides the shared default. Under pytest each process
+    gets its own subdirectory so one suite cannot see another's files.
+    """
+    override = os.environ.get("EXPORT_TEMP_DIR", "").strip()
+    if override:
+        path = Path(override)
+    else:
+        path = Path(tempfile.gettempdir()) / "family-album-export"
+        if os.environ.get("PYTEST_CURRENT_TEST"):
+            path = path / f"pytest-{os.getpid()}"
     path.mkdir(parents=True, exist_ok=True)
     return path
 
@@ -285,14 +297,34 @@ def wait_slot_free(key: tuple[int, int], wait_s: float) -> bool:
         return True
 
 
+def sweep_max_age_s() -> float:
+    """Keep a zip that may still be building or sending.
+
+    Age is measured from mtime. A live build is younger than the build timeout.
+    A finished zip can still be in the response body for EXPORT_TRANSFER_MAX_S.
+    A new process must not delete the other one.
+    """
+    return timeout_seconds() + max(0.0, float(constants.EXPORT_TRANSFER_MAX_S))
+
+
 def sweep_temp_dir() -> int:
+    """Delete old regular export zips in this directory. Skip links and fresh files."""
     directory = temp_dir()
+    cutoff = time.time() - sweep_max_age_s()
     removed = 0
     for path in directory.glob("export-*.zip"):
         try:
-            if path.is_file():
-                path.unlink()
-                removed += 1
+            info = path.lstat()
+        except OSError:
+            logger.warning("export temp sweep failed")
+            continue
+        if stat.S_ISLNK(info.st_mode) or not stat.S_ISREG(info.st_mode):
+            continue
+        if info.st_mtime >= cutoff:
+            continue
+        try:
+            path.unlink()
+            removed += 1
         except OSError:
             logger.warning("export temp sweep failed")
     logger.info("export temp sweep removed=%s", removed)
@@ -447,14 +479,16 @@ def build_zip(
         raise all_missing
     error = outcome.get("error")
     result = outcome.get("result")
-    if error is not None or not isinstance(result, BuildResult) or not path.is_file():
-        if isinstance(error, ExportCancelled) or cancel.is_set():
-            _unlink(path)
-            raise ExportFailed("cancelled")
-        logger.warning(
-            "export build failed error=%s",
-            type(error).__name__ if error is not None else "missing",
-        )
+    if isinstance(error, ExportCancelled) or (cancel.is_set() and not isinstance(result, BuildResult)):
         _unlink(path)
-        raise ExportFailed("read")
-    return result
+        raise ExportFailed("cancelled")
+    if isinstance(result, BuildResult) and path.is_file():
+        return result
+    if error is None:
+        if isinstance(result, BuildResult):
+            error = FileNotFoundError(path)
+        else:
+            error = RuntimeError("export worker finished without a result")
+    logger.warning("export build failed error=%s", type(error).__name__)
+    _unlink(path)
+    raise ExportFailed("read") from error

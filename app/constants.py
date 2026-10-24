@@ -40,6 +40,10 @@ EXPORT_CANCEL_WAIT_S = 4
 # Blob downloads above this many MiB use the browser's own download. Engineering cap, not a measurement.
 EXPORT_BLOB_MAX_MB = 200
 
+# After the zip is finished, another process may still be sending it.
+# Startup cleanup keeps files newer than the build timeout plus this send window.
+EXPORT_TRANSFER_MAX_S = 3600
+
 # Used when the request omits a valid ?d=YYYY-MM-DD. Env EXPORT_FILENAME_TZ overrides it.
 EXPORT_FILENAME_TZ = "Asia/Shanghai"
 
@@ -109,6 +113,7 @@ EXPORT = {
     "up_b": "记在我名下",
     "up_b_sub": "进「我的相册」，家庭可见，与孩子内容分开",
     "up_go": "继续选图",
+    "upload_sheet_failed": "没传上，再点一次试试",
     "empty_ro_title": "还没有你上传的照片",
     "empty_ro_p": "批量打包只含本人上传。<br>家人相册里你仍可<strong>单张保存原图</strong>。",
     "empty_ro_btn": "去时光线保存单张",

@@ -38,6 +38,7 @@
     <label class="field"><span>照片</span>
       <input class="input" type="file" name="file" accept="image/jpeg,image/png,image/webp" required>
     </label>
+    <p class="inline-hint" data-upload-failed hidden>{{ export_copy.upload_sheet_failed }}</p>
     <button class="btn" type="submit">上传</button>
   </form>
   {% endif %}

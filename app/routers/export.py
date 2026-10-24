@@ -122,10 +122,16 @@ async def _zip_chunks(path: Path, on_close, cancel) -> AsyncIterator[bytes]:
 
 
 class ZipDownload(StreamingResponse):
-    """Closes the body iterator on disconnect so the temp file is removed."""
+    """Removes the temp file before releasing the pack slot.
 
-    def __init__(self, content, on_close=None, **kwargs) -> None:
+    The body generator may never start (disconnect before the first byte).
+    aclose() then skips the generator finally, and ASGI 2.4 skips BackgroundTask
+    when send fails. This finally still unlinks, then releases.
+    """
+
+    def __init__(self, content, *, path: Path, on_close=None, **kwargs) -> None:
         super().__init__(content, **kwargs)
+        self._path = path
         self._on_close = on_close
 
     async def __call__(self, scope, receive, send) -> None:
@@ -138,6 +144,7 @@ class ZipDownload(StreamingResponse):
                     await closer()
                 except Exception:
                     logger.warning("export stream close failed")
+            _unlink(self._path)
             if self._on_close is not None:
                 self._on_close()
 
@@ -167,6 +174,7 @@ def stream_zip(
         headers["Set-Cookie"] = f"fa_dl={dl}; Path=/; Max-Age=120; SameSite=Strict"
     return ZipDownload(
         _zip_chunks(path, on_close, cancel),
+        path=path,
         on_close=on_close,
         media_type="application/zip",
         headers=headers,
@@ -272,8 +280,8 @@ async def export_zip(
         if error is not None:
             return _frameable(JSONResponse({"detail": "export_failed"}, status_code=503))
         result = outcome.get("result")
-        if result is None:
-            return _frameable(JSONResponse({"detail": "export_failed"}, status_code=503))
+        if not isinstance(result, export_service.BuildResult):
+            raise RuntimeError("export finished without a result")
         try:
             response = stream_zip(
                 result.path,

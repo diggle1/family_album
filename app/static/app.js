@@ -40,6 +40,7 @@
   var allMissingBody = null;
   var lastProgress = null;
   var iframeEl = null;
+  var activeDl = "";
   var trapped = false;
   var ignorePop = false;
   var bigTimers = [];
@@ -214,6 +215,11 @@
     bigTimers = [];
     if (iframeEl && iframeEl.parentNode) iframeEl.parentNode.removeChild(iframeEl);
     iframeEl = null;
+  }
+
+  function invalidateDl() {
+    activeDl = "";
+    dropIframe();
   }
 
   function shake() {
@@ -547,16 +553,21 @@
   }
 
   function openIframe() {
+    if (userStop || phase === "stopping" || phase === "confirm") return;
     dropIframe();
     var dl = randomDl();
+    activeDl = dl;
     var frame = document.createElement("iframe");
     frame.hidden = true;
     frame.setAttribute("aria-hidden", "true");
     frame.src = "/api/export/my-photos.zip?dl=" + dl + "&d=" + encodeURIComponent(localDate());
     iframeEl = frame;
     var settled = false;
+    function still() {
+      return activeDl === dl;
+    }
     function settleCookie() {
-      if (settled) return;
+      if (!still() || settled) return;
       if (document.cookie.indexOf("fa_dl=" + dl) === -1) return;
       settled = true;
       dropTimersOnly();
@@ -571,38 +582,38 @@
       bigTimers.forEach(function (id) { clearTimeout(id); clearInterval(id); });
       bigTimers = [];
     }
-    var poll = setInterval(settleCookie, 500);
-    var timer = setTimeout(function () {
-      if (settled) return;
+    function applyIframeBody() {
+      if (!still() || settled) return;
+      var data = readIframeJson(frame);
+      if (!data || !data.detail) return false;
       settled = true;
       dropTimersOnly();
-      var data = readIframeJson(frame);
-      if (data && data.detail === "export_busy") {
+      if (data.detail === "no_photos") {
+        window.location.reload();
+        return true;
+      }
+      if (data.detail === "export_busy") {
         showBusy();
-        return;
+        return true;
       }
-      if (data && data.detail === "all_missing") {
+      if (data.detail === "all_missing") {
         showAllMissing(data);
-        return;
+        return true;
       }
+      finishPackFailed();
+      return true;
+    }
+    var poll = setInterval(settleCookie, 500);
+    var timer = setTimeout(function () {
+      if (!still() || settled) return;
+      if (applyIframeBody()) return;
+      settled = true;
+      dropTimersOnly();
       finishPackFailed();
     }, headerWaitMs());
     bigTimers.push(poll, timer);
     frame.addEventListener("load", function () {
-      if (settled) return;
-      var data = readIframeJson(frame);
-      if (!data || !data.detail) return;
-      settled = true;
-      dropTimersOnly();
-      if (data.detail === "export_busy") {
-        showBusy();
-        return;
-      }
-      if (data.detail === "all_missing") {
-        showAllMissing(data);
-        return;
-      }
-      finishPackFailed();
+      applyIframeBody();
     });
     document.body.appendChild(frame);
   }
@@ -615,6 +626,7 @@
       return res.json();
     }).then(function (body) {
       clearTimeout(timer);
+      if (userStop || phase === "stopping" || phase === "confirm") return;
       if (!body || body.stopped !== true) {
         finishPackFailed();
         return;
@@ -622,6 +634,7 @@
       openIframe();
     }, function () {
       clearTimeout(timer);
+      if (userStop || phase === "stopping" || phase === "confirm") return;
       finishPackFailed();
     });
   }
@@ -724,10 +737,28 @@
     });
   }
 
+  function restoreConfirm() {
+    phase = "confirm";
+    userStop = false;
+    sawHeaders = false;
+    disarmBack();
+    showMask();
+    showTemplate("export-confirm-tpl");
+    setRow("idle");
+    showToast(copy("toast-cancelled"), 3000, true);
+  }
+
   function cancelPack() {
+    if (phase === "big") {
+      invalidateDl();
+      restoreConfirm();
+      fetch("/api/export/cancel", { method: "POST", credentials: "same-origin" }).then(function () {}, function () {});
+      return;
+    }
     if (phase !== "packing") return;
     userStop = true;
     phase = "stopping";
+    invalidateDl();
     var btn = document.querySelector("[data-export-action='cancel']");
     if (btn) {
       btn.textContent = copy("stopping");
@@ -743,13 +774,8 @@
     }).then(function (body) {
       clearTimeout(timer);
       if (body && body.stopped === true) {
-        phase = "confirm";
-        userStop = false;
-        disarmBack();
-        showTemplate("export-confirm-tpl");
-        setRow("idle");
-        showToast(copy("toast-cancelled"), 3000, true);
-      } else {
+        restoreConfirm();
+      } else if (phase === "stopping") {
         finishPackFailed();
       }
     }, function () {
@@ -833,7 +859,15 @@
       event.preventDefault();
       var body = new FormData(form);
       fetch("/api/photos", { method: "POST", body: body, credentials: "same-origin" }).then(function (res) {
-        if (res.status === 201) window.location.reload();
+        if (res.status === 201) {
+          window.location.reload();
+          return;
+        }
+        var note = form.querySelector("[data-upload-failed]");
+        if (note) note.hidden = false;
+      }, function () {
+        var note = form.querySelector("[data-upload-failed]");
+        if (note) note.hidden = false;
       });
     }
   });

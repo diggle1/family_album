@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import io
 import json
+import os
 import re
 import threading
 import time
@@ -457,12 +458,35 @@ def test_worker_stops_by_flag_without_close(client: TestClient, monkeypatch: pyt
 
 def test_startup_sweeps_orphan_export_files(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
     monkeypatch.setattr(export_service, "temp_dir", lambda: tmp_path)
-    (tmp_path / "export-orphan.zip").write_bytes(b"PK")
+    orphan = tmp_path / "export-orphan.zip"
+    orphan.write_bytes(b"PK")
+    stale = time.time() - export_service.sweep_max_age_s() - 5
+    os.utime(orphan, (stale, stale))
     (tmp_path / "keep.txt").write_text("x", encoding="utf-8")
     assert export_service.sweep_temp_dir() == 1
-    assert not (tmp_path / "export-orphan.zip").exists()
+    assert not orphan.exists()
     assert (tmp_path / "keep.txt").exists()
     assert "sweep_temp_dir()" in _MAIN.read_text(encoding="utf-8")
+
+
+def test_startup_sweep_keeps_fresh_pack_and_skips_symlink(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
+    monkeypatch.setattr(export_service, "temp_dir", lambda: tmp_path)
+    fresh = tmp_path / "export-fresh.zip"
+    fresh.write_bytes(b"PK")
+    target = tmp_path / "real.zip"
+    target.write_bytes(b"PK")
+    link = tmp_path / "export-link.zip"
+    link.symlink_to(target)
+    nested = tmp_path / "nested"
+    nested.mkdir()
+    (nested / "export-nested.zip").write_bytes(b"PK")
+    with TestClient(app):
+        pass
+    assert fresh.is_file()
+    assert link.is_symlink()
+    assert target.is_file()
+    assert (nested / "export-nested.zip").is_file()
+    assert export_service.sweep_temp_dir() == 0
 
 
 def test_count_uses_sql_count(client: TestClient):
@@ -813,7 +837,8 @@ def test_result_templates_are_preloaded(client: TestClient):
 
 
 def test_copy_matches_final_spec():
-    assert len(constants.EXPORT) == 70
+    assert len(constants.EXPORT) == 71
+    assert constants.EXPORT["upload_sheet_failed"] == "没传上，再点一次试试"
     assert constants.EXPORT["row_sub_failed_pack_retry"] == "没打包成 · 点这里重试"
     assert constants.EXPORT["row_sub_failed_pack"] == "没打包成 · 点这里看原因"
     assert constants.EXPORT["row_sub_failed"] == "没下载成 · 点这里重试"
@@ -864,3 +889,184 @@ def test_viewer_tap_targets_and_toast_ms():
     assert "showToast(original.getAttribute(\"data-save-original\"), 4000)" in script
     assert "showToast(fail, 4000)" in script
     assert "data-save-original" in script
+
+
+def test_second_client_startup_keeps_in_progress_zip(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+):
+    monkeypatch.setattr(export_service, "temp_dir", lambda: tmp_path)
+    monkeypatch.setenv("EXPORT_BUILD_TIMEOUT_S", "8")
+    monkeypatch.setattr("app.storage.factory.store_for", lambda _backend: SlowStore(0.8))
+    child_id = _family(client, "sweep-live@example.com", "扫", "扫家")
+    assert upload(client, kind="child", child_id=child_id, taken_on="2026-10-22").status_code == 201
+    box: dict[str, object] = {}
+
+    def run() -> None:
+        box["response"] = client.get("/api/export/my-photos.zip")
+
+    worker = threading.Thread(target=run)
+    worker.start()
+    deadline = time.monotonic() + 3
+    while time.monotonic() < deadline and not list(tmp_path.glob("export-*.zip")):
+        time.sleep(0.05)
+    assert list(tmp_path.glob("export-*.zip"))
+    with TestClient(app):
+        pass
+    assert list(tmp_path.glob("export-*.zip"))
+    worker.join(8)
+    assert box["response"].status_code == 200  # type: ignore[attr-defined]
+
+
+def test_disconnect_before_headers_unlinks_before_release(tmp_path: Path):
+    from starlette.requests import ClientDisconnect
+
+    from app.routers.export import stream_zip
+
+    key = (9, 9)
+    path = tmp_path / "export-before-headers.zip"
+    path.write_bytes(b"PK" + b"abcdefghij" * 8)
+    cancel = threading.Event()
+    slot = export_service.acquire_pack_slot(key, 1, cancel)
+    assert isinstance(slot, export_service.PackSlot)
+    seen: dict[str, bool] = {}
+
+    def on_close() -> None:
+        seen["existed"] = path.exists()
+        slot.release()
+
+    response = stream_zip(path, on_close=on_close)
+
+    async def receive():
+        return {"type": "http.disconnect"}
+
+    async def send(_message):
+        raise OSError("client gone")
+
+    scope = {
+        "type": "http",
+        "asgi": {"version": "3.0", "spec_version": "2.4"},
+        "http_version": "1.1",
+        "method": "GET",
+        "scheme": "http",
+        "path": "/api/export/my-photos.zip",
+        "raw_path": b"/api/export/my-photos.zip",
+        "query_string": b"",
+        "headers": [],
+        "client": ("127.0.0.1", 9),
+        "server": ("test", 80),
+    }
+
+    async def run():
+        await response(scope, receive, send)
+
+    with pytest.raises(ClientDisconnect):
+        anyio.run(run)
+    assert seen["existed"] is False
+    assert not path.exists()
+    assert list(tmp_path.iterdir()) == []
+    assert key not in export_service._active
+
+
+def test_unknown_route_uses_unified_404(client: TestClient):
+    page = client.get("/no/such/page")
+    assert page.status_code == 404
+    assert "no-store" in page.headers["cache-control"]
+    assert "没加载出来" in page.text
+    api = client.get("/api/no/such")
+    assert api.status_code == 404
+    assert api.headers["content-type"].startswith("application/json")
+    assert "detail" in api.json()
+    assert "no-store" in api.headers["cache-control"]
+    assert api.headers.get("x-frame-options") != "SAMEORIGIN"
+
+
+def test_zip_member_403_is_sameorigin_without_leaking(client: TestClient):
+    child_id = _family(client, "frame@example.com", "框", "框家")
+    assert upload(client, kind="child", child_id=child_id, taken_on="2026-10-22").status_code == 201
+    photo = client.get("/api/export/my-photos.zip")
+    assert photo.status_code == 200
+    outsider = TestClient(app)
+    auth(outsider, "frame-out@example.com", "外人")
+    denied = outsider.get("/api/export/my-photos.zip")
+    assert denied.status_code == 403
+    assert denied.json() == {"detail": "没有访问权限"}
+    assert "框家" not in denied.text
+    assert "no-store" in denied.headers["cache-control"]
+    assert denied.headers["x-frame-options"] == "SAMEORIGIN"
+    anonymous = TestClient(app).get("/api/export/my-photos.zip")
+    assert anonymous.status_code == 403
+    assert anonymous.headers["x-frame-options"] == "SAMEORIGIN"
+    settings = client.get("/family/settings")
+    assert settings.status_code == 200
+    assert settings.headers.get("x-frame-options") == "DENY"
+    photo_id = client.get("/api/export/my-photos.zip")
+    assert photo_id.status_code == 200
+    name = _names(photo_id.content)[0]
+    media_id = name.rsplit("_", 1)[1].split(".")[0]
+    media = outsider.get(f"/media/{media_id}")
+    assert media.status_code == 403
+    assert media.headers.get("x-frame-options") != "SAMEORIGIN"
+    script = _SCRIPT.read_text(encoding="utf-8")
+    iframe = script.split("function openIframe", 1)[1].split("function startBig", 1)[0]
+    assert "finishPackFailed()" in iframe
+    assert "headerWaitMs()" in iframe
+    assert "activeDl === dl" in iframe
+
+
+def test_big_cancel_ignores_stale_dl_and_keeps_confirm():
+    script = _SCRIPT.read_text(encoding="utf-8")
+    cancel = script.split("function cancelPack", 1)[1].split("function onRow", 1)[0]
+    assert 'phase === "big"' in cancel
+    assert "invalidateDl()" in cancel
+    assert "restoreConfirm()" in cancel
+    iframe = script.split("function openIframe", 1)[1].split("function startBig", 1)[0]
+    assert "activeDl === dl" in iframe
+    assert "finishPackFailed()" in iframe
+    sheet = Path("app/templates/fragments/export_sheet.html").read_text(encoding="utf-8")
+    big = sheet.split("state == 'big'", 1)[1].split("{% else %}", 1)[0]
+    assert 'data-export-action="cancel"' in big
+
+
+def test_no_photos_reloads_empty_state_for_blob_and_iframe():
+    script = _SCRIPT.read_text(encoding="utf-8")
+    handle = script.split("function handleResponse", 1)[1].split("function onOffline", 1)[0]
+    missing = handle.split("response.status === 404", 1)[1].split("if (!response.ok)", 1)[0]
+    assert "location.reload" in missing
+    assert "finishPackFailed" not in missing
+    iframe = script.split("function openIframe", 1)[1].split("function startBig", 1)[0]
+    empty = iframe.split('data.detail === "no_photos"', 1)[1].split("export_busy", 1)[0]
+    assert "location.reload" in empty
+    assert "finishPackFailed" not in empty
+
+
+def test_last_download_written_only_after_blob_check():
+    script = _SCRIPT.read_text(encoding="utf-8")
+    after_def = script.split("function rememberDownload()", 1)[1]
+    assert after_def.count("rememberDownload()") == 1
+    blob = script.split("function finishBlob", 1)[1].split("function randomDl", 1)[0]
+    assert "rememberDownload()" in blob
+    iframe = script.split("function openIframe", 1)[1].split("function startBig", 1)[0]
+    assert "rememberDownload" not in iframe
+    assert "localStorage.removeItem" not in script
+    assert "localStorage.setItem" in script.split("function rememberDownload", 1)[1].split("function readStoredDate", 1)[0]
+
+
+def test_upload_sheet_failed_stays_open_with_copy(client: TestClient):
+    _family(client, "upfail@example.com", "传败", "传败家")
+    page = client.get("/family/export")
+    assert page.status_code == 200
+    assert 'data-upload-failed' in page.text
+    assert "没传上，再点一次试试" in page.text
+    assert page.text.index("data-upload-failed") < page.text.index('id="upload-file"') + page.text[page.text.index('id="upload-file"'):].index("</form>")
+    form = page.text.split('id="upload-file"', 1)[1].split("</form>", 1)[0]
+    assert form.index("data-upload-failed") < form.index('type="submit"')
+    script = _SCRIPT.read_text(encoding="utf-8")
+    assert "没传上，再点一次试试" not in script
+    upload = script.split('form.id === "upload-file"', 1)[1].split("document.body.addEventListener(\"click\"", 1)[0]
+    assert "res.status === 201" in upload
+    assert "data-upload-failed" in upload
+    assert "note.hidden = false" in upload
+    assert ".value" not in upload
+    assert "upload-mask" not in upload
+    for word in BANNED:
+        assert word not in form

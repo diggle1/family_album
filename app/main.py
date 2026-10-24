@@ -9,7 +9,8 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from urllib.parse import quote, urlparse
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, Request
+from starlette.exceptions import HTTPException
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
@@ -154,6 +155,8 @@ async def http_error(request: Request, exc: HTTPException):
         response = JSONResponse({"detail": detail}, status_code=exc.status_code)
         if exc.status_code in {403, 404}:
             response.headers["Cache-Control"] = "no-store"
+        if exc.status_code == 403 and request.url.path == "/api/export/my-photos.zip":
+            response.headers["X-Frame-Options"] = "SAMEORIGIN"
         return response
     if exc.status_code == 404:
         response = templates.TemplateResponse(
