@@ -1,31 +1,72 @@
-<div class="sheet export-sheet{% if state != 'confirm' %} sheet-center{% endif %}">
+<div class="sheet export-sheet{% if state != 'confirm' %} sheet-center{% endif %}{% if state == 'packing' %} is-packing{% endif %}">
   <div class="grab"></div>
   {% if state == 'packing' %}
   <div class="spinner" aria-hidden="true"></div>
-  <h4>{{ export_copy.packing }}</h4>
-  <p class="sub">{{ export_copy.packing_note }}</p>
+  <h4>{{ export_copy.packing_title }}</h4>
+  <p class="sub">{{ export_copy.packing_sub }}</p>
+  <p class="hint export-hint">{{ export_copy.packing_hint }}</p>
+  <button class="btn ghost" type="button" data-export-action="cancel">{{ export_copy.cancel }}</button>
   {% elif state == 'success' %}
   <div class="illus ok" aria-hidden="true">✓</div>
-  <h4>{{ export_copy.success_title }}</h4>
-  <p class="sub">{{ export_copy.success_sub.format(count=count) }}</p>
-  <div class="free-line ok">✓ {{ export_copy.free_line }}</div>
-  <button class="btn" type="button" id="export-save" data-export-save data-filename="{{ export_copy.zip_filename }}">{{ export_copy.save_zip }}</button>
-  <a class="btn ghost" href="/family/settings">{{ export_copy.done }}</a>
+  <h4 data-export-ok-title>{{ export_copy.ok_title }}</h4>
+  <p class="sub" data-export-ok-sub></p>
+  <div class="receipt">
+    <div class="fn"><span class="zip">ZIP</span><span data-export-filename></span></div>
+    <div class="kv">
+      <span data-export-count-cell hidden>{{ export_copy.k_count }} <b><span data-export-count></span> 张</b></span>
+      <span>{{ export_copy.k_size }} <b data-export-size></b></span>
+    </div>
+    <div class="loc" data-export-where></div>
+  </div>
+  <div data-export-miss></div>
+  <p class="hint export-hint" data-export-miss-txt hidden>{{ export_copy.miss_txt }}</p>
+  <div class="ios-line" data-export-ios hidden>{{ export_copy.ios_cancel }}</div>
+  <div class="free-line ok">✓ {{ export_copy.free }}</div>
+  <button class="btn" type="button" data-export-close>{{ export_copy.done }}</button>
+  <button class="btn text" type="button" data-export-save>{{ export_copy.redownload }}</button>
   {% elif state == 'failure' %}
   <div class="illus err" aria-hidden="true">!</div>
-  <h4>{{ export_copy.fail_title }}</h4>
-  <p class="sub">{{ export_copy.fail_body }}</p>
+  <h4>{{ export_copy.packfail_title }}</h4>
+  <p class="sub">{{ export_copy.packfail_sub }}</p>
   <button class="btn" type="button" data-export-action="retry">{{ export_copy.retry }}</button>
-  <a class="btn ghost" href="/family/settings">{{ export_copy.close }}</a>
+  <button class="btn text" type="button" data-export-close>{{ export_copy.close }}</button>
+  {% elif state == 'downloading' %}
+  <div class="spinner" aria-hidden="true"></div>
+  <h4>{{ export_copy.dl_title }}</h4>
+  <div class="bar"><i data-export-bar></i></div>
+  <div class="bar-meta" data-export-dl-meta></div>
+  <button class="btn" type="button" data-export-collapse>{{ export_copy.dl_collapse }}</button>
+  <p class="hint export-hint">{{ export_copy.dl_hint }}</p>
+  {% elif state == 'dlfail' %}
+  <div class="illus err" aria-hidden="true">!</div>
+  <h4>{{ export_copy.fail_title }}</h4>
+  <p class="sub">{{ export_copy.fail_sub }}</p>
+  <div class="bar"><i class="err" data-export-bar></i></div>
+  <div class="bar-meta" data-export-dl-meta></div>
+  <button class="btn" type="button" data-export-action="retry">{{ export_copy.retry }}</button>
+  <button class="btn text" type="button" data-export-close>{{ export_copy.close }}</button>
+  {% elif state == 'allmissing' %}
+  <div class="illus muted" aria-hidden="true">📭</div>
+  <h4>{{ export_copy.packfail_title }}</h4>
+  <p class="sub" data-export-allmiss-sub>{{ export_copy.allmiss_sub }}</p>
+  <div data-export-miss></div>
+  <button class="btn" type="button" data-export-close>{{ export_copy.gotit }}</button>
+  {% elif state == 'big' %}
+  <div class="illus" aria-hidden="true">⬇</div>
+  <h4>{{ export_copy.big_title }}</h4>
+  <p class="sub">{{ export_copy.big_sub }}</p>
+  <div class="free-line ok">✓ {{ export_copy.free }}</div>
+  <button class="btn" type="button" data-export-close>{{ export_copy.done }}</button>
   {% else %}
-  <h4>{{ export_copy.sheet_title }}</h4>
-  <p class="sub">{{ export_copy.sheet_sub }}</p>
+  <h4>{{ export_copy.confirm_title }}</h4>
+  <p class="sub">{{ export_copy.confirm_sub }}</p>
   <div class="summary">
     <b>{{ count }}</b> 张
-    <span>{{ export_copy.summary.format(count=count) }}<br>{{ export_copy.exclude }}</span>
+    <span>{{ export_copy.confirm_sum.format(n=count) }}<br>{{ export_copy.confirm_sum2 }}</span>
   </div>
-  <div class="free-line">✓ {{ export_copy.free_line }}</div>
+  <div class="free-line">✓ {{ export_copy.free }}</div>
   <button class="btn" type="button" data-export-action="start">{{ export_copy.start }}</button>
   <a class="btn ghost" href="/family/settings">{{ export_copy.cancel }}</a>
+  <p class="inline-hint" data-export-busy hidden></p>
   {% endif %}
 </div>
