@@ -11,6 +11,7 @@
     <div class="grab"></div>
     <h4>{{ video_copy.fab_sheet }}</h4>
     <a class="btn ghost" id="fab-photo" data-fab-photo href="{% if family_view|default(false) %}/upload{% else %}/upload?child={{ child.id }}{% endif %}">{{ video_copy.fab_photo }}</a>
+    <a class="btn ghost" id="fab-legacy" data-fab-legacy href="{% if family_view|default(false) %}/legacy-import{% else %}/legacy-import?child={{ child.id }}{% endif %}">{{ legacy.cta }}</a>
     <a class="btn" id="fab-video" data-fab-video href="{% if family_view|default(false) %}/videos/new{% else %}/videos/new?child={{ child.id }}{% endif %}">{{ video_copy.fab_video }}</a>
     <button type="button" class="btn text" data-fab-close>{{ video_copy.cancel }}</button>
   </div>

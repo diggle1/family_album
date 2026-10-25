@@ -50,6 +50,7 @@ def main() -> None:
     print("photo_children ready")
     print("timeline_last_seen ready")
     print("day_notes ready")
+    print("legacy_import ready (no new tables)")
     print("schema ready")
 
 

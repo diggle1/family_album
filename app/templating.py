@@ -9,6 +9,7 @@ from app.constants import (
     ELDERS_WHATS_NEW,
     EXPORT,
     JOURNAL,
+    LEGACY_IMPORT,
     MULTI_CHILD,
     ON_THIS_DAY,
     PHOTO_MULTI_CHILD,
@@ -25,6 +26,7 @@ templates.env.globals["elders"] = ELDERS_NO_APP
 templates.env.globals["wn_copy"] = ELDERS_WHATS_NEW
 templates.env.globals["otd_copy"] = ON_THIS_DAY
 templates.env.globals["day_note"] = DAY_NOTE
+templates.env.globals["legacy"] = LEGACY_IMPORT
 
 
 def _initial(name: str | None) -> str:

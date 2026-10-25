@@ -44,6 +44,19 @@
     <a class="btn ghost" href="/family/members">家庭成员</a>
   </div>
   {% endif %}
+  {% if can_upload %}
+  <div class="sec">{{ legacy.tray_lab }}</div>
+  <div class="list">
+    <a class="li" id="legacy-import-entry" href="/legacy-import">
+      <span class="ic-round" aria-hidden="true">▤</span>
+      <span class="t">
+        <b>{{ legacy.cta }}</b>
+        <small>{{ legacy.entry_sub }}</small>
+      </span>
+      <span class="chev" aria-hidden="true">›</span>
+    </a>
+  </div>
+  {% endif %}
   <div class="sec" id="my-data">我的数据</div>
   <div class="list">
     <a class="li" id="export-entry" href="/family/export" data-uid="{{ user.id }}" data-copy-closed="{{ export_copy.row_sub_closed }}">

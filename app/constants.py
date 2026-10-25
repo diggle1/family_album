@@ -140,5 +140,13 @@ from app.day_note_copy import DAY_NOTE_BODY_DISPLAY as DAY_NOTE_BODY_DISPLAY
 from app.day_note_copy import DAY_NOTE_BODY_MAX as DAY_NOTE_BODY_MAX
 from app.day_note_copy import DAY_NOTE_BODY_WARN as DAY_NOTE_BODY_WARN
 from app.day_note_copy import DAY_NOTE_SNIP as DAY_NOTE_SNIP
+from app.legacy_import_copy import LEGACY_IMPORT as LEGACY_IMPORT
 from app.on_this_day_copy import ON_THIS_DAY as ON_THIS_DAY
 from app.whats_new_copy import ELDERS_WHATS_NEW as ELDERS_WHATS_NEW
+
+# One local batch of old photos. The client blocks the batch; the server caps one file.
+LEGACY_IMPORT_MAX_FILES = 50
+LEGACY_IMPORT_MAX_BYTES = 20 * 1024 * 1024
+LEGACY_IMPORT_BATCH_MAX_BYTES = 200 * 1024 * 1024
+LEGACY_IMPORT_MAX_EDGE = 8192
+LEGACY_IMPORT_CONCURRENCY = 1

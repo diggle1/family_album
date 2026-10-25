@@ -2,5 +2,6 @@
 {% if can_upload %}
 <button type="button" id="fab" class="fab" data-fab-open hx-swap-oob="outerHTML" aria-label="{{ video_copy.fab_sheet }}">＋</button>
 <a id="fab-photo" class="btn ghost" data-fab-photo hx-swap-oob="outerHTML" href="{% if family_view|default(false) %}/upload{% else %}/upload?child={{ child.id }}{% endif %}">{{ video_copy.fab_photo }}</a>
+<a id="fab-legacy" class="btn ghost" data-fab-legacy hx-swap-oob="outerHTML" href="{% if family_view|default(false) %}/legacy-import{% else %}/legacy-import?child={{ child.id }}{% endif %}">{{ legacy.cta }}</a>
 <a id="fab-video" class="btn" data-fab-video hx-swap-oob="outerHTML" href="{% if family_view|default(false) %}/videos/new{% else %}/videos/new?child={{ child.id }}{% endif %}">{{ video_copy.fab_video }}</a>
 {% endif %}

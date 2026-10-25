@@ -189,7 +189,7 @@ def create_photo(
     if not data:
         raise HTTPException(status_code=400, detail="请上传照片")
     if len(data) > settings.max_upload_bytes:
-        raise HTTPException(status_code=400, detail="单张照片不能超过 10MB")
+        raise HTTPException(status_code=400, detail="单张照片不能超过 20MB")
     media_type = sniff_image(data)
     if media_type is None:
         raise HTTPException(status_code=400, detail="只支持 jpeg、png、webp")
