@@ -71,7 +71,23 @@ def _live_child_ids(db: Session, family_id: int, child_ids: list[int]) -> list[i
     return [child.id for child in linked_children(db, family_id=family_id, child_ids=child_ids)]
 
 
-def _collect(db: Session, *, family_id: int, since: datetime, now: datetime) -> list[dict]:
+def _scoped(child_ids: list[int], only_child_id: int | None) -> list[int] | None:
+    """None means this row is outside the selected child. Family keeps every id."""
+    if only_child_id is None:
+        return child_ids
+    if only_child_id not in child_ids:
+        return None
+    return [only_child_id]
+
+
+def _collect(
+    db: Session,
+    *,
+    family_id: int,
+    since: datetime,
+    now: datetime,
+    only_child_id: int | None = None,
+) -> list[dict]:
     buckets: dict[date, dict] = defaultdict(
         lambda: {"photo_count": 0, "journal_count": 0, "video_count": 0, "child_ids": set()}
     )
@@ -81,9 +97,11 @@ def _collect(db: Session, *, family_id: int, since: datetime, now: datetime) -> 
         if not _in_window(photo.created_at, since, now):
             continue
         if photo.kind == "self":
+            if only_child_id is not None:
+                continue
             buckets[photo.taken_on]["photo_count"] += 1
             continue
-        child_ids = _live_child_ids(db, family_id, photo_child_ids(db, photo))
+        child_ids = _scoped(_live_child_ids(db, family_id, photo_child_ids(db, photo)), only_child_id)
         if not child_ids:
             continue
         bucket = buckets[photo.taken_on]
@@ -96,7 +114,7 @@ def _collect(db: Session, *, family_id: int, since: datetime, now: datetime) -> 
     for journal in journals:
         if not _in_window(journal.created_at, since, now):
             continue
-        child_ids = _live_child_ids(db, family_id, journal_child_ids(db, journal))
+        child_ids = _scoped(_live_child_ids(db, family_id, journal_child_ids(db, journal)), only_child_id)
         if not child_ids:
             continue
         bucket = buckets[journal.on_date]
@@ -109,7 +127,7 @@ def _collect(db: Session, *, family_id: int, since: datetime, now: datetime) -> 
     for video in videos:
         if not _in_window(video.created_at, since, now):
             continue
-        child_ids = _live_child_ids(db, family_id, video_child_ids(db, video))
+        child_ids = _scoped(_live_child_ids(db, family_id, video_child_ids(db, video)), only_child_id)
         if not child_ids:
             continue
         bucket = buckets[video.on_date]
@@ -190,7 +208,13 @@ def build_slip(
     """Template view. Empty days mean the strip is not rendered."""
     moment = as_utc(now or utcnow())
     since, window, seen_at = _window(db, user_id=user_id, family_id=family_id, now=moment)
-    days = _collect(db, family_id=family_id, since=since, now=moment)
+    days = _collect(
+        db,
+        family_id=family_id,
+        since=since,
+        now=moment,
+        only_child_id=prefer_child_id,
+    )
     rows = []
     for item in days:
         record_day = item["date"]

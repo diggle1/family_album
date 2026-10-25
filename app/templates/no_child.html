@@ -1,9 +1,15 @@
 {% extends "layout.html" %}
-{% block title %}还没有孩子 · kids时光机{% endblock %}
+{% block title %}{{ tcf.tl_title_all }} · kids时光机{% endblock %}
 {% block content %}
-<div class="center">
-  <div class="illus">🧒</div>
-  <h3>还没有孩子档案</h3>
-  <p>请让家长管理员添加孩子。添加之后，时光会按天出现在这里。</p>
+<div class="feed" data-who-scope="family" data-family-view="1" data-who-nokids="1">
+  <div class="top">
+    <div class="title">{{ tcf.tl_title_all }}</div>
+  </div>
+  <div class="empty-paper">
+    <div class="illus">🏠</div>
+    <h3>{{ tcf.no_kids_hint }}</h3>
+    <p>{{ tcf.no_kids_sub }}</p>
+  </div>
+  <p class="desk-aside">{{ tcf.desk_aside }}</p>
 </div>
 {% endblock %}

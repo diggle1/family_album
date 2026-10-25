@@ -3,6 +3,10 @@
 {% block content %}
 <div class="top"><div class="title">添加孩子<div class="meta">时光线按生日算「几岁几个月」</div></div></div>
 <div class="pad">
+  <div class="empty-paper" data-who-nokids="1">
+    <h3>{{ tcf.no_kids_hint }}</h3>
+    <p>{{ tcf.no_kids_sub }}</p>
+  </div>
   <div class="banner info">家庭里至少保留 1 名家长管理员（创建者自动担任）。不能降级家庭里最后一位家长管理员。</div>
   {% if error %}<div class="banner err">{{ error }}</div>{% endif %}
   <form method="post" action="/children" class="stack">

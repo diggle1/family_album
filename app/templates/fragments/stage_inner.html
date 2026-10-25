@@ -8,38 +8,53 @@
 </div>
 <p class="sr-only">{{ video_copy.skel_note }}</p>
 {% set on_family = family_view|default(false) %}
-{% set nav_child = children[0] if on_family else child %}
-<div class="feed"{% if not on_family %} data-child-id="{{ child.id }}"{% endif %}{% if on_family %} data-family-view="1"{% endif %}>
+{% set who_scope = who.scope if who is defined and who else ('family' if on_family else 'child') %}
+{% set nav_child = children[0] if on_family and children else child %}
+<div class="feed" data-who-scope="{{ who_scope }}"{% if not on_family and child %} data-child-id="{{ child.id }}"{% endif %}{% if on_family %} data-family-view="1"{% endif %}>
   <div class="top">
-    <span class="avatar kid">{{ nav_child.name|initial }}</span>
-    <div class="title">{{ timeline.child.name }}<span class="meta">{% if on_family %}{{ timeline.child.photo_count }} 张{% else %}{{ timeline.child.age_label }} · {{ timeline.child.photo_count }} 张{% endif %}</span></div>
+    {% if nav_child %}<span class="avatar kid">{{ nav_child.name|initial }}</span>{% endif %}
+    <div class="title">{{ who.title if who is defined and who else timeline.child.name }}<span class="meta">{% if on_family %}{{ timeline.child.photo_count }} 张{% elif child %}{{ timeline.child.age_label }} · {{ timeline.child.photo_count }} 张{% endif %}</span></div>
     {% if membership and membership.role == 'viewer' %}
     <span class="rochip">{{ video_copy.ro_meta }}</span>
     {% endif %}
-    {% if can_upload %}
+    {% if can_upload and nav_child %}
     <a class="write-pill" href="/journals/new{% if not on_family %}?child={{ child.id }}{% endif %}">✎ {{ journal_copy.entry_write }}</a>
     <a class="write-pill video-pill" href="/videos/new{% if not on_family %}?child={{ child.id }}{% endif %}" aria-label="{{ video_copy.tl_hang.format(kid=nav_child.name) }}">＋ {{ video_copy.entry_video }}</a>
     {% endif %}
     <a class="avatar sm me" href="/family/settings">{{ user.name|initial }}</a>
   </div>
-  {% if children|length >= 2 %}
-  <div class="tabs2">
-    <a class="{% if not on_family %}on{% endif %}" href="/?child={{ nav_child.id }}">{{ multi_child.tl_tab_child }}</a>
-    <a class="{% if on_family %}on{% endif %}" href="/?view=family">{{ multi_child.tl_tab_all }}</a>
-  </div>
-  <div class="caps">
-    {% for item in children %}
-    <a class="cap-pill{% if not on_family and item.id == nav_child.id %} on{% endif %}"
-       href="/?child={{ item.id }}"
-       hx-get="/fragments/timeline?child={{ item.id }}"
-       hx-target="#stage"
-       hx-swap="innerHTML"
-       hx-push-url="true"
-       hx-indicator="#stage">
-      <span class="avatar sm">{{ item.name|initial }}</span>{{ item.name }}
-    </a>
-    {% endfor %}
-  </div>
+  {% if children %}
+  <nav class="who-strip-wrap" aria-label="{{ tcf.who_label }}">
+    <div class="who-strip" id="who-strip"
+         data-copy-who-label="{{ tcf.who_label }}"
+         data-copy-who-all="{{ tcf.who_all }}"
+         data-copy-empty-back="{{ tcf.empty_back }}"
+         data-copy-ro-meta="{{ tcf.ro_meta }}">
+      <div class="lbl">{{ tcf.who_label }}</div>
+      <div class="who-row">
+        <a class="ntag all{% if on_family %} on{% endif %}" data-who-nav data-who="all" href="/"
+           hx-get="/fragments/timeline?view=family"
+           hx-target="#stage"
+           hx-swap="innerHTML"
+           hx-push-url="/"
+           hx-sync="#stage:replace">
+          <span class="dot fam"></span><span class="nm">{{ tcf.who_all }}</span>
+        </a>
+        {% for item in children %}
+        {% set dot = ['', 's2', 's3'][loop.index0 % 3] %}
+        <a class="ntag{% if not on_family and child and item.id == child.id %} on{% endif %}"
+           data-who-nav data-who="{{ item.id }}" href="/?child={{ item.id }}"
+           hx-get="/fragments/timeline?child={{ item.id }}"
+           hx-target="#stage"
+           hx-swap="innerHTML"
+           hx-push-url="/?child={{ item.id }}"
+           hx-sync="#stage:replace">
+          <span class="dot {{ dot }}"></span><span class="nm">{{ item.name }}</span>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+  </nav>
   {% endif %}
   {% if membership and membership.role == 'viewer' %}
   <div class="banner info">你的权限是「只读 · 只能看」。需要传照片请让家长改档位。</div>
@@ -75,6 +90,24 @@
       {% endif %}
     </section>
     {% endfor %}
+  {% elif who_scope == 'child' %}
+  <div class="empty-paper" data-who-empty="1">
+    <div class="illus">📭</div>
+    <h3>{{ who.empty_title }}</h3>
+    <p>{{ who.empty_sub }}</p>
+    <a class="back" data-who-nav href="/"
+       hx-get="/fragments/timeline?view=family"
+       hx-target="#stage"
+       hx-swap="innerHTML"
+       hx-push-url="/"
+       hx-sync="#stage:replace">{{ tcf.empty_back }}</a>
+  </div>
+  {% elif not children %}
+  <div class="empty-paper" data-who-nokids="1">
+    <div class="illus">🏠</div>
+    <h3>{{ tcf.no_kids_hint }}</h3>
+    <p>{{ tcf.no_kids_sub }}</p>
+  </div>
   {% else %}
   <div class="center compact">
     <div class="illus">📷</div>

@@ -16,6 +16,12 @@ from app.services.clock import isoformat
 from app.services.elders import EldersError, apply_access_url, parse_json_object, paste_for_admin
 from app.services.children import child_in_family
 from app.services.on_this_day import OnThisDayUnavailable, public_on_this_day
+from app.services.timeline_child_filter import (
+    TimelineFilterBusy,
+    parse_child_token,
+    raise_if_busy,
+    resolve_timeline_child,
+)
 from app.services.whats_new import (
     TimelineSeenUnavailable,
     mark_timeline_seen,
@@ -118,6 +124,27 @@ def get_on_this_day(
     except OnThisDayUnavailable:
         return _json({"detail": "服务忙"}, 503)
     return _json(payload)
+
+
+_INVALID_CHILD = {"detail": "孩子参数无效", "code": "invalid_child"}
+
+
+@router.get("/api/families/current/timeline-filter")
+def get_timeline_filter(
+    child: str | None = None,
+    ctx: MemberCtx = Depends(require_member()),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    """Read-only who-tag resolution. Junk tokens are 422 and do not echo the value."""
+    try:
+        raise_if_busy()
+    except TimelineFilterBusy:
+        return _json({"detail": "服务忙"}, 503)
+    kind, _child_id = parse_child_token(child)
+    if kind == "invalid":
+        return _json(_INVALID_CHILD, 422)
+    scope, found = resolve_timeline_child(db, ctx.family.id, child)
+    return _json({"scope": scope, "child_id": None if found is None else found.id})
 
 
 @router.get("/api/families/current/whats-new")

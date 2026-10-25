@@ -386,6 +386,11 @@ def test_permission_matrix_and_no_leak(client: TestClient):
                 assert bit not in response.text
         for url in foreign_pages:
             page = actor.get(url)
+            if actor is other and url.startswith("/?child="):
+                assert page.status_code == 200, url
+                for bit in secret_bits:
+                    assert bit not in page.text
+                continue
             assert page.status_code == 403, url
             assert "没有访问权限" in page.text
             for bit in secret_bits:
@@ -499,7 +504,8 @@ def test_html_login_family_child_and_age(client: TestClient):
         follow_redirects=True,
     )
     assert "果果" in born.text
-    assert "还没有照片" in born.text
+    assert "还没有果果的记录" in born.text
+    assert "看全家" in born.text
     assert 'class="fab"' in born.text
     uploaded = client.post(
         "/upload?kind=child",

@@ -1,0 +1,60 @@
+"""看谁签产品文案。41 键与终稿 mockup COPY 逐字相同。
+
+稿注 anno_* 不在产品字典里。样例名和示意句入库，但不进时光线常驻界面。
+"""
+
+TIMELINE_CHILD_FILTER = {
+    "tab_time": "时光",
+    "tab_family": "家人",
+    "tab_settings": "设置",
+    "ro_meta": "只读 · 只能看",
+    "who_label": "看谁的",
+    "who_all": "全家",
+    "kid_a": "果果",
+    "kid_b": "豆豆",
+    "kid_c": "安安",
+    "tl_family": "果果家",
+    "tl_title_all": "时光",
+    "tl_title_kid": "果果的时光",
+    "age_a": "3岁2个月",
+    "age_b": "1岁5个月",
+    "j_quote_a": "「今天幼儿园画了大太阳」",
+    "j_sub_a": "妈妈写 · 写给果果",
+    "j_quote_b": "「豆豆学会叫爸爸了」",
+    "j_sub_b": "爸爸写 · 写给豆豆",
+    "j_quote_both": "「周末公园野餐」",
+    "j_sub_both": "妈妈写 · 写给果果、豆豆",
+    "v_title": "公园滑梯 · 爸爸传",
+    "snip_line": "妈妈：今天幼儿园画了大太阳",
+    "empty_title": "还没有果果的记录",
+    "empty_sub": "家里给果果传了照片、日志或视频，会出现在这里。",
+    "empty_back": "看全家",
+    "empty_title_b": "还没有安安的记录",
+    "empty_sub_b": "先给安安挂上照片或日志，再回来看。",
+    "top_slip": "最近有新内容",
+    "top_slip_sub": "3 天有新的",
+    "top_otd": "去年今天",
+    "top_otd_sub": "2025 · 果果 2 岁",
+    "top_otd_gone": "筛到豆豆时，与豆豆无关的年签随主列表隐藏（示意）",
+    "no_kids_hint": "先添加孩子，再来看谁的",
+    "no_kids_sub": "家里还没有孩子时，时光线照常看；加上孩子后会出现名签。",
+    "role_note_ro": "只读长辈：同路径可见名签条，无新增写入口",
+    "role_note_admin": "管理员与可上传：同路径可筛；本刀不另开入口",
+    "err_perm": "你没有权限做这件事",
+    "err_gone": "进不了这家",
+    "err_gone_sub": "家里的内容不会在这里显示",
+    "desk_aside": "电脑和手机看到的是同一本相册",
+    "url_demo": "album.guoguo.home / 时光",
+}
+
+# Draft notes. Kept for the 49-key lock. Not shipped on a page.
+TIMELINE_CHILD_FILTER_ANNO = {
+    "anno_strip": "看谁签 · 浅纸名签条 · 主视觉=名字",
+    "anno_vs": "异于写页 Ø56 兄弟姐妹条",
+    "anno_filter": "点名签 → 主列表即时只留该孩",
+    "anno_empty": "暖空纸口语 · 不假卡不白屏",
+    "anno_top": "顶卡随筛：无关内容隐藏",
+    "anno_desk": "桌面内容柱顶 · 同控件",
+    "anno_nokids": "无孩子：无条或仅全家",
+    "anno_ro": "只读同路径 · 无写入口",
+}

@@ -30,6 +30,13 @@ from app.services.children import (
 from app.services.day_notes import day_page_state
 from app.services.journals import build_family_feed, build_feed
 from app.services.on_this_day import year_card, year_meta_for
+from app.services.timeline_child_filter import (
+    TimelineFilterBusy,
+    child_token_probes,
+    raise_if_busy,
+    resolve_timeline_child,
+    view_copy,
+)
 from app.services.whats_new import build_slip
 from app.services.clock import date_label, shanghai_today, weekday_zh
 from app.services.elders import EldersError, greeting_for, invite_absolute, normalize_access_url
@@ -117,17 +124,27 @@ def _login_ctx(request: Request, *, error: str | None = None, email: str = "", n
     }
 
 
+def _who_choice(db, family_id: int, raw: str | None):
+    """Busy becomes 503. A bad child id is the mixed feed, not a different status."""
+    try:
+        raise_if_busy()
+    except TimelineFilterBusy as exc:
+        raise HTTPException(status_code=503, detail="服务忙") from exc
+    _scope, current = resolve_timeline_child(db, family_id, raw)
+    return current is None, current, view_copy(current)
+
+
 @router.get("/")
 def home(
     request: Request,
-    child: int | None = None,
+    child: str | None = None,
     toast: str | None = None,
     db: Session = Depends(get_db),
 ):
     user = optional_user(request, db)
     nxt = safe_next(request.query_params.get("next"))
     if user is None:
-        if child is not None:
+        if child_token_probes(child):
             raise HTTPException(status_code=403, detail=FORBIDDEN)
         return render(request, "login.html", _login_ctx(request, nxt=nxt))
     if not user.name:
@@ -136,7 +153,7 @@ def home(
         return RedirectResponse(nxt, status_code=303)
     membership = get_membership(db, user.id)
     if membership is None:
-        if child is not None:
+        if child_token_probes(child):
             raise HTTPException(status_code=403, detail=FORBIDDEN)
         return render(
             request,
@@ -148,18 +165,7 @@ def home(
         raise HTTPException(status_code=403, detail=FORBIDDEN)
     children = list_children(db, family.id)
     flags = _flags(user, membership)
-    if request.query_params.get("view") == "family" and children:
-        return _timeline_response(
-            request, db, user, membership, family, children, None, toast, family_view=True
-        )
-    current = None
-    if child is not None:
-        current = child_in_family(db, family_id=family.id, child_id=child)
-        if current is None:
-            raise HTTPException(status_code=403, detail=FORBIDDEN)
-    elif children:
-        current = children[0]
-    if current is None:
+    if not children:
         if membership.role == "admin":
             return render(
                 request,
@@ -171,7 +177,22 @@ def home(
             "no_child.html",
             {**flags, "toast": toast_text(toast), "show_nav": True, "tab": "timeline"},
         )
-    return _timeline_response(request, db, user, membership, family, children, current, toast)
+    if request.query_params.get("view") == "family" and children:
+        _who_choice(db, family.id, None)
+        return _timeline_response(request, db, user, membership, family, children, None, toast, family_view=True)
+    family_view, current, who = _who_choice(db, family.id, child)
+    return _timeline_response(
+        request,
+        db,
+        user,
+        membership,
+        family,
+        children,
+        current,
+        toast,
+        family_view=family_view,
+        who=who,
+    )
 
 
 def _video_toast(params) -> str | None:
@@ -238,8 +259,21 @@ def _year_card(timeline, current, children, family_view: bool):
     return year_card(timeline, prefer_child_id=prefer, fallback_child_id=fallback)
 
 
-def _timeline_response(request, db, user, membership, family, children, current, toast, family_view=False):
+def _timeline_response(
+    request,
+    db,
+    user,
+    membership,
+    family,
+    children,
+    current,
+    toast,
+    family_view=False,
+    who=None,
+):
     flags = _flags(user, membership)
+    if who is None:
+        who = view_copy(None if family_view else current)
     if family_view:
         timeline = build_family_feed(db, family.id)
         timeline["child"]["name"] = family.name
@@ -256,6 +290,7 @@ def _timeline_response(request, db, user, membership, family, children, current,
             "child": current,
             "timeline": timeline,
             "family_view": family_view,
+            "who": who,
             "write_child": write_child,
             "show_nav": True,
             "show_fab": flags["can_upload"],
@@ -282,7 +317,7 @@ def _timeline_response(request, db, user, membership, family, children, current,
 @router.get("/fragments/timeline")
 def timeline_fragment(
     request: Request,
-    child: int | None = None,
+    child: str | None = None,
     db: Session = Depends(get_db),
 ):
     gate = gate_member(request, db)
@@ -290,19 +325,21 @@ def timeline_fragment(
         return gate
     children = list_children(db, gate.family.id)
     flags = _flags(gate.user, gate.membership)
-    family_view = request.query_params.get("view") == "family"
-    if family_view:
-        if not children:
-            raise HTTPException(status_code=403, detail=FORBIDDEN)
+    raw_child = None if request.query_params.get("view") == "family" else child
+    family_view, found, who = _who_choice(db, gate.family.id, raw_child)
+    if family_view and not children:
+        family_view = True
         found = None
+        timeline = {
+            "child": {"id": None, "name": "", "birth_date": "", "age_label": "", "photo_count": 0},
+            "days": [],
+            "video_count": 0,
+            "family_view": True,
+        }
+    elif family_view:
         timeline = build_family_feed(db, gate.family.id)
         timeline["child"]["name"] = gate.family.name
     else:
-        if child is None:
-            raise HTTPException(status_code=403, detail=FORBIDDEN)
-        found = child_in_family(db, family_id=gate.family.id, child_id=child)
-        if found is None:
-            raise HTTPException(status_code=403, detail=FORBIDDEN)
         timeline = build_feed(db, found)
     return render(
         request,
@@ -314,6 +351,7 @@ def timeline_fragment(
             "child": found,
             "timeline": timeline,
             "family_view": family_view,
+            "who": who,
             "write_child": "" if family_view else str(found.id),
             "highlight_video": request.query_params.get("vhl") or "",
             "wn": _slip(
