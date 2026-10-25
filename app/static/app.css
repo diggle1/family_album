@@ -17,6 +17,7 @@
   --err-soft: #FBE4E2;
   --film: #E8E2DA;
   --sprocket: #C8C0B6;
+  --film-dark: #2B2420;
   --r: 14px;
   --font: "PingFang SC", "Noto Sans SC", "Noto Sans CJK SC", "Microsoft YaHei", system-ui, sans-serif;
 }
@@ -67,6 +68,7 @@ a { color: inherit; }
 .day-h span { font-size: 12px; color: var(--ink2); }
 .age { color: var(--accent); background: var(--accent-soft); padding: 2px 8px; border-radius: 10px; font-weight: 600; }
 .pics { display: grid; gap: 4px; border-radius: var(--r); overflow: hidden; }
+.pics.photo-stack { display: block; gap: 0; overflow: visible; border-radius: 0; }
 .pics.n1 { grid-template-columns: 1fr; }
 .pics.n1 .ph { aspect-ratio: 4 / 3; }
 .pics.n2 { grid-template-columns: 1fr 1fr; }
@@ -713,3 +715,83 @@ button.li {
 .dkids .row { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-top: 1px solid var(--line); font-size: 14px; font-weight: 700; }
 .dkids .row:first-of-type { border-top: 0; }
 .filmmeta { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+
+.opt .ic.child { background: var(--accent-soft); }
+.opt .ic.me { background: var(--family-soft); }
+#photo-app .btn.dis, #photo-app .btn[disabled] { opacity: .45; pointer-events: none; background: #C9BEB4; color: #fff; }
+.redbar {
+  background: var(--err); color: #fff; font-size: 13px; font-weight: 700;
+  text-align: center; padding: 8px 12px;
+}
+.redbar[hidden] { display: none; }
+.strip-wrap { padding: 8px 12px 4px; }
+.strip-wrap .slbl {
+  font-size: 12px; font-weight: 700; color: var(--ink2); margin: 0 4px 8px;
+  display: flex; justify-content: space-between; align-items: center; gap: 8px;
+}
+.strip-wrap .slbl .hint { font-weight: 500; color: var(--ink3); font-size: 11px; }
+.strip {
+  position: relative; background: var(--film-dark); border-radius: 10px;
+  padding: 12px 0 14px; overflow: hidden;
+}
+.strip .teeth {
+  position: absolute; top: 0; bottom: 0; width: 14px; display: flex;
+  flex-direction: column; justify-content: space-between; padding: 8px 0; z-index: 1;
+}
+.strip .teeth.l { left: 0; }
+.strip .teeth.r { right: 0; }
+.strip .teeth i {
+  display: block; width: 8px; height: 8px; margin: 0 auto; border-radius: 2px; background: #5a524c;
+}
+.strip .track {
+  display: flex; padding: 4px 22px 2px; align-items: flex-end; min-height: 88px; overflow: hidden;
+}
+.sticker {
+  position: relative; flex: none; width: 68px; margin-right: -10px; z-index: 2;
+  border: 0; background: transparent; padding: 0; font-family: inherit; cursor: pointer;
+}
+.sticker .face {
+  width: 60px; height: 60px; border-radius: 10px; border: 2.5px solid #F5EFE6;
+  background: #E39A5B; display: grid; place-items: center; font-size: 22px; font-weight: 800;
+  color: #fff; position: relative; margin: 0 auto;
+}
+.sticker .face.c1 { background: #7FA36B; }
+.sticker .face.c2 { background: #6B8FA3; }
+.sticker .ck {
+  position: absolute; right: -4px; bottom: -4px; width: 18px; height: 18px; border-radius: 50%;
+  background: var(--accent); color: #fff; font-size: 11px; font-weight: 800; display: none;
+  place-items: center; border: 2px solid #fff;
+}
+.sticker .nm {
+  display: block; margin-top: 6px; font-size: 11px; font-weight: 700; color: #E8DED4; text-align: center;
+}
+.sticker.on { z-index: 4; }
+.sticker.on .face { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(200, 85, 61, .45); }
+.sticker.on .ck { display: grid; }
+.sticker.off { opacity: .55; }
+.sticker.off .face { border-color: #9a9088; }
+.phrev {
+  margin: 6px 20px 4px; border-radius: 14px; overflow: hidden; position: relative;
+  aspect-ratio: 4 / 3; background: var(--film); 
+}
+.phrev img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.phrev .ph { position: absolute; inset: 0; display: grid; place-items: center; color: var(--ink3); }
+.phrev .badge {
+  position: absolute; left: 10px; top: 10px; background: rgba(43, 36, 32, .72);
+  color: #fff; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 999px;
+}
+.phrev .badge.fam { background: rgba(47, 111, 106, .85); }
+.pcard {
+  display: block; background: #fff; border-radius: 14px; overflow: hidden; margin: 10px 0;
+  border: 1px solid var(--line); text-decoration: none; color: inherit;
+}
+.pcard .shot { aspect-ratio: 4 / 3; width: 100%; object-fit: cover; display: block; background: var(--film); }
+.pcard .meta {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 10px 12px; font-size: 11px; color: var(--ink3);
+}
+.agechip {
+  font-size: 11px; font-weight: 700; color: var(--accent); background: var(--accent-soft);
+  padding: 2px 8px; border-radius: 999px;
+}
+.sign { padding: 8px 24px 20px; text-align: right; font-size: 12px; color: var(--ink3); }

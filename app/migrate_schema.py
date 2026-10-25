@@ -22,6 +22,12 @@ v2026.10.25.2 adds a nullable families.family_access_url column. create_all
 does not alter a families table that already exists, so upgrades run the
 ALTER below. Rolling back to v2026.10.25.1 leaves the column in place and
 simply does not read it. Do not DROP COLUMN and do not DROP TABLE.
+
+v2026.10.25.3 adds photo_children, then projects each kind=child
+photos.child_id into one association row when that photo has none yet.
+It does not alter photos.child_id. Self photos are not inserted. Rolling
+back to v2026.10.25.2 does not import PhotoChild, so create_all leaves the
+table and its rows in place. Do not DROP TABLE.
 """
 
 from __future__ import annotations
@@ -61,6 +67,17 @@ WHERE child_id IS NOT NULL
 """
 
 
+_PHOTO_BACKFILL = """
+INSERT OR IGNORE INTO photo_children (photo_id, child_id, position)
+SELECT id, child_id, 0 FROM photos
+WHERE kind = 'child'
+  AND child_id IS NOT NULL
+  AND NOT EXISTS (
+    SELECT 1 FROM photo_children pc WHERE pc.photo_id = photos.id
+  )
+"""
+
+
 def _backfill_associations(bind: Engine) -> None:
     """Project the legacy single child into the association table. Idempotent."""
     insp = inspect(bind)
@@ -69,6 +86,8 @@ def _backfill_associations(bind: Engine) -> None:
             conn.execute(text(_JOURNAL_BACKFILL))
         if insp.has_table("videos") and insp.has_table("video_children"):
             conn.execute(text(_VIDEO_BACKFILL))
+        if insp.has_table("photos") and insp.has_table("photo_children"):
+            conn.execute(text(_PHOTO_BACKFILL))
 
 
 def _ensure_family_access_url(bind: Engine) -> None:

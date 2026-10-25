@@ -1,7 +1,97 @@
 {% extends "layout.html" %}
-{% block title %}{{ export_copy.up_title }} · kids时光机{% endblock %}
+{% block title %}{% if not kind %}{{ photo_copy.entry_title }}{% elif mode == 'edit' %}{{ photo_copy.u_title_edit }}{% elif kind == 'self' %}{{ photo_copy.u_title_self }}{% else %}{{ photo_copy.u_title }}{% endif %} · kids时光机{% endblock %}
 {% block content %}
-<div class="sheet-page">
-  {% include "fragments/upload_sheet.html" %}
+{% if not kind %}
+<div class="sheet-page" id="photo-entry">
+  <div class="sheet">
+    <h4>{{ photo_copy.entry_title }}</h4>
+    <p class="sub">{{ photo_copy.entry_sub }}</p>
+    {% if error %}<div class="banner err">{{ error }}</div>{% endif %}
+    <a class="opt" href="/upload?kind=child{% if query_child %}&amp;child={{ query_child }}{% endif %}">
+      <span class="ic child">🧒</span>
+      <span><b>{{ photo_copy.entry_child }}</b><small>{{ photo_copy.entry_child_sub }}</small></span>
+    </a>
+    <a class="opt fam" href="/upload?kind=self">
+      <span class="ic me">👤</span>
+      <span><b>{{ photo_copy.entry_self }}</b><small>{{ photo_copy.entry_self_sub }}</small></span>
+    </a>
+  </div>
 </div>
+{% else %}
+{% set single = children|length == 1 %}
+{% set needs_file = mode != 'edit' %}
+{% set blocked = show_red or needs_file %}
+<div id="photo-app" class="paper"
+     data-mode="{{ mode }}"
+     data-kind="{{ kind }}"
+     data-photo-id="{% if photo %}{{ photo.id }}{% endif %}"
+     data-uid="{{ user.id }}"
+     data-today="{{ today }}"
+     data-pre-name="{{ pre_name }}"
+     data-single="{{ 1 if single else 0 }}"
+     data-back="{{ back_href }}"
+     data-retry-text="{{ export_copy.upload_sheet_failed }}"
+     {% for key, value in photo_copy.items() %}data-copy-{{ key }}="{{ value }}" {% endfor %}>
+  <div class="wtop">
+    <a class="back" href="{{ back_href }}" id="photo-close">✕</a>
+    <div class="title">{% if mode == 'edit' %}{{ photo_copy.u_title_edit }}{% elif kind == 'self' %}{{ photo_copy.u_title_self }}{% else %}{{ photo_copy.u_title }}{% endif %}</div>
+    <span class="wtop-gap"></span>
+  </div>
+  {% if error %}<div class="banner err">{{ error }}</div>{% endif %}
+  {% if kind == 'child' %}
+  <div id="film-strip">
+    <div class="strip-wrap{% if single %} single{% endif %}" id="strip">
+      <div class="slbl">
+        <span>{{ photo_copy.strip_label }}</span>
+        <span class="hint" id="strip-hint">{% if single %}{{ photo_copy.strip_hint_single }}{% elif pre_name %}{{ photo_copy.strip_hint_pre.format(name=pre_name) }}{% elif not selected_ids %}{{ photo_copy.strip_hint_pick }}{% endif %}</span>
+      </div>
+      <div class="strip">
+        <span class="teeth l" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+        <div class="track" id="sticker-row">
+          {% for child in children %}
+          {% set on = child.id in selected_ids %}
+          <button type="button" class="sticker{% if on %} on{% else %} off{% endif %}" data-child-id="{{ child.id }}">
+            <span class="face c{{ loop.index0 % 3 }}">{{ child.name|initial }}<span class="ck">✓</span></span>
+            <span class="nm">{{ child.name }}</span>
+          </button>
+          {% endfor %}
+        </div>
+        <span class="teeth r" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+      </div>
+    </div>
+    <div class="redbar" id="redbar"{% if not show_red %} hidden{% endif %}>{{ photo_copy.err_no_child }}</div>
+  </div>
+  {% endif %}
+  <div class="upbody">
+    <div class="phrev" id="photo-preview">
+      {% if photo %}
+      <img id="photo-img" src="/media/{{ photo.id }}" alt="">
+      {% else %}
+      <img id="photo-img" alt="" hidden>
+      <div class="ph" id="photo-ph">{% if kind == 'self' %}{{ photo_copy.u_title_self }}{% else %}{{ photo_copy.u_title }}{% endif %}</div>
+      {% endif %}
+      <span class="badge{% if kind == 'self' %} fam{% endif %}" id="picked-badge" hidden>{{ photo_copy.u_picked }}</span>
+    </div>
+    {% if kind == 'self' %}
+    <div class="banner fam" id="self-banner">{{ photo_copy.self_banner }}</div>
+    {% endif %}
+    {% if mode == 'edit' %}
+    <p class="hint" id="photo-date-label">{{ edit_date }}</p>
+    {% else %}
+    <label class="field" id="photo-date-field">
+      <input class="input" id="photo-date" type="date" value="{{ today }}">
+    </label>
+    <input id="photo-file" type="file" accept="image/jpeg,image/png,image/webp" hidden>
+    {% endif %}
+  </div>
+  <div class="wfoot">
+    <button type="button" class="errline" id="photo-error" hidden></button>
+    <button type="button" class="btn{% if kind == 'self' %} family{% endif %}{% if blocked %} dis{% endif %}" id="photo-submit"{% if blocked %} disabled{% endif %}>{% if mode == 'edit' %}{{ photo_copy.u_submit_edit }}{% elif kind == 'self' %}{{ photo_copy.u_submit_self }}{% else %}{{ photo_copy.u_submit }}{% endif %}</button>
+    <a class="btn ghost" id="photo-cancel" href="{{ back_href }}">{{ photo_copy.cancel }}</a>
+  </div>
+</div>
+<script type="application/json" id="photo-children">{{ children_json | safe }}</script>
+<script type="application/json" id="photo-selected">{{ selected_json | safe }}</script>
+<script src="/static/photo.js" defer></script>
+{% endif %}
 {% endblock %}

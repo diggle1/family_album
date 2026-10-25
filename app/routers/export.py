@@ -35,6 +35,7 @@ from app.services.export import (
     missing_header_value,
 )
 from app.services.journals import count_my_journals, export_markdown
+from app.services.photos import photo_export_sidecars
 from app.services.videos import video_export_sidecars
 from app.services.photos import iter_stream, open_photo
 from app.routers.pages import _flags, gate_member, render
@@ -238,6 +239,7 @@ async def export_zip(
     items.extend(list_my_videos(db, family_id=family_id, uploader_id=user_id))
     markdown = export_markdown(db, family_id=family_id, author_id=user_id)
     sidecars = video_export_sidecars(db, family_id=family_id, uploader_id=user_id)
+    sidecars.extend(photo_export_sidecars(db, family_id=family_id, uploader_id=user_id))
     db.rollback()
     extras: list[tuple[str, bytes]] = []
     if markdown:

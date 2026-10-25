@@ -1,0 +1,25 @@
+<a class="pcard" href="/photos/{{ ph.id }}" data-photo-id="{{ ph.id }}">
+  <img class="shot" src="{{ ph.media_url }}" alt="">
+  <div class="meta">
+    <span class="left">{{ photo_copy.card_by.format(who=ph.uploader_name) }}</span>
+    {% if ph.children|length > 1 %}
+    <span class="who-col">
+      <span class="stack">
+        {% for kid in ph.children[:3] %}
+        <span class="sa c{{ loop.index0 % 3 }}">{{ kid.name|initial }}</span>
+        {% endfor %}
+        {% if ph.children|length > 3 %}
+        <span class="more">{{ photo_copy.stack_more.format(n=ph.children|length - 3) }}</span>
+        {% endif %}
+      </span>
+      <span class="stack-ages">
+        {% for kid in ph.children %}
+        <span class="ag">{{ photo_copy.card_age_tag.format(name=kid.name, age=kid.age_label) }}</span>
+        {% endfor %}
+      </span>
+    </span>
+    {% elif ph.children|length == 1 %}
+    <span class="agechip">{{ ph.children[0].age_label }}</span>
+    {% endif %}
+  </div>
+</a>

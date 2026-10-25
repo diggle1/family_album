@@ -7,14 +7,27 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
-from app.constants import FORBIDDEN
+from app.constants import FORBIDDEN, PHOTO_MULTI_CHILD, ROLE_RANK
 from app.db import get_db
 from app.deps import MemberCtx, require_member
 from app.models import Photo
-from app.services.photos import create_photo, iter_stream, open_photo, photo_payload, self_album
+from app.services.assoc import parse_child_id_list
+from app.services.photos import PhotoError, create_photo, iter_stream, open_photo, photo_payload, self_album, update_photo_assoc
 from app.setup_gate import note_child_media, note_child_upload
 
 router = APIRouter(tags=["photos"])
+
+
+def photo_writer(ctx: MemberCtx = Depends(require_member())) -> MemberCtx:
+    if ROLE_RANK[ctx.membership.role] < ROLE_RANK["uploader"]:
+        raise PhotoError(403, "photo_forbidden_role", FORBIDDEN)
+    return ctx
+
+
+def _json(payload: dict, status: int) -> JSONResponse:
+    response = JSONResponse(payload, status_code=status)
+    response.headers["Cache-Control"] = "private, no-store"
+    return response
 
 
 async def _read_limited(file: UploadFile, request: Request) -> bytes:
@@ -41,11 +54,12 @@ async def post_photo(
     request: Request,
     kind: str = Form(...),
     child_id: str | None = Form(None),
+    child_ids: list[str] | None = Form(None),
     taken_on: str | None = Form(None),
     file: UploadFile | None = File(None),
-    ctx: MemberCtx = Depends(require_member("uploader")),
+    ctx: MemberCtx = Depends(photo_writer),
     db: Session = Depends(get_db),
-) -> dict:
+) -> JSONResponse:
     if file is None:
         raise HTTPException(status_code=400, detail="请上传照片")
     data = await _read_limited(file, request)
@@ -55,12 +69,45 @@ async def post_photo(
         uploader_id=ctx.user.id,
         kind_raw=kind,
         child_id_raw=child_id,
+        child_ids_raw=child_ids,
         taken_on_raw=taken_on,
         data=data,
     )
-    response = JSONResponse(photo_payload(photo), status_code=201)
+    response = _json(photo_payload(db, photo), 201)
     note_child_upload(request, response, role=ctx.membership.role, kind=photo.kind)
     return response
+
+
+@router.patch("/api/photos/{photo_id}")
+async def patch_photo(
+    photo_id: int,
+    request: Request,
+    ctx: MemberCtx = Depends(photo_writer),
+    db: Session = Depends(get_db),
+):
+    ctype = request.headers.get("content-type", "")
+    if "multipart/form-data" in ctype or "application/octet-stream" in ctype:
+        raise PhotoError(400, "photo_file_immutable", "不能换片")
+    try:
+        payload = await request.json()
+    except Exception as exc:
+        raise PhotoError(422, "child_required", PHOTO_MULTI_CHILD["err_no_child"]) from exc
+    if not isinstance(payload, dict):
+        raise PhotoError(422, "child_required", PHOTO_MULTI_CHILD["err_no_child"])
+    if payload.get("file") or payload.get("storage_path") or payload.get("poster"):
+        raise PhotoError(400, "photo_file_immutable", "不能换片")
+    if "kind" in payload:
+        raise PhotoError(400, "photo_kind_immutable", "不能改照片类型")
+    if "child_ids" in payload:
+        child_ids = parse_child_id_list(payload.get("child_ids"))
+    elif "child_id" in payload and payload.get("child_id") is not None:
+        one = payload.get("child_id")
+        child_ids = [one] if isinstance(one, int) and not isinstance(one, bool) else None
+        if child_ids is None:
+            raise PhotoError(400, "child_required", PHOTO_MULTI_CHILD["err_no_child"])
+    else:
+        child_ids = None
+    return _json(update_photo_assoc(db, ctx, photo_id, child_ids=child_ids), 200)
 
 
 @router.get("/api/photos/self/{user_id}")

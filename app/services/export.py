@@ -84,6 +84,8 @@ class ExportItem:
     storage_backend: str
     kind: str
     child_name: str | None
+    child_ids: tuple[int, ...] = ()
+    child_names: tuple[str, ...] = ()
 
     @property
     def entry_name(self) -> str:
@@ -192,14 +194,20 @@ def content_disposition(day: date) -> str:
 
 def list_my_photos(db: Session, *, family_id: int, uploader_id: int) -> list[ExportItem]:
     """Photos this user uploaded in this family. Request parameters are not read."""
-    rows = db.execute(
-        select(Photo, Child.name)
-        .outerjoin(Child, (Child.id == Photo.child_id) & (Child.family_id == family_id))
-        .where(Photo.family_id == family_id, Photo.uploader_id == uploader_id)
-        .order_by(Photo.taken_on.asc(), Photo.id.asc())
-    ).all()
+    from app.services.assoc import linked_children, photo_child_ids
+
+    rows = list(
+        db.scalars(
+            select(Photo)
+            .where(Photo.family_id == family_id, Photo.uploader_id == uploader_id)
+            .order_by(Photo.taken_on.asc(), Photo.id.asc())
+        ).all()
+    )
     items: list[ExportItem] = []
-    for photo, child_name in rows:
+    for photo in rows:
+        raw_ids = photo_child_ids(db, photo) if photo.kind == "child" else []
+        live = linked_children(db, family_id=family_id, child_ids=raw_ids)
+        names = tuple(child.name for child in live)
         items.append(
             ExportItem(
                 photo_id=photo.id,
@@ -207,7 +215,9 @@ def list_my_photos(db: Session, *, family_id: int, uploader_id: int) -> list[Exp
                 storage_path=photo.storage_path,
                 storage_backend=photo.storage_backend or "local",
                 kind=photo.kind,
-                child_name=child_name if isinstance(child_name, str) and child_name else None,
+                child_name=names[0] if names else None,
+                child_ids=tuple(child.id for child in live),
+                child_names=names,
             )
         )
     return items
@@ -265,6 +275,9 @@ def count_my_photos(db: Session, *, family_id: int, uploader_id: int) -> int:
 
 
 def owner_label(item: ExportItem) -> str:
+    names = [name for name in item.child_names if name]
+    if names and item.kind in {"child", "video"}:
+        return "挂在 " + "、".join(names)
     if item.kind == "video" and item.child_name:
         return f"挂在 {item.child_name}"
     if item.kind == "child" and item.child_name:

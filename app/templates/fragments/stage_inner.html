@@ -58,14 +58,9 @@
       {% include "fragments/video_card.html" %}
       {% endfor %}
       {% if day.photos %}
-      {% set n = day.photos|length %}
-      {% set shown = day.photos[:3] if n >= 3 else day.photos %}
-      <div class="pics n{{ 3 if n >= 3 else n }}">
-        {% for ph in shown %}
-        <a class="ph" href="{% if n > 3 and loop.last %}/children/{{ child.id }}/days/{{ day.taken_on }}{% else %}/photos/{{ ph.id }}{% endif %}">
-          <img src="{{ ph.media_url }}" alt="{{ day.date_label }}的照片">
-          {% if n > 3 and loop.last %}<span class="more">+{{ n - 3 }}</span>{% endif %}
-        </a>
+      <div class="pics photo-stack">
+        {% for ph in day.photos %}
+        {% include "fragments/photo_card.html" %}
         {% endfor %}
       </div>
       <div class="byline">{{ day.byline }}</div>
@@ -75,9 +70,9 @@
   {% else %}
   <div class="center compact">
     <div class="illus">📷</div>
-    <h3>{{ video_copy.empty_tl_title }}</h3>
+    <h3>{{ photo_copy.empty_tl_title }}</h3>
     {% if can_upload %}
-    <p>把第一张挂到孩子的这一天。</p>
+    <p>{{ photo_copy.empty_tl_sub }}</p>
     <a class="btn" href="/upload?kind=child&amp;child={{ child.id }}">{{ video_copy.empty_tl_btn }}</a>
     <a class="btn ghost" href="/videos/new?child={{ child.id }}">{{ video_copy.empty_v_btn }}</a>
     {% else %}
