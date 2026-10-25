@@ -140,6 +140,7 @@ from app.day_note_copy import DAY_NOTE_BODY_DISPLAY as DAY_NOTE_BODY_DISPLAY
 from app.day_note_copy import DAY_NOTE_BODY_MAX as DAY_NOTE_BODY_MAX
 from app.day_note_copy import DAY_NOTE_BODY_WARN as DAY_NOTE_BODY_WARN
 from app.day_note_copy import DAY_NOTE_SNIP as DAY_NOTE_SNIP
+from app.exif_day_split_copy import DAY_PILES as DAY_PILES
 from app.legacy_import_copy import LEGACY_IMPORT as LEGACY_IMPORT
 from app.on_this_day_copy import ON_THIS_DAY as ON_THIS_DAY
 from app.timeline_child_filter_copy import TIMELINE_CHILD_FILTER as TIMELINE_CHILD_FILTER

@@ -11,6 +11,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.constants import (
+    DAY_PILES,
     LEGACY_IMPORT,
     LEGACY_IMPORT_BATCH_MAX_BYTES,
     LEGACY_IMPORT_CONCURRENCY,
@@ -23,12 +24,13 @@ from app.db import get_db
 from app.deps import MemberCtx, require_member
 from app.routers.pages import _flags, gate_member, render
 from app.services.children import child_in_family, list_children
+from app.services.capture_day import read_capture_day
 from app.services.legacy_import import (
     LegacyImportError,
     import_spooled_photo,
     note_session,
+    parse_claimed_on_date,
     require_child_ids,
-    require_on_date,
 )
 
 router = APIRouter(tags=["legacy-import"])
@@ -106,6 +108,7 @@ def legacy_import_page(
             "show_nav": True,
             "children_json": json.dumps(children_json, ensure_ascii=True),
             "selected_json": json.dumps(selected_ids),
+            "piles": DAY_PILES,
         },
     )
 
@@ -121,12 +124,15 @@ async def post_legacy_photo(
     ctx: MemberCtx = Depends(require_member()),
     db: Session = Depends(get_db),
 ) -> JSONResponse:
-    """One photo. ``family_id`` on the form is ignored; the session owns the family."""
+    """One photo. ``family_id`` on the form is ignored; the session owns the family.
+
+    A day read from the file wins. A missing day is not filled with today.
+    """
     del client_name
     _writer(ctx)
     if file is None:
         raise LegacyImportError(422, "file_required", _FILE_REQUIRED)
-    taken = require_on_date(on_date)
+    claimed = parse_claimed_on_date(on_date)
     chosen = require_child_ids(child_ids)
     note_session(import_session)
     header = request.headers.get("content-length")
@@ -145,7 +151,7 @@ async def post_legacy_photo(
             db,
             family_id=ctx.membership.family_id,
             uploader_id=ctx.user.id,
-            on_date=taken,
+            on_date=claimed,
             child_ids=chosen,
             path=path,
             byte_size=total,
@@ -153,3 +159,35 @@ async def post_legacy_photo(
     finally:
         path.unlink(missing_ok=True)
     return _json(payload, 201)
+
+
+@router.post("/api/families/current/legacy-import/peek-date")
+async def peek_legacy_date(
+    request: Request,
+    file: UploadFile | None = File(None),
+    ctx: MemberCtx = Depends(require_member()),
+) -> JSONResponse:
+    """Read one file's capture day. Nothing is stored and nothing is written."""
+    _writer(ctx)
+    if file is None:
+        raise LegacyImportError(422, "file_required", _FILE_REQUIRED)
+    header = request.headers.get("content-length")
+    if header and header.isdigit() and int(header) > LEGACY_IMPORT_MAX_BYTES + 256 * 1024:
+        raise LegacyImportError(400, "legacy_import_file_too_large", LEGACY_IMPORT["fail_why_mb"])
+    from app.config import get_settings
+
+    root = get_settings().media_root
+    root.mkdir(parents=True, exist_ok=True)
+    handle = tempfile.NamedTemporaryFile(prefix=".pk-", dir=root, delete=False)
+    path = Path(handle.name)
+    handle.close()
+    try:
+        await _spool(file, path, LEGACY_IMPORT_MAX_BYTES)
+        try:
+            found = read_capture_day(path)
+        except Exception:
+            found = None
+    finally:
+        path.unlink(missing_ok=True)
+    text = found.isoformat() if found is not None else None
+    return _json({"on_date": text}, 200)

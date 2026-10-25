@@ -1114,6 +1114,71 @@ a.more-btn { text-decoration: none; display: inline-grid; place-items: center; }
 .li-root .wfoot .btn + .btn,
 .li-root .wfoot a.btn + .btn,
 .li-root .wfoot .btn + a.btn { margin-top: 10px; }
+.li-root .btn:disabled { opacity: .42; cursor: not-allowed; }
+.li-root .split-oral {
+  margin: 4px 16px 2px; font-size: 13px; font-weight: 700; color: var(--ink2); text-align: left;
+}
+.li-root .split-head {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+  margin: 2px 16px 8px;
+}
+.li-root .split-head b { font-size: 14px; font-weight: 800; color: var(--ink); }
+.li-root .split-head span { font-size: 12px; font-weight: 700; color: var(--ink2); }
+.li-root #pile-list { display: flex; flex-direction: column; gap: 8px; margin: 0 16px 8px; }
+.li-root .pile {
+  background: linear-gradient(180deg, #FFFCF7, #FBF7F2);
+  border: 1px solid #E8D9C4;
+  border-radius: 14px; padding: 8px 10px 10px;
+  box-shadow: inset 0 1px 0 #fff;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.li-root .pile.need {
+  border-color: #E0C080;
+  background: linear-gradient(180deg, #FFF8E8, #FFF3D6);
+  cursor: pointer; text-align: left; font-family: inherit; width: 100%;
+}
+.li-root .pile-head { display: flex; align-items: center; gap: 10px; }
+.li-root .pile-tag {
+  width: 54px; height: 58px; flex: none; border-radius: 12px;
+  background: #fff; border: 1.5px solid #E8C4B8;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.li-root .pile-tag .mo { font-size: 9px; font-weight: 800; color: var(--accent); letter-spacing: .04em; line-height: 1; }
+.li-root .pile-tag .dy {
+  font-size: 24px; font-weight: 900; color: var(--ink);
+  font-variant-numeric: tabular-nums; line-height: 1.02; letter-spacing: -0.5px;
+}
+.li-root .pile-tag .wd { font-size: 9px; font-weight: 700; color: var(--ink3); line-height: 1; }
+.li-root .pile.need .pile-tag { border-color: #E0C080; border-style: dashed; background: var(--warn-soft); }
+.li-root .pile.need .pile-tag .dy { font-size: 13px; font-weight: 800; color: var(--warn); letter-spacing: 0; }
+.li-root .pile.need .pile-tag .mo { color: var(--warn); }
+.li-root .pile-info { flex: 1; min-width: 0; }
+.li-root .pile-info .k { font-size: 12px; font-weight: 700; color: var(--ink3); margin-bottom: 2px; }
+.li-root .pile-info .v { font-size: 15px; font-weight: 800; color: var(--ink); }
+.li-root .pile.need .pile-info .v { color: var(--warn); }
+.li-root .pile-info .cnt { font-size: 12px; font-weight: 700; color: var(--ink2); margin-top: 2px; }
+.li-root .pile-go { font-size: 12px; font-weight: 800; color: var(--accent); flex: none; }
+.li-root .pile.need .pile-go { color: var(--warn); }
+.li-root .thumbs.sm { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
+.li-root .thumbs.sm img {
+  width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 6px;
+  max-height: 56px; background: #E7DDD2; border: 1px solid var(--line);
+}
+.li-root .no-today { color: var(--warn); font-weight: 700; }
+.li-root .done-piles { display: flex; flex-direction: column; gap: 8px; margin: 8px 16px; }
+.li-root .done-pile-row {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px;
+}
+.li-root .mini-tag {
+  width: 40px; height: 44px; border-radius: 10px; background: #fff;
+  border: 1.5px solid #E8C4B8;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; flex: none;
+}
+.li-root .mini-tag .mo { font-size: 8px; font-weight: 800; color: var(--accent); }
+.li-root .mini-tag .dy { font-size: 16px; font-weight: 900; font-variant-numeric: tabular-nums; }
+.li-root .done-pile-row .tx { flex: 1; font-size: 13px; font-weight: 700; }
+.li-root .done-pile-row .tx span { display: block; font-size: 11px; color: var(--ink2); font-weight: 600; margin-top: 2px; }
 #legacy-import .errline {
   display: block; width: 100%; margin-bottom: 8px; border: 0; background: transparent;
   color: var(--err); font-weight: 700; text-align: left; font-family: inherit;

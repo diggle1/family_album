@@ -144,7 +144,7 @@ uvicorn app.main:app --host 127.0.0.1 --port 8000
 ## 照片
 
 - 只接受 jpeg / png / webp，单张不超过 20MB。
-- 家长管理员和可上传的家人可以从本机一次导入旧照片（最多 50 张）。整批要手选同一天，并至少挂给一个孩子。前面的反代请把 `client_max_body_size` 设到不少于 200m，并加上 `proxy_request_buffering off`。说明见 `releases/v2026.10.25.7.md`。
+- 家长管理员和可上传的家人可以从本机一次导入旧照片（最多 50 张）。有拍摄日的按天分成几堆；没有拍摄日的要选手选日，不会自动算成今天。整批至少挂给一个孩子。前面的反代请把 `client_max_body_size` 设到不少于 200m，并加上 `proxy_request_buffering off`。说明见 `releases/v2026.10.25.9.md`。
 - 时光线顶上可以按孩子看。「看谁的」里先是「全家」，再是每个孩子的名签。点开一个孩子，主列表和顶上的两张卡片只留这个孩子的记录。地址用 `child=`。说明见 `releases/v2026.10.25.8.md`。
 - 文件名是随机 UUID。`storage_backend` 在上传时写成当时的 `STORAGE_BACKEND`。
 - 看图必须带登录态访问 `GET /media/{id}`，且照片属于当前家庭。
