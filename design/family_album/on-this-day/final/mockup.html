@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>kids时光机 · 往年今日（窄）· FINAL「琥珀年签」</title>
+<style>
+:root{
+  --bg:#FBF7F2; --surface:#FFFFFF; --line:#EDE5DC;
+  --ink:#2B2420; --ink2:#6F635A; --ink3:#9A8E85;
+  --accent:#C8553D; --accent-soft:#F8E6DF;
+  --family:#2F6F6A; --family-soft:#E4F0EE;
+  --ok:#3B7D4F; --ok-soft:#E3F1E6; --err:#B3261E; --err-soft:#FBE4E2;
+  --warn:#9A6200; --warn-soft:#FFF3D6;
+  --film-dark:#2B2420; --film-ink:#E8DED4;
+  --anno:#2563EB;
+  --font:"PingFang SC","Noto Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:#E5DFD7;color:var(--ink);padding:28px 20px 100px}
+h1.page{font-size:22px;font-weight:800;letter-spacing:.02em}
+p.lead{color:var(--ink2);font-size:13px;margin:6px 0 10px;line-height:1.55;max-width:1200px}
+.claim{display:inline-block;background:var(--warn-soft);color:var(--warn);font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px;margin-bottom:12px;border:1px solid #F0E0B0}
+.claim2{display:inline-block;background:var(--accent-soft);color:var(--accent);font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px;margin-bottom:18px;margin-left:6px}
+.nav{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:22px;max-width:1700px}
+.nav button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:8px 14px;font-size:12px;font-family:inherit;color:var(--ink2);cursor:pointer}
+.nav button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.group{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start}
+.group.hide{display:none}
+.gtitle{width:100%;font-size:15px;font-weight:800;color:var(--ink);margin-bottom:-12px}
+.frame{width:390px}
+.frame.desk{width:1024px}
+.frame .cap{font-size:12px;color:var(--ink2);font-weight:600;margin-bottom:8px;min-height:34px;line-height:1.45}
+.phone{width:390px;height:760px;background:var(--surface);border-radius:28px;overflow:hidden;position:relative;
+  box-shadow:0 0 0 8px #1f1b18,0 18px 40px rgba(0,0,0,.18);display:flex;flex-direction:column}
+.phone.paper{background:var(--bg)}
+.deskwin{width:1024px;height:720px;background:var(--bg);border-radius:12px;overflow:hidden;position:relative;
+  box-shadow:0 0 0 1px #cfc6bc,0 18px 40px rgba(0,0,0,.14);display:flex;flex-direction:column}
+.desk-chrome{flex:none;height:40px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;padding:0 16px}
+.desk-chrome .dots{display:flex;gap:6px}
+.desk-chrome .dots i{width:10px;height:10px;border-radius:50%;background:#E5DFD7;display:block}
+.desk-chrome .dots i:nth-child(1){background:#E8A07A}
+.desk-chrome .dots i:nth-child(2){background:#E8D9A8}
+.desk-chrome .dots i:nth-child(3){background:#A8C9B0}
+.desk-chrome .urlbar{flex:1;height:26px;border-radius:8px;background:var(--bg);border:1px solid var(--line);font-size:12px;color:var(--ink3);display:flex;align-items:center;padding:0 12px}
+.desk-body{flex:1;display:flex;min-height:0}
+.desk-side{width:200px;flex:none;background:#fff;border-right:1px solid var(--line);padding:20px 14px}
+.desk-side .logo{font-size:14px;font-weight:800;margin-bottom:18px}
+.desk-side .navi{display:flex;flex-direction:column;gap:4px}
+.desk-side .navi span{font-size:13px;font-weight:600;color:var(--ink3);padding:10px 12px;border-radius:10px}
+.desk-side .navi span.on{background:var(--accent-soft);color:var(--accent)}
+.desk-main{flex:1;overflow:hidden;display:flex;flex-direction:column;min-width:0}
+.desk-col{width:100%;max-width:720px;margin:0 auto;padding:16px 24px 32px;overflow:auto;height:100%}
+.status{height:28px;flex:none;font-size:12px;display:flex;justify-content:space-between;padding:6px 22px 0;color:var(--ink)}
+.scroll{flex:1;overflow:hidden;position:relative;background:var(--bg)}
+.top{display:flex;align-items:center;gap:10px;padding:8px 16px 10px;flex:none;background:var(--surface);border-bottom:1px solid var(--line)}
+.top .title{font-size:18px;font-weight:700;flex:1;min-width:0}
+.top .meta{font-size:12px;color:var(--ink2);font-weight:400;display:block;margin-top:2px}
+.ib{border:0;background:transparent;font-size:20px;width:44px;height:44px;display:grid;place-items:center;font-family:inherit;cursor:pointer;color:var(--ink);flex:none}
+.rometa{font-size:11px;font-weight:700;color:var(--ink3);background:#EFE9E1;padding:2px 8px;border-radius:999px}
+.anno{position:absolute;border:1.5px dashed var(--anno);border-radius:6px;pointer-events:none;z-index:7}
+.anno-tag{position:absolute;background:var(--anno);color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap;z-index:8;pointer-events:none;line-height:1.4}
+.note{margin-top:28px;padding:16px 18px;background:#fff;border-radius:12px;border:1px solid #ddd;max-width:1240px;font-size:13px;color:var(--ink2);line-height:1.65}
+.note b{color:var(--ink)}
+.tabbar{flex:none;display:flex;border-top:1px solid var(--line);background:#fff;height:56px}
+.tabbar span{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;color:var(--ink3);font-weight:600;gap:2px}
+.tabbar span.on{color:var(--accent)}
+.tabbar span i{font-style:normal;font-size:18px;line-height:1}
+
+/* ===== 日签条（跨刀示意 · 对齐 elders-whats-new final） ===== */
+.slipbar-wrap{padding:12px 14px 0}
+.slipbar{position:relative;
+  background:linear-gradient(180deg,#FFF8E8 0%,var(--bg) 72%);
+  border:1px solid #E8D9B8;border-radius:4px;
+  padding:12px 14px 12px 18px;cursor:pointer;
+  box-shadow:0 2px 8px rgba(43,36,32,.06)}
+.slipbar::before,.slipbar::after{content:"";position:absolute;left:0;right:0;height:8px;
+  background:radial-gradient(circle at 7px 0,#E5DFD7 4.5px,transparent 5.5px) repeat-x;
+  background-size:14px 8px;pointer-events:none}
+.slipbar::before{top:-4px;transform:rotate(180deg)}
+.slipbar::after{bottom:-4px}
+.slipbar .rail{position:absolute;left:0;top:6px;bottom:6px;width:4px;background:var(--accent);border-radius:0 2px 2px 0}
+.slipbar .row1{display:flex;align-items:baseline;gap:10px;padding-left:4px}
+.slipbar .ttl{font-size:16px;font-weight:800;color:var(--ink);letter-spacing:.02em;flex:1;line-height:1.3}
+.slipbar .corner{font-size:12px;font-weight:700;color:var(--warn);white-space:nowrap;flex:none}
+
+/* ===== FINAL 琥珀年签 · 撕边单卡 + 年号戳 + 缩略拼贴（吸旧相框） ===== */
+.amber-wrap{padding:10px 14px 4px}
+.amber-card{position:relative;cursor:pointer;
+  background:linear-gradient(165deg,#FFFBF0 0%,#FFF6E0 48%,var(--bg) 100%);
+  border:1.5px solid #E8D4A0;border-radius:4px;
+  padding:12px 12px 12px 14px;
+  box-shadow:0 2px 10px rgba(154,98,0,.08);
+  display:flex;align-items:center;gap:10px;
+  min-height:78px}
+.amber-card::before,.amber-card::after{content:"";position:absolute;left:0;right:0;height:8px;
+  background:radial-gradient(circle at 8px 0,#E5DFD7 4.5px,transparent 5.5px) repeat-x;
+  background-size:16px 8px;pointer-events:none}
+.amber-card::before{top:-4px;transform:rotate(180deg)}
+.amber-card::after{bottom:-4px}
+/* 琥珀年号戳 · warn 双线圆印 · 大年份可读 */
+.amber-stamp{flex:none;width:58px;height:58px;position:relative;
+  display:grid;place-items:center}
+.amber-stamp .seal{width:54px;height:54px;border-radius:50%;
+  border:2.5px double var(--warn);
+  background:radial-gradient(circle at 40% 35%,#FFF9E8,#FFF3D6 60%,#F5E6B8);
+  box-shadow:inset 0 0 0 1px rgba(154,98,0,.25),0 1px 0 rgba(255,255,255,.6);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  transform:rotate(-8deg);
+  color:var(--warn)}
+.amber-stamp .seal .yy{font-size:16px;font-weight:900;letter-spacing:.02em;line-height:1;font-variant-numeric:tabular-nums}
+.amber-stamp .seal .dot{width:20px;height:1.5px;background:var(--warn);opacity:.55;margin:3px 0 2px;border-radius:1px}
+.amber-stamp .seal .lab{font-size:8px;font-weight:800;letter-spacing:.12em;opacity:.85}
+/* 吸旧相框：缩略拼贴嵌进年签卡内 · 非木色相框主形态 */
+.amber-thumbs{flex:none;width:56px;height:56px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:2px;
+  background:rgba(154,98,0,.08);padding:3px;border-radius:6px;border:1px solid rgba(154,98,0,.18);overflow:hidden}
+.amber-thumbs.one{grid-template-columns:1fr;grid-template-rows:1fr}
+.amber-thumbs i{display:block;border-radius:3px;min-height:0}
+.amber-thumbs i.a{background:linear-gradient(135deg,#E8C4A8,#D4A574)}
+.amber-thumbs i.b{background:linear-gradient(135deg,#7FA36B,#5F8A55)}
+.amber-thumbs i.c{background:linear-gradient(135deg,#6B8FA3,#2F6F6A)}
+.amber-thumbs i.d{background:linear-gradient(135deg,#C9B8E8,#8F7BB8)}
+.amber-thumbs.one i{min-height:50px}
+.amber-body{flex:1;min-width:0;padding-right:2px}
+.amber-body .ttl{font-size:18px;font-weight:800;color:var(--ink);letter-spacing:.03em;line-height:1.25}
+.amber-body .sub{font-size:12px;color:var(--ink2);margin-top:3px;font-weight:600}
+.amber-body .chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
+.amber-go{flex:none;font-size:22px;color:var(--warn);font-weight:700;opacity:.7;align-self:center}
+.chip{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;line-height:1.2}
+.chip.ph{background:var(--accent-soft);color:var(--accent)}
+.chip.jn{background:var(--family-soft);color:var(--family)}
+.chip.vd{background:var(--ok-soft);color:var(--ok)}
+.chip .ico{font-size:10px;opacity:.85}
+.chip .n{font-variant-numeric:tabular-nums;margin-left:1px}
+
+/* 时光线简卡 */
+.tl{padding:6px 16px 20px}
+.dayh{display:flex;align-items:center;gap:8px;margin:12px 0 8px;font-size:15px;font-weight:800}
+.agechip{font-size:11px;font-weight:700;color:var(--accent);background:var(--accent-soft);padding:2px 8px;border-radius:999px}
+.jcard{display:flex;gap:12px;background:#fff;border-radius:12px;padding:14px 14px 12px 0;margin:10px 0;border:1px solid var(--line)}
+.jcard .rail{width:56px;flex:none;display:flex;flex-direction:column;align-items:center;position:relative}
+.jcard .rail::after{content:"";position:absolute;top:0;bottom:0;left:50%;width:2px;background:var(--accent);opacity:.55;transform:translateX(-50%)}
+.jcard .rail .d{position:relative;z-index:1;background:#fff;text-align:center;font-size:11px;color:var(--ink2);line-height:1.3;padding:2px 0 4px}
+.jcard .rail .d b{display:block;font-size:17px;color:var(--ink);font-weight:800}
+.jcard .c{flex:1;min-width:0;padding-right:12px}
+.jcard .c .q{font-size:16px;font-weight:700;line-height:1.45;margin-bottom:4px}
+.jcard .c .sub{font-size:13px;color:var(--ink3);line-height:1.45}
+.photogrid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:10px 0}
+.photogrid .p{height:110px;border-radius:8px}
+.p1{background:linear-gradient(145deg,#F2C4A0,#E8A07A)}.p2{background:linear-gradient(145deg,#B9D3C6,#7FA59A)}
+.p3{background:linear-gradient(145deg,#C9B8E8,#8F7BB8)}
+.vcard{position:relative;background:var(--film-dark);border-radius:10px;padding:10px 18px;margin:10px 0;color:var(--film-ink)}
+.vcard .teeth{position:absolute;top:0;bottom:0;width:12px;display:flex;flex-direction:column;justify-content:space-between;padding:8px 0}
+.vcard .teeth.l{left:0}.vcard .teeth.r{right:0}
+.vcard .teeth i{display:block;width:7px;height:7px;margin:0 auto;border-radius:1px;background:#5a524c}
+.vcard .body{padding:8px 4px;font-size:14px;font-weight:700}
+.vcard .dur{position:absolute;right:22px;bottom:10px;font-size:11px;background:rgba(0,0,0,.45);padding:2px 6px;border-radius:999px}
+
+.center{display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:24px 32px;height:100%}
+.center h3{font-size:20px;margin:16px 0 8px;font-weight:800}.center p{font-size:14px;color:var(--ink2);line-height:1.65;margin-bottom:12px}
+.illus{width:88px;height:88px;border-radius:50%;background:var(--accent-soft);display:grid;place-items:center;font-size:36px}
+.illus.mute{background:#EFE9E1}
+.desk-topbar{display:flex;align-items:center;gap:12px;padding:8px 0 12px;border-bottom:1px solid var(--line);margin-bottom:12px}
+.desk-topbar .title{font-size:20px;font-weight:800;flex:1}
+.mute{font-size:12px;color:var(--ink3);text-align:center;padding:8px;font-weight:600}
+.childbar{display:flex;gap:10px;padding:10px 14px 0;overflow:hidden}
+.childbar .av{width:44px;height:44px;border-radius:50%;background:linear-gradient(145deg,#F2C4A0,#E8A07A);border:2.5px solid var(--accent);position:relative;flex:none}
+.childbar .av.on::after{content:"✓";position:absolute;right:-2px;bottom:-2px;width:16px;height:16px;border-radius:50%;background:var(--accent);color:#fff;font-size:10px;font-weight:800;display:grid;place-items:center}
+.childbar .av.s2{background:linear-gradient(145deg,#B9D3C6,#7FA59A);border-color:var(--line)}
+.childbar .nm{font-size:11px;font-weight:700;text-align:center;margin-top:4px;color:var(--ink2)}
+</style>
+</head>
+<body>
+<h1 class="page">往年今日（窄）· FINAL「琥珀年签」</h1>
+<span class="claim">FINAL · 琥珀年签</span>
+<span class="claim2">撕边单卡 · 年号戳 · 缩略拼贴 · 有才占位 · 双端同路径</span>
+<p class="lead">依据 cut v2026.10.25.5。定名<strong>琥珀年签</strong>（designer2 主线）：撕边浅纸单卡 + 琥珀年号双线戳 + 大字「去年今天」；吸 designer「旧相框卡」大年份可读 + 缩略拼贴嵌进年签卡内（不作木色相框主形态）。有媒资才渲染；与「最近有更新」同屏时日签在上、年签在下，不合成。桌面内容柱内同序。文案全在 <code>COPY</code>。<code>#s=状态id</code> / <code>#s=all</code>。示例「果果家」。</p>
+<nav class="nav" id="nav"></nav>
+<div id="stages"></div>
+<p class="note" id="foot"></p>
+
+<script>
+const COPY = {
+  tab_time:'时光', tab_family:'家人', tab_settings:'设置',
+  ro_meta:'只读 · 只能看',
+  amber_title:'去年今天',
+  amber_sub:'{mo}月{d}日 · {y}',
+  amber_stamp_lab:'年',
+  chip_photo:'图',
+  chip_journal:'日志',
+  chip_video:'视频',
+  chip_count:'{label} {n}',
+  slip_title:'最近有新内容',
+  slip_sub_days:'{n} 天有新的',
+  day_title:'{mo}月{d}日',
+  day_year_meta:'{y}年 · 去年今天',
+  day_back:'时光',
+  day_empty_title:'这一天还没有内容',
+  day_empty_sub:'可能已经删掉了，回时光线看看别的日子',
+  err_perm:'你没有权限做这件事',
+  err_gone:'打不开这页',
+  err_gone_sub:'家里的内容不会在这里显示',
+  deny_title:'进不了这家',
+  deny_sub:'您不在这家的成员里，这里不会显示内容。',
+  role_note_admin:'管理员与可上传：同路径可见往年今日卡，本刀不另开入口',
+  tl_family:'果果家',
+  tl_child:'果果',
+  tl_family_all:'全家',
+  age_chip:'3岁2个月',
+  age_chip_then:'去年 · 2岁2个月',
+  j_quote:'「今天幼儿园画了大太阳」',
+  j_sub:'妈妈写 · 写给果果',
+  j_quote_then:'「公园第一次踩落叶」',
+  j_sub_then:'爸爸写 · 写给果果',
+  v_title:'公园滑梯 · 爸爸传',
+  v_title_then:'踩落叶 · 妈妈传',
+  desk_aside:'电脑和手机看到的是同一本相册',
+  child_filter_note:'孩子页：只出该孩子相关媒资',
+  leap_note:'2月29日无对应日：同空态，卡不占位',
+  none_note:'去年今天无媒资 → 往年今日卡不渲染',
+  anno_amber:'琥珀年签 · 单卡+年号戳+缩略 · 非木色相框',
+  anno_both:'日签在上 · 年签在下 · 不合成一条',
+  anno_none:'无媒资 → 整卡不渲染（对照）',
+  anno_desk:'桌面仍在内容柱内 · 非右侧栏',
+  anno_child:'孩视图角标仅该孩子',
+  url_demo:'album.guoguo.home / 时光'
+};
+const f=(s,o)=>{if(!s)return'';let o2=s;if(o)Object.keys(o).forEach(k=>{o2=o2.replace(new RegExp('\\{'+k+'\\}','g'),o[k]);});return o2;};
+const C=(k,o)=>f(COPY[k],o);
+
+const S = [
+  ['tl_otd','1 仅年签卡'],
+  ['tl_both','2 日签+年签'],
+  ['tl_none','3 无卡对照'],
+  ['day','4 某一天'],
+  ['day_empty','5 某日已空'],
+  ['tl_otd_desk','6 桌面·仅年签'],
+  ['tl_both_desk','7 桌面·并存'],
+  ['child_filter','8 孩子页'],
+  ['err_perm','9 403/非成员']
+];
+
+function tabbar(on){
+  return `<div class="tabbar">
+    <span class="${on==='time'?'on':''}"><i>◷</i>${C('tab_time')}</span>
+    <span class="${on==='family'?'on':''}"><i>◎</i>${C('tab_family')}</span>
+    <span class="${on==='settings'?'on':''}"><i>⚙</i>${C('tab_settings')}</span>
+  </div>`;
+}
+function chipsCount(items){
+  const map={ph:['ph',C('chip_photo'),'▣'],jn:['jn',C('chip_journal'),'✎'],vd:['vd',C('chip_video'),'▹']};
+  return items.map(it=>{
+    const m=map[it.k];
+    return `<span class="chip ${m[0]}"><span class="ico">${m[2]}</span>${m[1]}<span class="n">${it.n}</span></span>`;
+  }).join('');
+}
+function slipbar({days}={}){
+  return `<div class="slipbar-wrap"><div class="slipbar">
+    <div class="rail"></div>
+    <div class="row1"><div class="ttl">${C('slip_title')}</div><div class="corner">${C('slip_sub_days',{n:days||3})}</div></div>
+  </div></div>`;
+}
+function amberThumbs(ph){
+  const n=ph||4;
+  if(n<=1) return `<div class="amber-thumbs one"><i class="a"></i></div>`;
+  if(n===2) return `<div class="amber-thumbs"><i class="a"></i><i class="b"></i><i class="c" style="grid-column:1/-1"></i></div>`;
+  return `<div class="amber-thumbs"><i class="a"></i><i class="b"></i><i class="c"></i><i class="d"></i></div>`;
+}
+function amberCard({y,mo,d,counts,ph}={}){
+  const yy=y||2025, m=mo||10, dd=d||25;
+  const cnt=counts||[{k:'ph',n:4},{k:'jn',n:1},{k:'vd',n:1}];
+  const phN = ph!=null ? ph : (cnt.find(c=>c.k==='ph')||{n:4}).n;
+  return `<div class="amber-wrap"><div class="amber-card">
+    <div class="amber-stamp"><div class="seal">
+      <div class="yy">${yy}</div>
+      <div class="dot"></div>
+      <div class="lab">${C('amber_stamp_lab')}</div>
+    </div></div>
+    ${amberThumbs(phN)}
+    <div class="amber-body">
+      <div class="ttl">${C('amber_title')}</div>
+      <div class="sub">${C('amber_sub',{mo:m,d:dd,y:yy})}</div>
+      <div class="chips">${chipsCount(cnt)}</div>
+    </div>
+    <div class="amber-go">›</div>
+  </div></div>`;
+}
+function tlCards(){
+  return `
+    <div class="dayh">10月25日 <span class="agechip">${C('age_chip')}</span></div>
+    <div class="jcard">
+      <div class="rail"><div class="d"><b>25</b>周日</div></div>
+      <div class="c"><div class="q">${C('j_quote')}</div><div class="sub">${C('j_sub')}</div></div>
+    </div>
+    <div class="photogrid"><div class="p p1"></div><div class="p p2"></div></div>
+    <div class="dayh">10月22日 <span class="agechip">${C('age_chip')}</span></div>
+    <div class="vcard"><div class="teeth l"><i></i><i></i><i></i><i></i></div><div class="teeth r"><i></i><i></i><i></i><i></i></div>
+      <div class="body">${C('v_title')}</div><div class="dur">0:18</div></div>`;
+}
+function phoneTL({slip, amber, extra, title, topMeta, childBar}={}){
+  return `<div class="phone">
+    <div class="status"><span>9:41</span><span>${C('tl_family')}</span></div>
+    <div class="top"><div class="title">${title||C('tl_family_all')}<span class="meta">${topMeta||''}</span></div><span class="rometa">${C('ro_meta')}</span></div>
+    <div class="scroll">
+      ${childBar||''}
+      <div class="tl" style="padding-top:0">
+        ${slip||''}
+        ${amber||''}
+        ${tlCards()}
+      </div>
+      ${extra||''}
+    </div>
+    ${tabbar('time')}
+  </div>`;
+}
+function deskTL({slip, amber, anno, title}={}){
+  return `<div class="deskwin">
+    <div class="desk-chrome"><div class="dots"><i></i><i></i><i></i></div><div class="urlbar">${C('url_demo')}</div></div>
+    <div class="desk-body">
+      <div class="desk-side"><div class="logo">kids时光机</div>
+        <div class="navi"><span class="on">${C('tab_time')}</span><span>${C('tab_family')}</span><span>${C('tab_settings')}</span></div>
+        <p style="font-size:11px;color:var(--ink3);margin-top:24px;line-height:1.5;padding:0 8px">${C('role_note_admin')}</p>
+      </div>
+      <div class="desk-main"><div class="desk-col" style="position:relative">
+        <div class="desk-topbar"><div class="title">${title||C('tl_family_all')}</div><span class="rometa">${C('ro_meta')}</span></div>
+        ${slip||''}
+        ${amber||''}
+        ${tlCards()}
+        <div class="mute">${C('desk_aside')}</div>
+        ${anno||''}
+      </div></div>
+    </div>
+  </div>`;
+}
+function frame(cap,inner,desk){return `<div class="frame${desk?' desk':''}"><div class="cap">${cap}</div>${inner}</div>`;}
+function dayPage({empty}={}){
+  if(empty){
+    return `<div class="phone paper">
+      <div class="status"><span>9:41</span><span>${C('tl_family')}</span></div>
+      <div class="top"><button class="ib">←</button><div class="title">${C('day_title',{mo:10,d:25})}<span class="meta">${C('day_year_meta',{y:2025})}</span></div></div>
+      <div class="scroll"><div class="center"><div class="illus mute">📭</div><h3>${C('day_empty_title')}</h3><p>${C('day_empty_sub')}</p></div></div>
+      ${tabbar('time')}
+    </div>`;
+  }
+  return `<div class="phone">
+    <div class="status"><span>9:41</span><span>${C('tl_family')}</span></div>
+    <div class="top"><button class="ib">←</button><div class="title">${C('day_title',{mo:10,d:25})}<span class="meta">${C('day_year_meta',{y:2025})} · ${C('age_chip_then')}</span></div><span class="rometa">${C('ro_meta')}</span></div>
+    <div class="scroll"><div class="tl">
+      <div class="jcard"><div class="rail"><div class="d"><b>25</b>周六</div></div><div class="c"><div class="q">${C('j_quote_then')}</div><div class="sub">${C('j_sub_then')}</div></div></div>
+      <div class="photogrid"><div class="p p1"></div><div class="p p2"></div><div class="p p3"></div><div class="p p1"></div></div>
+      <div class="vcard"><div class="teeth l"><i></i><i></i><i></i><i></i></div><div class="teeth r"><i></i><i></i><i></i><i></i></div>
+        <div class="body">${C('v_title_then')}</div><div class="dur">0:24</div></div>
+    </div></div>
+    ${tabbar('time')}
+  </div>`;
+}
+
+const stages=document.getElementById('stages');
+const DEMO_COUNTS=[{k:'ph',n:4},{k:'jn',n:1},{k:'vd',n:1}];
+const CHILD_COUNTS=[{k:'ph',n:2},{k:'jn',n:1}];
+
+/* 1 tl_otd */
+stages.innerHTML += `<div class="group" id="tl_otd">
+  <div class="gtitle">1 · 仅往年今日卡（有媒资）390 · AC-D1 / D5</div>
+  ${frame('只读长辈开时光线：仅琥珀年签单卡；左年号戳「2025」+ 缩略拼贴 + 大字「去年今天」+ 角标；点进某一天',
+    phoneTL({amber:amberCard({counts:DEMO_COUNTS}),
+      extra:`<div class="anno" style="left:18px;top:8px;width:354px;height:96px"></div><div class="anno-tag" style="left:18px;top:-2px">${C('anno_amber')}</div>`})
+  )}
+</div>`;
+
+/* 2 tl_both */
+stages.innerHTML += `<div class="group hide" id="tl_both">
+  <div class="gtitle">2 · 日签条 + 往年今日并存（日签在上）390 · AC-D4 / D7</div>
+  ${frame('同屏：上方日签条（跨刀示意），下方琥珀年签；间距清晰，禁止合成一条 Feed',
+    phoneTL({slip:slipbar({days:3}),amber:amberCard({counts:DEMO_COUNTS}),
+      extra:`<div class="anno" style="left:18px;top:8px;width:354px;height:168px"></div><div class="anno-tag" style="left:18px;top:-2px">${C('anno_both')}</div>`})
+  )}
+</div>`;
+
+/* 3 tl_none */
+stages.innerHTML += `<div class="group hide" id="tl_none">
+  <div class="gtitle">3 · 去年无媒资 · 往年今日不占位 390 · AC-D2 · leap 同空态</div>
+  ${frame('无媒资：琥珀年签整卡不渲染；可有/无日签。本帧示意有日签、无年签。2/29 无对应日同空态。',
+    phoneTL({slip:slipbar({days:2}),
+      extra:`<div class="anno-tag" style="left:24px;top:78px">${C('anno_none')}</div><div class="mute" style="position:absolute;left:0;right:0;bottom:16px">${C('none_note')} · ${C('leap_note')}</div>`})
+  )}
+</div>`;
+
+/* 4 day */
+stages.innerHTML += `<div class="group hide" id="day">
+  <div class="gtitle">4 · 点进某一天页（去年同月日媒资）· AC-D5</div>
+  ${frame('点琥珀年签 → 已有某一天页（2025-10-25）；复用既有路由，不新开详情模型',
+    dayPage()
+  )}
+</div>`;
+
+/* 5 day_empty */
+stages.innerHTML += `<div class="group hide" id="day_empty">
+  <div class="gtitle">5 · 某一天已空（媒资被删）现网空态 · 失败 4</div>
+  ${frame('进页后媒资已删：现网空态，不白屏、不吓人弹窗',
+    dayPage({empty:1})
+  )}
+</div>`;
+
+/* 6 tl_otd_desk */
+stages.innerHTML += `<div class="group hide" id="tl_otd_desk">
+  <div class="gtitle">6 · 桌面 ≥1024 · 仅年签 · AC-D6</div>
+  ${frame('桌面：琥珀年签在内容柱（max ~720）内；左侧仅既有导航，不作右侧独立栏',
+    deskTL({amber:amberCard({counts:DEMO_COUNTS}),
+      anno:`<div class="anno" style="left:24px;top:56px;width:672px;height:88px"></div><div class="anno-tag" style="left:24px;top:42px">${C('anno_desk')}</div>`}),
+    true
+  )}
+</div>`;
+
+/* 7 tl_both_desk */
+stages.innerHTML += `<div class="group hide" id="tl_both_desk">
+  <div class="gtitle">7 · 桌面 ≥1024 · 日签+年签同序 · AC-D6 / D7</div>
+  ${frame('同文案同路径：日签在上、年签在下，均在内容柱内',
+    deskTL({slip:slipbar({days:3}),amber:amberCard({counts:DEMO_COUNTS}),
+      anno:`<div class="anno" style="left:24px;top:56px;width:672px;height:160px"></div><div class="anno-tag" style="left:24px;top:42px">${C('anno_both')} · 桌面</div>`}),
+    true
+  )}
+</div>`;
+
+/* 8 child_filter */
+stages.innerHTML += `<div class="group hide" id="child_filter">
+  <div class="gtitle">8 · 孩子页只出该孩子相关 · AC-D8</div>
+  ${frame('孩视图：琥珀年签角标仅该孩子去年今天媒资（示意图 2 / 日志 1，无视频）',
+    phoneTL({title:C('tl_child'),topMeta:C('child_filter_note'),
+      childBar:`<div class="childbar"><div><div class="av on"></div><div class="nm">${C('tl_child')}</div></div><div><div class="av s2"></div><div class="nm">弟弟</div></div></div>`,
+      amber:amberCard({counts:CHILD_COUNTS,ph:2}),
+      extra:`<div class="anno" style="left:18px;top:68px;width:354px;height:96px"></div><div class="anno-tag" style="left:18px;top:54px">${C('anno_child')}</div>`})
+  )}
+</div>`;
+
+/* 9 err_perm */
+stages.innerHTML += `<div class="group hide" id="err_perm">
+  <div class="gtitle">9 · 只读写 403 / 非成员 · AC-D9</div>
+  ${frame('只读写接口 → 403 真话，不假装成功',
+    `<div class="phone paper">
+      <div class="status"><span>9:41</span><span></span></div>
+      <div class="scroll"><div class="center"><div class="illus mute">🔒</div><h3>${C('err_perm')}</h3><p style="color:var(--ink3);font-size:13px">${C('role_note_admin')}</p></div></div>
+    </div>`
+  )}
+  ${frame('非成员 / 移出：拒绝码与现网一致，不泄露家庭内容',
+    `<div class="phone paper">
+      <div class="status"><span>9:41</span><span></span></div>
+      <div class="scroll"><div class="center"><div class="illus mute">🔒</div><h3>${C('deny_title')}</h3><p>${C('deny_sub')}</p></div></div>
+    </div>`
+  )}
+</div>`;
+
+window.FRAME_COUNT=document.querySelectorAll('.frame').length;
+document.getElementById('foot').innerHTML=
+  '<b>主张：</b>琥珀年签——撕边浅纸<strong>单卡</strong> + 左侧<strong>琥珀年号戳</strong>（双线圆印 + 大年份，warn 色）+ <strong>缩略拼贴</strong>（吸旧相框，嵌卡内，非木色相框主形态）；大字「去年今天」；右侧类型角标带计数；有媒资才渲染；与日签并存时日签上、年签下，不合成一条。<br>'+
+  '<b>与日签条可感知差：</b>日签=撕边顶条可展开列表；年签=可点进某一天的单卡 + 印章感年号戳 + 缩略。<br>'+
+  '<b>硬闸：</b>无第二导航/新 Tab；双端同文案同路径；只读主路径；COPY 无「会员|开通|商城|发现|广告」及「回忆 Feed / On This Day」术语。<br>'+
+  '<b>文案：</b>全部来自 <code>COPY</code>（'+Object.keys(COPY).length+' keys）。帧数：'+window.FRAME_COUNT+' · 组数：'+S.length+'。<br>'+
+  '<b>自检禁词（脚注可列，产品 UI 须 0）：</b>会员、开通、商城、发现、广告、回忆 Feed、On This Day。';
+
+const nav=document.getElementById('nav');
+nav.innerHTML=S.map(([id,lab])=>`<button type="button" data-show="${id}">${lab}</button>`).join('')+
+  `<button type="button" data-show="all">全部</button>`;
+function show(id){
+  document.querySelectorAll('.group').forEach(g=>g.classList.toggle('hide',id!=='all'&&g.id!==id));
+  nav.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.show===id));
+}
+nav.addEventListener('click',e=>{const b=e.target.closest('button[data-show]');if(!b)return;show(b.dataset.show);history.replaceState(null,'','#s='+b.dataset.show);});
+(function init(){
+  const h=(location.hash||'').replace(/^#s=/,'').replace(/^#/,'');
+  if(h&&(h==='all'||S.some(([id])=>id===h)))show(h);else show('tl_otd');
+})();
+</script>
+</body>
+</html>

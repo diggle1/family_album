@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import json
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
+from app.constants import FORBIDDEN
 from app.db import get_db
 from app.deps import MemberCtx, require_member, require_user_for_family
 from app.elders_copy import ELDERS_NO_APP
@@ -13,6 +14,8 @@ from app.models import User
 from app.schemas import FamilyIn, InviteIn, RoleIn
 from app.services.clock import isoformat
 from app.services.elders import EldersError, apply_access_url, parse_json_object, paste_for_admin
+from app.services.children import child_in_family
+from app.services.on_this_day import OnThisDayUnavailable, public_on_this_day
 from app.services.whats_new import (
     TimelineSeenUnavailable,
     mark_timeline_seen,
@@ -96,6 +99,25 @@ async def post_elders_paste(
         raise EldersError(400, "access_url_required", ELDERS_NO_APP["empty_url_hint"])
     payload = parse_json_object(await request.body())
     return _json(paste_for_admin(db, family=ctx.family, payload=payload))
+
+
+@router.get("/api/families/current/on-this-day")
+def get_on_this_day(
+    child_id: int | None = None,
+    ctx: MemberCtx = Depends(require_member()),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    # family_id comes from the session. A query parameter of the same name is ignored.
+    child = None
+    if child_id is not None:
+        child = child_in_family(db, family_id=ctx.family.id, child_id=child_id)
+        if child is None:
+            raise HTTPException(status_code=403, detail=FORBIDDEN)
+    try:
+        payload = public_on_this_day(db, family_id=ctx.family.id, child=child)
+    except OnThisDayUnavailable:
+        return _json({"detail": "服务忙"}, 503)
+    return _json(payload)
 
 
 @router.get("/api/families/current/whats-new")

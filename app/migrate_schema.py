@@ -32,6 +32,10 @@ table and its rows in place. Do not DROP TABLE.
 v2026.10.25.4 adds timeline_last_seen. create_all builds it once the model
 is imported. Rolling back to v2026.10.25.3 does not import TimelineLastSeen,
 so create_all leaves that table and its rows in place. Do not DROP TABLE.
+
+v2026.10.25.5 does not add a table or a column. The year card reads the
+existing photo, journal, and video rows. Rolling back to v2026.10.25.4
+leaves every table in place. Do not DROP TABLE.
 """
 
 from __future__ import annotations
