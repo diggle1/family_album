@@ -203,6 +203,29 @@ class Video(Base):
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
+class PhotoChild(Base):
+    """Ordered children on one child photo. child_id has no FK, same as videos.
+
+    photos.child_id keeps its existing foreign key and is dual-written as the
+    first requested id. This table is not dropped on rollback.
+    """
+
+    __tablename__ = "photo_children"
+    __table_args__ = (
+        UniqueConstraint("photo_id", "child_id", name="uq_photo_child"),
+        Index("ix_photo_child_child", "child_id"),
+        Index("ix_photo_child_photo", "photo_id"),
+        CheckConstraint("position >= 0", name="ck_photo_child_pos"),
+    )
+
+    photo_id: Mapped[int] = mapped_column(
+        ForeignKey("photos.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    child_id: Mapped[int] = mapped_column(primary_key=True)
+    position: Mapped[int] = mapped_column()
+
+
 class VideoChild(Base):
     """Ordered children on one video. child_id has no FK, same as videos.child_id."""
 

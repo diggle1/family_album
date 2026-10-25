@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
 from urllib.parse import quote
@@ -11,7 +12,7 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.auth import set_session
-from app.constants import ELDERS_NO_APP, FORBIDDEN, JOURNAL, ROLE_LABEL, ROLE_NOTE, VIDEO
+from app.constants import ELDERS_NO_APP, FORBIDDEN, JOURNAL, PHOTO_MULTI_CHILD, ROLE_LABEL, ROLE_NOTE, VIDEO
 from app.db import get_db
 from app.deps import MemberCtx, optional_user
 from app.http import client_ip, safe_next, toast_text
@@ -36,7 +37,8 @@ from app.services.families import (
     list_members,
     set_role,
 )
-from app.services.photos import create_photo, self_album
+from app.services.assoc import children_payload, linked_children, parse_form_child_ids, photo_child_ids
+from app.services.photos import PhotoError, can_edit_photo, create_photo, self_album
 from app.setup_gate import note_child_upload
 from app.services.validators import parse_iso_date
 from app.templating import templates
@@ -136,7 +138,7 @@ def home(
     flags = _flags(user, membership)
     if request.query_params.get("view") == "family" and children:
         return _timeline_response(
-            request, db, user, membership, family, children, children[0], toast, family_view=True
+            request, db, user, membership, family, children, None, toast, family_view=True
         )
     current = None
     if child is not None:
@@ -184,6 +186,17 @@ def _journal_toast(params) -> str | None:
     return None
 
 
+def _photo_toast(params) -> str | None:
+    kind = params.get("toast")
+    if kind == "photo_edited":
+        return PHOTO_MULTI_CHILD["toast_edited"]
+    if kind == "photo_posted":
+        pdate = params.get("pdate") or ""
+        if re.fullmatch(r"\d{1,2}月\d{1,2}日", pdate):
+            return PHOTO_MULTI_CHILD["toast_posted"].format(date=pdate)
+    return None
+
+
 def _timeline_response(request, db, user, membership, family, children, current, toast, family_view=False):
     flags = _flags(user, membership)
     if family_view:
@@ -209,7 +222,10 @@ def _timeline_response(request, db, user, membership, family, children, current,
             "fab_href": "/upload" if family_view else f"/upload?child={current.id}",
             "tab": "timeline",
             "highlight_video": request.query_params.get("vhl") or "",
-            "toast": _video_toast(request.query_params) or _journal_toast(request.query_params) or toast_text(toast),
+            "toast": _photo_toast(request.query_params)
+            or _video_toast(request.query_params)
+            or _journal_toast(request.query_params)
+            or toast_text(toast),
         },
     )
 
@@ -229,7 +245,7 @@ def timeline_fragment(
     if family_view:
         if not children:
             raise HTTPException(status_code=403, detail=FORBIDDEN)
-        found = children[0]
+        found = None
         timeline = build_family_feed(db, gate.family.id)
         timeline["child"]["name"] = gate.family.name
     else:
@@ -641,29 +657,72 @@ def upload_page(
     return _upload_form(request, db, gate, kind=kind, child_id=child)
 
 
-def _upload_form(request, db, gate: MemberCtx, *, kind: str | None, child_id: int | None, error: str | None = None, status_code: int = 200):
+def _upload_form(
+    request,
+    db,
+    gate: MemberCtx,
+    *,
+    kind: str | None,
+    child_id: int | None,
+    error: str | None = None,
+    status_code: int = 200,
+    mode: str = "new",
+    photo: Photo | None = None,
+    selected_override: list[int] | None = None,
+):
     children = list_children(db, gate.family.id)
-    selected = None
-    if child_id is not None:
-        selected = child_in_family(db, family_id=gate.family.id, child_id=child_id)
-    if selected is None and len(children) == 1:
-        selected = children[0]
     chosen = (kind or "").strip().lower()
     if chosen not in {"child", "self"}:
         chosen = ""
+    explicit = None
+    if child_id is not None:
+        explicit = child_in_family(db, family_id=gate.family.id, child_id=child_id)
+    selected_ids: list[int] = []
+    pre_name = ""
+    if selected_override is not None:
+        known = {child.id for child in children}
+        selected_ids = [item for item in selected_override if item in known]
+    elif chosen == "child":
+        if explicit is not None:
+            selected_ids = [explicit.id]
+        elif len(children) == 1:
+            selected_ids = [children[0].id]
+    if chosen == "child" and len(children) > 1 and selected_ids and (explicit is not None or mode == "edit" or selected_override is not None):
+        first = next(child for child in children if child.id == selected_ids[0])
+        pre_name = first.name
+    if chosen == "self":
+        back = f"/people/{gate.user.id}/album"
+    elif selected_ids:
+        back = f"/?child={selected_ids[0]}"
+    elif len(children) > 1:
+        back = "/?view=family"
+    else:
+        back = "/"
+    children_json = [
+        {"id": child.id, "name": child.name, "birth": child.birth_date.isoformat()} for child in children
+    ]
     flags = _flags(gate.user, gate.membership)
     return render(
         request,
         "upload.html",
         {
             **flags,
+            "family": gate.family,
             "children": children,
-            "selected": selected,
+            "selected_ids": selected_ids,
+            "pre_name": pre_name,
+            "query_child": explicit.id if explicit is not None else None,
             "kind": chosen,
+            "mode": mode,
+            "photo": photo,
             "today": shanghai_today().isoformat(),
             "error": error,
-            "show_nav": True,
-            "tab": "people" if chosen == "self" else "timeline",
+            "show_red": chosen == "child" and not selected_ids,
+            "show_nav": False,
+            "back_href": back,
+            "children_json": json.dumps(children_json, ensure_ascii=True),
+            "selected_json": json.dumps(selected_ids),
+            "edit_date": date_label(photo.taken_on) if photo is not None else "",
         },
         status_code=status_code,
     )
@@ -674,6 +733,7 @@ async def upload_save(
     request: Request,
     kind: str = Form(""),
     child_id: str | None = Form(None),
+    child_ids: list[str] | None = Form(None),
     taken_on: str | None = Form(None),
     file: UploadFile | None = File(None),
     db: Session = Depends(get_db),
@@ -686,6 +746,7 @@ async def upload_save(
     parsed_child = None
     if child_id and str(child_id).isdigit():
         parsed_child = int(child_id)
+    override = parse_form_child_ids(child_ids)
     try:
         if file is None:
             raise HTTPException(status_code=400, detail="请上传照片")
@@ -696,8 +757,20 @@ async def upload_save(
             uploader_id=gate.user.id,
             kind_raw=kind,
             child_id_raw=child_id,
+            child_ids_raw=child_ids,
             taken_on_raw=taken_on,
             data=data,
+        )
+    except PhotoError as exc:
+        return _upload_form(
+            request,
+            db,
+            gate,
+            kind=kind,
+            child_id=parsed_child,
+            error="没传上去，点重试",
+            status_code=exc.status,
+            selected_override=override,
         )
     except HTTPException as exc:
         if exc.status_code == 403:
@@ -710,6 +783,7 @@ async def upload_save(
             child_id=parsed_child,
             error="没传上去，点重试",
             status_code=exc.status_code,
+            selected_override=override,
         )
     if photo.kind == "self":
         response = RedirectResponse(f"/people/{gate.user.id}/album?toast=album", status_code=303)
@@ -802,24 +876,52 @@ def photo_page(photo_id: int, request: Request, toast: str | None = None, db: Se
     if photo is None or photo.family_id != gate.family.id:
         raise HTTPException(status_code=403, detail=FORBIDDEN)
     owner = db.get(User, photo.uploader_id)
-    child = None
-    if photo.kind == "child" and photo.child_id is not None:
-        child = child_in_family(db, family_id=gate.family.id, child_id=photo.child_id)
+    audience: list[dict] = []
+    if photo.kind == "child":
+        raw_ids = photo_child_ids(db, photo)
+        live = linked_children(db, family_id=gate.family.id, child_ids=raw_ids)
+        audience = children_payload(live, photo.taken_on)
+    owner_name = owner.name if owner and owner.name else "未命名"
     return render(
         request,
         "photo.html",
         {
             **_flags(gate.user, gate.membership),
             "photo": photo,
-            "owner_name": owner.name if owner and owner.name else "未命名",
-            "child": child,
+            "owner_name": owner_name,
+            "audience": audience,
+            "can_edit": photo.kind == "child" and can_edit_photo(gate.membership, photo),
             "date_label": date_label(photo.taken_on),
             "weekday": weekday_zh(photo.taken_on),
             "suffix": Path(photo.storage_path or "").suffix.lower(),
             "show_nav": True,
             "tab": "people" if photo.kind == "self" else "timeline",
-            "toast": toast_text(toast),
+            "toast": _photo_toast(request.query_params) or toast_text(toast),
         },
+    )
+
+
+@router.get("/photos/{photo_id}/edit")
+def photo_edit_page(photo_id: int, request: Request, db: Session = Depends(get_db)):
+    gate = gate_member(request, db)
+    if isinstance(gate, RedirectResponse):
+        return gate
+    if gate.membership.role not in {"admin", "uploader"}:
+        raise HTTPException(status_code=403, detail=FORBIDDEN)
+    photo = db.get(Photo, photo_id)
+    if photo is None or photo.family_id != gate.family.id:
+        raise HTTPException(status_code=403, detail=FORBIDDEN)
+    if photo.kind != "child" or not can_edit_photo(gate.membership, photo):
+        raise HTTPException(status_code=403, detail=FORBIDDEN)
+    return _upload_form(
+        request,
+        db,
+        gate,
+        kind="child",
+        child_id=photo.child_id,
+        mode="edit",
+        photo=photo,
+        selected_override=photo_child_ids(db, photo),
     )
 
 

@@ -9,7 +9,7 @@
     <span class="meta">{% if album.relation_label %}{{ album.relation_label }}{% else %}关系未填{% endif %} · {{ album.photos|length }} 张</span>
   </div>
 </div>
-<div class="banner fam">这些照片记在本人名下，不会出现在{% if child_names %}{{ child_names|join("、") }}的{% else %}孩子{% endif %}时光线。</div>
+<div class="banner fam">{{ photo_copy.self_banner }}</div>
 {% if album.photos %}
 <div class="grid3">
   {% for photo in album.photos %}

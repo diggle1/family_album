@@ -1,4 +1,4 @@
-"""Shared child-set checks and association rows for journals and videos.
+"""Shared child-set checks and association rows for journals, videos, and photos.
 
 The primary ``child_id`` on the parent row is always ``child_ids[0]`` after
 de-duplication, in request order. It is not the smallest id.
@@ -12,7 +12,7 @@ from datetime import date
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from app.models import Child, Journal, JournalChild, Video, VideoChild
+from app.models import Child, Journal, JournalChild, Photo, PhotoChild, Video, VideoChild
 from app.services.children import child_in_family, list_children
 from app.services.clock import age_label
 
@@ -203,6 +203,41 @@ def clear_journal_children(db: Session, journal_id: int) -> None:
 
 def clear_video_children(db: Session, video_id: int) -> None:
     db.execute(delete(VideoChild).where(VideoChild.video_id == video_id))
+
+
+def _rows_for_photo(db: Session, photo_id: int) -> list[PhotoChild]:
+    return list(
+        db.scalars(
+            select(PhotoChild)
+            .where(PhotoChild.photo_id == photo_id)
+            .order_by(PhotoChild.position.asc(), PhotoChild.child_id.asc())
+        ).all()
+    )
+
+
+def photo_child_ids(db: Session, photo: Photo) -> list[int]:
+    rows = _rows_for_photo(db, photo.id)
+    if rows:
+        return [row.child_id for row in rows]
+    if photo.kind == "child" and photo.child_id is not None:
+        return [photo.child_id]
+    return []
+
+
+def photo_has_child(db: Session, photo: Photo, child_id: int) -> bool:
+    return child_id in photo_child_ids(db, photo)
+
+
+def replace_photo_children(db: Session, photo: Photo, children: list[Child]) -> None:
+    db.execute(delete(PhotoChild).where(PhotoChild.photo_id == photo.id))
+    db.flush()
+    for index, child in enumerate(children):
+        db.add(PhotoChild(photo_id=photo.id, child_id=child.id, position=index))
+    photo.child_id = children[0].id
+
+
+def clear_photo_children(db: Session, photo_id: int) -> None:
+    db.execute(delete(PhotoChild).where(PhotoChild.photo_id == photo_id))
 
 
 def children_payload(children: list[Child], on_date: date) -> list[dict]:

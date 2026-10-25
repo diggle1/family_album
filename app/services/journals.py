@@ -32,7 +32,13 @@ from app.services.assoc import (
     replace_journal_children,
     resolve_children,
 )
-from app.services.children import build_timeline, child_in_family, list_children
+from app.services.children import (
+    build_timeline,
+    child_in_family,
+    family_child_photos,
+    load_uploaders,
+    photo_feed_item,
+)
 from app.services.clock import age_label, as_utc, date_label, isoformat, shanghai_today, utcnow, weekday_zh
 
 logger = logging.getLogger("family_album.journal")
@@ -597,23 +603,28 @@ def _empty_day(on_date: date, *, age: str) -> dict:
 
 
 def build_family_feed(db: Session, family_id: int) -> dict:
-    """One card per journal or video. Photos stay one-child records and are merged by day."""
+    """One card per journal, video, or photo. A photo linked to several children is still one card."""
     from app.services.videos import family_videos_for_feed
 
-    children = list_children(db, family_id)
     by_date: dict[str, dict] = {}
-    photo_count = 0
-    for child in children:
-        base = build_timeline(db, child)
-        photo_count += int(base["child"]["photo_count"])
-        for day in base["days"]:
-            bucket = by_date.get(day["taken_on"])
-            if bucket is None:
-                bucket = _empty_day(date.fromisoformat(day["taken_on"]), age="")
-                by_date[day["taken_on"]] = bucket
-            bucket["photos"].extend(day["photos"])
-            if day.get("byline"):
-                bucket["byline"] = day["byline"] if not bucket["byline"] else bucket["byline"]
+    photos = family_child_photos(db, family_id)
+    users = load_uploaders(db, photos)
+    photo_count = len(photos)
+    for photo in photos:
+        key = photo.taken_on.isoformat()
+        bucket = by_date.get(key)
+        if bucket is None:
+            bucket = _empty_day(photo.taken_on, age="")
+            by_date[key] = bucket
+        bucket["photos"].append(photo_feed_item(db, photo, users))
+    for bucket in by_date.values():
+        if not bucket["photos"]:
+            continue
+        names: list[str] = []
+        for item in bucket["photos"]:
+            if item["uploader_name"] not in names:
+                names.append(item["uploader_name"])
+        bucket["byline"] = "、".join(names) + " 上传"
     rows = [
         row
         for row in db.scalars(

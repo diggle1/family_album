@@ -26,6 +26,7 @@ from app.models import (  # noqa: F401
     JournalPhoto,
     Membership,
     Photo,
+    PhotoChild,
     User,
     Video,
     VideoChild,
@@ -43,6 +44,7 @@ def main() -> None:
     print("journal_children ready")
     print("videos ready")
     print("video_children ready")
+    print("photo_children ready")
     print("schema ready")
 
 

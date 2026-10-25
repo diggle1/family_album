@@ -3,9 +3,12 @@
 {% block content %}
 <div class="top">
   <a class="back" href="javascript:history.back()">←</a>
-  <div class="title">{% if photo.kind == 'self' %}本人照片{% else %}孩子照片{% endif %}
-    <span class="meta">{{ date_label }} {{ weekday }} · {{ owner_name }} 上传</span>
+  <div class="title">{% if photo.kind == 'self' %}{{ photo_copy.u_title_self }}{% else %}{{ photo_copy.entry_child }}{% endif %}
+    <span class="meta">{{ date_label }} {{ weekday }}</span>
   </div>
+  {% if can_edit %}
+  <a class="more-btn" href="/photos/{{ photo.id }}/edit" aria-label="{{ photo_copy.u_title_edit }}">✎</a>
+  {% endif %}
   <button type="button" class="more-btn" data-photo-more aria-label="更多" aria-expanded="false">⋯</button>
 </div>
 <div class="menu" id="photo-menu" hidden>
@@ -14,11 +17,19 @@
     <small>{{ export_copy.v_menu_sub }}</small>
   </a>
 </div>
-{% if photo.kind == 'self' %}
-<div class="fam-bar">家人相册 · {{ owner_name }}</div>
-<div class="banner fam">记在本人名下，不进孩子时光线。<span class="badge self">本人</span></div>
-{% elif child %}
-<div class="banner info">挂在 · {{ child.name }}</div>
-{% endif %}
 <img class="hero" src="/media/{{ photo.id }}" alt="{{ date_label }}的照片">
+{% if photo.kind == 'self' %}
+<div class="banner fam">{{ photo_copy.self_banner }}</div>
+<p class="sign">{{ photo_copy.card_by_self.format(who=owner_name) }}</p>
+{% else %}
+<div class="dkids">
+  <div class="lbl">{{ photo_copy.d_kids_label }}</div>
+  {% for kid in audience %}
+  <div class="row">
+    <span class="nm">{{ photo_copy.d_kid_age.format(name=kid.name, age=kid.age_label) }}</span>
+  </div>
+  {% endfor %}
+</div>
+<p class="sign">{{ photo_copy.d_sign.format(who=owner_name, date=date_label) }}</p>
+{% endif %}
 {% endblock %}
