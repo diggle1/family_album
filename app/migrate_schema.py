@@ -49,6 +49,11 @@ child photos. Rolling back to v2026.10.25.6 leaves those rows in place.
 v2026.10.25.8 does not add a table or a column. The who-tag is a URL filter
 over the existing association rows. Rolling back to v2026.10.25.7 leaves
 every row in place. Do not DROP TABLE and do not DROP COLUMN.
+
+v2026.10.25.9 does not add a table or a column. Grouping old photos by
+capture day reads the file for that one request and does not keep a batch.
+Rolling back to v2026.10.25.8 leaves every row in place. Do not DROP TABLE
+and do not DROP COLUMN.
 """
 
 from __future__ import annotations

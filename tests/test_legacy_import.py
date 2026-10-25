@@ -477,8 +477,8 @@ def test_release_notes_mention_body_size_and_buffering_off():
     assert "d0c08c0e390b4facf25a738f4cd20ca4" in notes
     assert "legacy_import ready (no new tables)" in notes
     changelog = Path("CHANGELOG.md").read_text(encoding="utf-8")
-    assert changelog.split("## v2026.10.25.6", 1)[0].startswith("# Changelog\n\n## v2026.10.25.8")
-    assert app.version == "2026.10.25.8"
+    assert changelog.split("## v2026.10.25.6", 1)[0].startswith("# Changelog\n\n## v2026.10.25.9")
+    assert app.version == "2026.10.25.9"
 
 
 def test_copy_cta_wording():

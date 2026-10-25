@@ -642,6 +642,6 @@ def test_child_filter_no_new_tables():
     assert "e2944c5e" in notes
     assert "v2026.10.25.7" in notes
     assert "down -v" in notes
-    assert app.version == "2026.10.25.8"
+    assert app.version == "2026.10.25.9"
     changelog = Path("CHANGELOG.md").read_text(encoding="utf-8")
-    assert changelog.split("## v2026.10.25.7", 1)[0].startswith("# Changelog\n\n## v2026.10.25.8")
+    assert changelog.split("## v2026.10.25.7", 1)[0].startswith("# Changelog\n\n## v2026.10.25.9")

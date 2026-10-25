@@ -274,7 +274,7 @@ def test_on_this_day_no_schema_change(tmp_path):
     assert "DROP COLUMN" not in notes
     changelog = Path("CHANGELOG.md").read_text(encoding="utf-8")
     assert "## v2026.10.25.5" in changelog.split("## v2026.10.25.4", 1)[0]
-    assert app.version == "2026.10.25.8"
+    assert app.version == "2026.10.25.9"
     engine.dispose()
 
 
