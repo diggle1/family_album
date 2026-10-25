@@ -413,11 +413,14 @@ button.li {
 .paper { min-height: 100%; display: flex; flex-direction: column; background: var(--bg); }
 .wtop { display: flex; align-items: center; gap: 8px; padding: 8px 8px 0; }
 .wtop .saved { font-size: 12px; color: var(--ok); font-weight: 600; }
+.wtop .mid { flex: 1; text-align: center; font-weight: 700; font-size: 15px; }
+.wtop .balance { width: 44px; flex: none; }
 .wtop-gap { flex: 1; }
 .more-btn {
   border: 0; background: transparent; font-size: 22px; min-width: 44px; min-height: 44px;
   color: var(--ink); cursor: pointer;
 }
+a.more-btn { text-decoration: none; display: inline-grid; place-items: center; }
 .letterhead, .dhead { text-align: center; padding: 8px 24px 12px; }
 .avatar.xl { width: 64px; height: 64px; font-size: 24px; margin: 0 auto; }
 .letterhead .name, .dhead .name { font-size: 18px; font-weight: 800; margin-top: 10px; }
@@ -718,9 +721,16 @@ button.li {
 
 .opt .ic.child { background: var(--accent-soft); }
 .opt .ic.me { background: var(--family-soft); }
+#photo-app .up-spacer { flex: 1; min-height: 12px; }
+#photo-app .letterhead .date { display: inline-block; }
+.caprow { padding: 6px 20px 0; flex: none; }
+.caprow .ph {
+  font-size: 14px; color: var(--ink3); line-height: 1.5; min-height: 40px;
+  border: 1px dashed var(--line); border-radius: 10px; padding: 8px 12px; background: #fff;
+}
 #photo-app .btn.dis, #photo-app .btn[disabled] { opacity: .45; pointer-events: none; background: #C9BEB4; color: #fff; }
 .redbar {
-  background: var(--err); color: #fff; font-size: 13px; font-weight: 700;
+  flex: none; width: 100%; background: var(--err); color: #fff; font-size: 13px; font-weight: 700;
   text-align: center; padding: 8px 12px;
 }
 .redbar[hidden] { display: none; }

@@ -6,27 +6,29 @@
   <div class="sk block"></div>
 </div>
 <p class="sr-only">{{ video_copy.skel_note }}</p>
-<div class="feed" data-child-id="{{ child.id }}"{% if family_view|default(false) %} data-family-view="1"{% endif %}>
+{% set on_family = family_view|default(false) %}
+{% set nav_child = children[0] if on_family else child %}
+<div class="feed"{% if not on_family %} data-child-id="{{ child.id }}"{% endif %}{% if on_family %} data-family-view="1"{% endif %}>
   <div class="top">
-    <span class="avatar kid">{{ child.name|initial }}</span>
-    <div class="title">{{ timeline.child.name }}<span class="meta">{% if family_view|default(false) %}{{ timeline.child.photo_count }} 张{% else %}{{ timeline.child.age_label }} · {{ timeline.child.photo_count }} 张{% endif %}</span></div>
+    <span class="avatar kid">{{ nav_child.name|initial }}</span>
+    <div class="title">{{ timeline.child.name }}<span class="meta">{% if on_family %}{{ timeline.child.photo_count }} 张{% else %}{{ timeline.child.age_label }} · {{ timeline.child.photo_count }} 张{% endif %}</span></div>
     {% if membership and membership.role == 'viewer' %}
     <span class="rochip">{{ video_copy.ro_meta }}</span>
     {% endif %}
     {% if can_upload %}
-    <a class="write-pill" href="/journals/new{% if not family_view|default(false) %}?child={{ child.id }}{% endif %}">✎ {{ journal_copy.entry_write }}</a>
-    <a class="write-pill video-pill" href="/videos/new{% if not family_view|default(false) %}?child={{ child.id }}{% endif %}" aria-label="{{ video_copy.tl_hang.format(kid=child.name) }}">＋ {{ video_copy.entry_video }}</a>
+    <a class="write-pill" href="/journals/new{% if not on_family %}?child={{ child.id }}{% endif %}">✎ {{ journal_copy.entry_write }}</a>
+    <a class="write-pill video-pill" href="/videos/new{% if not on_family %}?child={{ child.id }}{% endif %}" aria-label="{{ video_copy.tl_hang.format(kid=nav_child.name) }}">＋ {{ video_copy.entry_video }}</a>
     {% endif %}
     <a class="avatar sm me" href="/family/settings">{{ user.name|initial }}</a>
   </div>
   {% if children|length >= 2 %}
   <div class="tabs2">
-    <a class="{% if not family_view|default(false) %}on{% endif %}" href="/?child={{ child.id }}">{{ multi_child.tl_tab_child }}</a>
-    <a class="{% if family_view|default(false) %}on{% endif %}" href="/?view=family">{{ multi_child.tl_tab_all }}</a>
+    <a class="{% if not on_family %}on{% endif %}" href="/?child={{ nav_child.id }}">{{ multi_child.tl_tab_child }}</a>
+    <a class="{% if on_family %}on{% endif %}" href="/?view=family">{{ multi_child.tl_tab_all }}</a>
   </div>
   <div class="caps">
     {% for item in children %}
-    <a class="cap-pill{% if not family_view|default(false) and item.id == child.id %} on{% endif %}"
+    <a class="cap-pill{% if not on_family and item.id == nav_child.id %} on{% endif %}"
        href="/?child={{ item.id }}"
        hx-get="/fragments/timeline?child={{ item.id }}"
        hx-target="#stage"
@@ -48,7 +50,7 @@
       <div class="day-h">
         <b>{{ day.date_label }}</b>
         <span>{{ day.weekday }}</span>
-        {% if not family_view|default(false) %}<span class="age">{{ day.age_label }}</span>{% endif %}
+        {% if not on_family %}<span class="age">{{ day.age_label }}</span>{% endif %}
       </div>
       {% endif %}
       {% for item in day.journals %}
@@ -73,15 +75,15 @@
     <h3>{{ photo_copy.empty_tl_title }}</h3>
     {% if can_upload %}
     <p>{{ photo_copy.empty_tl_sub }}</p>
-    <a class="btn" href="/upload?kind=child&amp;child={{ child.id }}">{{ video_copy.empty_tl_btn }}</a>
-    <a class="btn ghost" href="/videos/new?child={{ child.id }}">{{ video_copy.empty_v_btn }}</a>
+    <a class="btn" href="/upload?kind=child{% if not on_family %}&amp;child={{ child.id }}{% endif %}">{{ video_copy.empty_tl_btn }}</a>
+    <a class="btn ghost" href="/videos/new{% if not on_family %}?child={{ child.id }}{% endif %}">{{ video_copy.empty_v_btn }}</a>
     {% else %}
     <p>照片会按天出现在这里。</p>
     {% endif %}
   </div>
   {% endif %}
   {% if can_upload and timeline.days and timeline.video_count == 0 %}
-  <p class="vempty"><a href="/videos/new?child={{ child.id }}">{{ video_copy.empty_v_title }} · {{ video_copy.empty_v_btn }}</a></p>
+  <p class="vempty"><a href="/videos/new{% if not on_family %}?child={{ child.id }}{% endif %}">{{ video_copy.empty_v_title }} · {{ video_copy.empty_v_btn }}</a></p>
   {% endif %}
   <div class="pad-bottom"></div>
 </div>

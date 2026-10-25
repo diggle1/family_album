@@ -1018,12 +1018,14 @@
     var sheet = document.getElementById("fab-sheet");
     if (opener && sheet) {
       event.preventDefault();
-      var child = document.querySelector("[data-child-id]");
-      var id = child ? child.getAttribute("data-child-id") || "" : "";
+      var feed = document.querySelector(".feed");
+      var family = feed && feed.getAttribute("data-family-view") === "1";
+      var id = "";
+      if (!family && feed) id = feed.getAttribute("data-child-id") || "";
       var photo = sheet.querySelector("[data-fab-photo]");
       var video = sheet.querySelector("[data-fab-video]");
-      if (photo && id) photo.setAttribute("href", "/upload?child=" + id);
-      if (video && id) video.setAttribute("href", "/videos/new?child=" + id);
+      if (photo) photo.setAttribute("href", id ? "/upload?child=" + id : "/upload");
+      if (video) video.setAttribute("href", id ? "/videos/new?child=" + id : "/videos/new");
       sheet.hidden = false;
       return;
     }

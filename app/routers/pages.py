@@ -138,7 +138,7 @@ def home(
     flags = _flags(user, membership)
     if request.query_params.get("view") == "family" and children:
         return _timeline_response(
-            request, db, user, membership, family, children, children[0], toast, family_view=True
+            request, db, user, membership, family, children, None, toast, family_view=True
         )
     current = None
     if child is not None:
@@ -245,7 +245,7 @@ def timeline_fragment(
     if family_view:
         if not children:
             raise HTTPException(status_code=403, detail=FORBIDDEN)
-        found = children[0]
+        found = None
         timeline = build_family_feed(db, gate.family.id)
         timeline["child"]["name"] = gate.family.name
     else:

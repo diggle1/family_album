@@ -48,6 +48,19 @@ MULTI_MD5 = "2bdab7983095c7e7b81a7c7715b73211"
 DAY = "2026-10-22"
 
 
+def _film(html: str) -> str:
+    return html.split('id="film-strip"', 1)[1].split('class="caprow"', 1)[0]
+
+
+def _tag_href(html: str, element_id: str) -> str:
+    for chunk in html.split("<a "):
+        tag = chunk.split(">", 1)[0]
+        if f'id="{element_id}"' not in tag or 'href="' not in tag:
+            continue
+        return tag.split('href="', 1)[1].split('"', 1)[0]
+    raise AssertionError(element_id)
+
+
 def _add(client: TestClient, name: str, birth: str) -> int:
     created = client.post("/api/children", json={"name": name, "birth_date": birth})
     assert created.status_code == 201, created.text
@@ -144,11 +157,18 @@ def test_empty_child_ids_400(client: TestClient):
     assert denied.json()["code"] == "child_required"
     assert denied.json()["detail"] == PHOTO_MULTI_CHILD["err_no_child"]
     page = client.get("/upload?kind=child")
-    block = page.text.split('id="film-strip"', 1)[1].split('id="photo-preview"', 1)[0]
-    assert PHOTO_MULTI_CHILD["err_no_child"] in block
+    assert page.text.index('id="photo-date"') < page.text.index('id="photo-preview"') < page.text.index('id="film-strip"')
+    assert page.text.index('id="film-strip"') < page.text.index('class="caprow"') < page.text.index('id="redbar"')
+    assert page.text.index('id="redbar"') < page.text.index('class="wfoot"') < page.text.index('id="photo-submit"')
+    block = _film(page.text)
+    assert 'id="redbar"' not in block
+    assert PHOTO_MULTI_CHILD["err_no_child"] in page.text.split('id="redbar"', 1)[1].split('id="photo-submit"', 1)[0]
     assert PHOTO_MULTI_CHILD["strip_hint_pick"] in block
+    assert PHOTO_MULTI_CHILD["u_cap_ph"] in page.text.split('class="caprow"', 1)[1].split('class="up-spacer"', 1)[0]
     assert "sticker on" not in block
-    assert "btn dis" in page.text or "disabled" in page.text
+    assert "btn dis" in page.text
+    assert "disabled" in page.text.split('id="photo-submit"', 1)[1].split(">", 1)[0]
+    assert 'class="mid"' in page.text
     assert _photo(client, [elder]).status_code == 201
 
 
@@ -204,7 +224,8 @@ def test_preselect_from_child_a_add_sibling(client: TestClient):
     page = client.get(f"/upload?kind=child&child={elder}")
     assert page.status_code == 200
     assert "已贴果果，可再贴兄弟姐妹" in page.text
-    block = page.text.split('id="film-strip"', 1)[1].split('id="photo-preview"', 1)[0]
+    assert page.text.index('id="photo-date"') < page.text.index('id="photo-preview"') < page.text.index('id="film-strip"')
+    block = _film(page.text)
     assert block.count('class="sticker on"') == 1
     assert "豆豆" in block and "果果" in block
     entry = client.get(f"/upload?child={elder}")
@@ -216,12 +237,66 @@ def test_preselect_from_child_a_add_sibling(client: TestClient):
     assert 'class="sticker on"' not in bare.text
 
 
+def test_family_entry_does_not_preselect_child_page_does(client: TestClient):
+    elder = _family(client, "p-fab@example.com", "妈妈", "入口家", child="果果")
+    younger = _add(client, "豆豆", "2025-03-01")
+    child_page = client.get(f"/?child={younger}")
+    assert _tag_href(child_page.text, "fab-photo") == f"/upload?child={younger}"
+    assert _tag_href(child_page.text, "fab-video") == f"/videos/new?child={younger}"
+    feed = child_page.text.split('class="feed"', 1)[1].split(">", 1)[0]
+    assert f'data-child-id="{younger}"' in feed
+    assert "data-family-view" not in feed
+    photo_entry = client.get(f"/upload?child={younger}")
+    assert f"/upload?kind=child&amp;child={younger}" in photo_entry.text
+    photo_form = client.get(f"/upload?kind=child&child={younger}")
+    picked = [part for part in photo_form.text.split("<button") if 'class="sticker on"' in part]
+    assert len(picked) == 1 and f'data-child-id="{younger}"' in picked[0]
+    video_form = client.get(f"/videos/new?child={younger}")
+    video_picked = [part for part in video_form.text.split("<button") if "chip on" in part]
+    assert len(video_picked) == 1 and f'data-child-id="{younger}"' in video_picked[0]
+    assert _tag_href(client.get(f"/?child={elder}").text, "fab-photo") == f"/upload?child={elder}"
+    assert _tag_href(client.get(f"/?child={elder}").text, "fab-video") == f"/videos/new?child={elder}"
+
+    family = client.get("/?view=family")
+    assert _tag_href(family.text, "fab-photo") == "/upload"
+    assert _tag_href(family.text, "fab-video") == "/videos/new"
+    assert "/upload?child=" not in family.text
+    assert "/videos/new?child=" not in family.text
+    family_feed = family.text.split('class="feed"', 1)[1].split(">", 1)[0]
+    assert "data-child-id" not in family_feed
+    assert 'data-family-view="1"' in family_feed
+    assert 'class="sticker on"' not in client.get("/upload?kind=child").text
+    video_bare = client.get("/videos/new").text.split('id="sib"', 1)[1].split('id="film-preview"', 1)[0]
+    assert "chip on" not in video_bare
+
+    switched = client.get("/fragments/timeline?view=family")
+    assert _tag_href(switched.text, "fab-photo") == "/upload"
+    assert _tag_href(switched.text, "fab-video") == "/videos/new"
+    assert "/upload?child=" not in switched.text
+    assert "/videos/new?child=" not in switched.text
+    switched_feed = switched.text.split('class="feed"', 1)[1].split(">", 1)[0]
+    assert "data-child-id" not in switched_feed
+    assert 'data-family-view="1"' in switched_feed
+
+    pages = Path("app/routers/pages.py").read_text(encoding="utf-8")
+    assert "children, None, toast, family_view=True" in pages
+    assert "found = None" in pages
+    script = Path("app/static/app.js").read_text(encoding="utf-8")
+    assert 'querySelector("[data-child-id]")' not in script
+    assert "data-family-view" in script
+    stage = Path("app/templates/fragments/stage_inner.html").read_text(encoding="utf-8")
+    assert 'class="feed" data-child-id=' not in stage
+
+
 def test_self_photo_path_no_film_strip(client: TestClient):
     child_id = _family(client, "p-self@example.com", "妈妈", "本人家", child="果果")
     _add(client, "豆豆", "2025-03-01")
     page = client.get("/upload?kind=self")
     assert page.status_code == 200
+    assert page.text.index('id="photo-date"') < page.text.index('id="photo-preview"') < page.text.index('id="self-banner"')
     assert 'id="film-strip"' not in page.text
+    assert 'class="caprow"' not in page.text
+    assert 'id="redbar"' not in page.text
     assert "sticker" not in page.text
     assert PHOTO_MULTI_CHILD["self_banner"] in page.text
     assert PHOTO_MULTI_CHILD["u_submit_self"] in page.text
@@ -466,14 +541,14 @@ def test_film_strip_has_no_age(client: TestClient):
     elder = _family(client, "p-strip@example.com", "妈妈", "胶片家", child="果果")
     _add(client, "豆豆", "2025-03-01")
     page = client.get(f"/upload?kind=child&child={elder}")
-    block = page.text.split('id="film-strip"', 1)[1].split('id="photo-preview"', 1)[0]
+    block = _film(page.text)
     assert "岁" not in block
     assert "个月" not in block
     assert PHOTO_MULTI_CHILD["strip_label"] in block
     single = TestClient(app)
     only = _family(single, "p-solo@example.com", "妈妈", "单孩胶片", child="果果")
     solo = single.get(f"/upload?kind=child&child={only}")
-    hint = solo.text.split('id="film-strip"', 1)[1].split('id="photo-preview"', 1)[0]
+    hint = _film(solo.text)
     assert PHOTO_MULTI_CHILD["strip_hint_single"] in hint
     assert "岁" not in hint
     entry = client.get("/upload")
@@ -634,8 +709,14 @@ def test_edit_page_no_file_input(client: TestClient):
     assert PHOTO_MULTI_CHILD["u_submit_edit"] in page.text
     assert 'type="file"' not in page.text
     assert 'id="film-strip"' in page.text
+    assert page.text.index('id="photo-date-label"') < page.text.index('id="photo-preview"') < page.text.index('id="film-strip"')
+    assert page.text.index('id="film-strip"') < page.text.index('class="caprow"') < page.text.index('id="redbar"')
+    assert page.text.index('id="redbar"') < page.text.index('id="photo-submit"')
     detail = client.get(f"/photos/{photo_id}")
-    assert f'href="/photos/{photo_id}/edit"' in detail.text
+    top, menu = detail.text.split('id="photo-menu"', 1)
+    assert f'href="/photos/{photo_id}/edit"' in top
+    assert "✎" in top
+    assert "/edit" not in menu.split("</div>", 1)[0]
 
 
 def test_storage_503_writes_no_photo(client: TestClient, monkeypatch: pytest.MonkeyPatch):

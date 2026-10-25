@@ -6,6 +6,9 @@
   <div class="title">{% if photo.kind == 'self' %}{{ photo_copy.u_title_self }}{% else %}{{ photo_copy.entry_child }}{% endif %}
     <span class="meta">{{ date_label }} {{ weekday }}</span>
   </div>
+  {% if can_edit %}
+  <a class="more-btn" href="/photos/{{ photo.id }}/edit" aria-label="{{ photo_copy.u_title_edit }}">✎</a>
+  {% endif %}
   <button type="button" class="more-btn" data-photo-more aria-label="更多" aria-expanded="false">⋯</button>
 </div>
 <div class="menu" id="photo-menu" hidden>
@@ -13,9 +16,6 @@
     {{ export_copy.v_menu }}
     <small>{{ export_copy.v_menu_sub }}</small>
   </a>
-  {% if can_edit %}
-  <a href="/photos/{{ photo.id }}/edit">{{ photo_copy.u_title_edit }}</a>
-  {% endif %}
 </div>
 <img class="hero" src="/media/{{ photo.id }}" alt="{{ date_label }}的照片">
 {% if photo.kind == 'self' %}
