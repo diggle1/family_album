@@ -21,6 +21,8 @@ from app.models import (  # noqa: F401
     Child,
     Family,
     Invite,
+    DayNote,
+    DayNoteChild,
     Journal,
     JournalChild,
     JournalPhoto,
@@ -47,6 +49,7 @@ def main() -> None:
     print("video_children ready")
     print("photo_children ready")
     print("timeline_last_seen ready")
+    print("day_notes ready")
     print("schema ready")
 
 

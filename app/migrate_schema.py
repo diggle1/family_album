@@ -36,6 +36,12 @@ so create_all leaves that table and its rows in place. Do not DROP TABLE.
 v2026.10.25.5 does not add a table or a column. The year card reads the
 existing photo, journal, and video rows. Rolling back to v2026.10.25.4
 leaves every table in place. Do not DROP TABLE.
+
+v2026.10.25.6 adds day_notes and day_note_children, plus a partial unique
+index on active sentences. create_all builds them once the models are
+imported. The index statement below is idempotent. Rolling back to
+v2026.10.25.5 does not import those models, so create_all leaves the
+tables and their rows in place. Do not drop them.
 """
 
 from __future__ import annotations
@@ -75,6 +81,13 @@ WHERE child_id IS NOT NULL
 """
 
 
+_DAY_NOTE_UNIQUE = """
+CREATE UNIQUE INDEX IF NOT EXISTS uq_day_note_active
+ON day_notes (family_id, author_id, on_date)
+WHERE deleted_at IS NULL
+"""
+
+
 _PHOTO_BACKFILL = """
 INSERT OR IGNORE INTO photo_children (photo_id, child_id, position)
 SELECT id, child_id, 0 FROM photos
@@ -96,6 +109,14 @@ def _backfill_associations(bind: Engine) -> None:
             conn.execute(text(_VIDEO_BACKFILL))
         if insp.has_table("photos") and insp.has_table("photo_children"):
             conn.execute(text(_PHOTO_BACKFILL))
+
+
+def _ensure_day_note_index(bind: Engine) -> None:
+    """Keep one active sentence per family, author, and day. Idempotent."""
+    if not inspect(bind).has_table("day_notes"):
+        return
+    with bind.begin() as conn:
+        conn.execute(text(_DAY_NOTE_UNIQUE))
 
 
 def _ensure_family_access_url(bind: Engine) -> None:
@@ -121,6 +142,7 @@ def migrate_schema(bind: Engine | None = None) -> bool:
 
     Base.metadata.create_all(target)
     _backfill_associations(target)
+    _ensure_day_note_index(target)
     _ensure_family_access_url(target)
     if "storage_backend" in _column_names(target, "photos"):
         return False

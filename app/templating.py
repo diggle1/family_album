@@ -4,6 +4,7 @@ from pathlib import Path
 from fastapi.templating import Jinja2Templates
 
 from app.constants import (
+    DAY_NOTE,
     ELDERS_NO_APP,
     ELDERS_WHATS_NEW,
     EXPORT,
@@ -23,6 +24,7 @@ templates.env.globals["photo_copy"] = PHOTO_MULTI_CHILD
 templates.env.globals["elders"] = ELDERS_NO_APP
 templates.env.globals["wn_copy"] = ELDERS_WHATS_NEW
 templates.env.globals["otd_copy"] = ON_THIS_DAY
+templates.env.globals["day_note"] = DAY_NOTE
 
 
 def _initial(name: str | None) -> str:

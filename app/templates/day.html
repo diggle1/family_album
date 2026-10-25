@@ -1,29 +1,100 @@
 {% extends "layout.html" %}
-{% block title %}{{ date_label }} · {{ child.name }}{% endblock %}
+{% block title %}{{ date_label }} · {% if child %}{{ child.name }}{% else %}{{ family.name }}{% endif %}{% endblock %}
 {% block content %}
+<div class="day-page" id="day-note-app"
+     data-on-date="{{ taken_on }}"
+     data-can-write="{{ 1 if can_upload else 0 }}"
+     data-body-max="200"
+     data-body-display="80"
+     data-body-warn="70"
+     {% if can_upload %}
+     data-copy-entry_write="{{ day_note.entry_write }}"
+     data-copy-entry_edit="{{ day_note.entry_edit }}"
+     data-copy-w_title_new="{{ day_note.w_title_new }}"
+     data-copy-w_title_edit="{{ day_note.w_title_edit }}"
+     data-copy-w_count="{{ day_note.w_count }}"
+     data-copy-w_submit="{{ day_note.w_submit }}"
+     data-copy-w_submit_edit="{{ day_note.w_submit_edit }}"
+     data-copy-sib_hint_pre="{{ day_note.sib_hint_pre }}"
+     data-copy-sib_hint_pick="{{ day_note.sib_hint_pick }}"
+     data-copy-err_empty="{{ day_note.err_empty }}"
+     data-copy-err_too_long="{{ day_note.err_too_long }}"
+     data-copy-err_no_child="{{ day_note.err_no_child }}"
+     data-copy-err_perm="{{ day_note.err_perm }}"
+     data-copy-err_perm_sub="{{ day_note.err_perm_sub }}"
+     {% endif %}>
 <div class="top">
-  <a class="back" href="/?child={{ child.id }}" aria-label="{{ wn_copy.day_back }}">←</a>
+  <a class="back" href="{{ back_href }}" aria-label="{{ wn_copy.day_back }}">←</a>
   <div class="title">{{ date_label }} {{ weekday }}
-    <span class="meta">{% if otd_year_meta %}{{ otd_year_meta }} · {% endif %}{{ child.name }}{% if age_label %} · {{ age_label }}{% endif %}</span>
+    <span class="meta">{% if otd_year_meta %}{{ otd_year_meta }} · {% endif %}{% if child %}{{ child.name }}{% if age_label %} · {{ age_label }}{% endif %}{% else %}{{ family.name }}{% endif %}</span>
   </div>
+  {% if membership and membership.role == 'viewer' %}
+  <span class="rochip">{{ day_note.ro_meta }}</span>
+  {% endif %}
+  {% if can_upload %}
+  <button type="button" class="write-pill day-note-pill" data-open-note>{{ day_note.entry_edit if state.mode == 'edit' else day_note.entry_write }}</button>
+  {% endif %}
 </div>
+{% if journals %}
+<h2 class="day-sec">{{ day_note.sec_journal }}</h2>
 {% for item in journals %}
 {% include "fragments/journal_card.html" %}
 {% endfor %}
+{% endif %}
 {% for item in videos %}
 {% include "fragments/video_card.html" %}
 {% endfor %}
 {% if photos %}
+<h2 class="day-sec">{{ day_note.sec_photos }}</h2>
 <div class="grid3">
   {% for photo in photos %}
   <a class="ph" href="/photos/{{ photo.id }}"><img src="{{ photo.media_url }}" alt="{{ date_label }}的照片"></a>
   {% endfor %}
 </div>
 {% endif %}
-{% if not photos and not journals and not videos %}
+{% if notes %}
+<section class="day-notes" id="day-notes">
+  <h2 class="day-sec">{{ day_note.sec_notes }}</h2>
+  {% for note in notes %}
+  {% include "fragments/day_note_card.html" %}
+  {% endfor %}
+</section>
+{% endif %}
+{% if not photos and not journals and not videos and not notes %}
 <div class="center compact">
   <h3>{{ wn_copy.day_empty_title }}</h3>
   <p>{{ wn_copy.day_empty_sub }}</p>
 </div>
 {% endif %}
+{% if can_upload %}
+<form id="day-note-form" class="day-note-form" hidden>
+  <div class="wtop">
+    <button type="button" class="back" id="day-note-cancel">✕</button>
+    <h2 id="day-note-title">{{ day_note.w_title_edit if state.mode == 'edit' else day_note.w_title_new }}</h2>
+  </div>
+  <textarea id="day-note-body" rows="4" placeholder="{{ day_note.w_placeholder }}">{{ state.body }}</textarea>
+  <div class="day-note-meta">
+    <span>{{ day_note.form_hint }}</span>
+    <span id="day-note-count"></span>
+  </div>
+  <div class="sib" id="sib">
+    <div class="slbl">
+      <span>{{ day_note.sib_label }}</span>
+      <span class="hint" id="sib-hint"></span>
+    </div>
+    <div class="row" id="sib-row"></div>
+  </div>
+  <p class="day-note-err" id="day-note-error" hidden></p>
+  <p class="day-note-sub" id="day-note-error-sub" hidden></p>
+  <button type="button" class="btn" id="day-note-submit">{{ day_note.w_submit_edit if state.mode == 'edit' else day_note.w_submit }}</button>
+</form>
+<div class="day-note-dock" id="day-note-dock">
+  <button type="button" class="btn" data-open-note>{{ day_note.entry_edit if state.mode == 'edit' else day_note.entry_write }}</button>
+</div>
+<script type="application/json" id="day-note-initial">{{ initial_json | safe }}</script>
+<script type="application/json" id="day-note-children">{{ children_json | safe }}</script>
+<script src="/static/day_note.js" defer></script>
+{% endif %}
+<p class="desk-aside">{{ day_note.desk_aside }}</p>
+</div>
 {% endblock %}

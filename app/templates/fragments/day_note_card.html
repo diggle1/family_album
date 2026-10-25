@@ -1,0 +1,12 @@
+<article class="warm-note" data-note-id="{{ note.id }}">
+  <p class="wn-body">{{ note.body }}</p>
+  <div class="wn-foot">
+    <span class="wn-by">{{ note.author.display_name }}</span>
+    {% for kid in note.children %}
+    <span class="kid-chip"><span class="av c{{ loop.index0 % 3 }}">{{ kid.name|initial }}</span>{{ kid.name }}</span>
+    {% endfor %}
+    {% if note.can_delete %}
+    <button type="button" class="warm-x" data-delete-note="{{ note.id }}">✕</button>
+    {% endif %}
+  </div>
+</article>

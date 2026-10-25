@@ -13,6 +13,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -284,6 +285,60 @@ class TimelineLastSeen(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     family_id: Mapped[int] = mapped_column(ForeignKey("families.id"))
     last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class DayNote(Base):
+    """One plain sentence from one author on one calendar day.
+
+    Active rows are unique per family, author, and on_date. Soft-deleted
+    rows stay in the table so a later sentence the same day can be a new
+    row. Rollback keeps this table. Do not drop it.
+    """
+
+    __tablename__ = "day_notes"
+    __table_args__ = (
+        Index("ix_day_note_family_date", "family_id", "on_date"),
+        Index(
+            "uq_day_note_active",
+            "family_id",
+            "author_id",
+            "on_date",
+            unique=True,
+            sqlite_where=text("deleted_at IS NULL"),
+        ),
+        CheckConstraint(
+            "deleted_at IS NOT NULL OR length(body) > 0",
+            name="ck_day_note_body",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    family_id: Mapped[int] = mapped_column(ForeignKey("families.id"))
+    author_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    on_date: Mapped[date] = mapped_column(Date)
+    body: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class DayNoteChild(Base):
+    """Children a sentence is for. child_id has no FK, same as journal_children."""
+
+    __tablename__ = "day_note_children"
+    __table_args__ = (
+        UniqueConstraint("note_id", "child_id", name="uq_day_note_child"),
+        Index("ix_day_note_child_child", "child_id"),
+        Index("ix_day_note_child_note", "note_id"),
+        CheckConstraint("position >= 0", name="ck_day_note_child_pos"),
+    )
+
+    note_id: Mapped[int] = mapped_column(
+        ForeignKey("day_notes.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    child_id: Mapped[int] = mapped_column(primary_key=True)
+    position: Mapped[int] = mapped_column()
 
 
 class AuthThrottle(Base):

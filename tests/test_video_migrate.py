@@ -116,7 +116,7 @@ def test_rollback_schema_ignores_video_table(tmp_path):
     assert "down -v" in Path("releases/v2026.10.24.4.md").read_text(encoding="utf-8")
     changelog = Path("CHANGELOG.md").read_text(encoding="utf-8")
     assert "## v2026.10.24.4" in changelog.split("## v2026.10.24.3", 1)[0]
-    assert app.version == "2026.10.25.5"
+    assert app.version == "2026.10.25.6"
     with Session(engine) as session:
         session.add(User(email="after-v@example.com", name="旧表", created_at=_stamp()))
         session.commit()

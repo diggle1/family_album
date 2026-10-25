@@ -27,6 +27,7 @@ from app.services.children import (
     list_children,
     require_child,
 )
+from app.services.day_notes import day_page_state
 from app.services.journals import build_family_feed, build_feed
 from app.services.on_this_day import year_card, year_meta_for
 from app.services.whats_new import build_slip
@@ -981,15 +982,15 @@ def photo_edit_page(photo_id: int, request: Request, db: Session = Depends(get_d
     )
 
 
-@router.get("/children/{child_id}/days/{taken_on}")
-def day_page(child_id: int, taken_on: str, request: Request, db: Session = Depends(get_db)):
-    gate = gate_member(request, db)
-    if isinstance(gate, RedirectResponse):
-        return gate
-    child = require_child(db, family_id=gate.family.id, child_id=child_id)
-    day = parse_iso_date(taken_on, invalid="拍摄日期无效", missing="拍摄日期无效")
-    assert day is not None
-    timeline = build_feed(db, child)
+def _render_day(request: Request, db: Session, gate: MemberCtx, day, *, child):
+    if child is not None:
+        timeline = build_feed(db, child)
+        back_href = f"/?child={child.id}"
+        child_id = child.id
+    else:
+        timeline = build_family_feed(db, gate.family.id)
+        back_href = "/?view=family"
+        child_id = None
     photos: list[dict] = []
     journals: list[dict] = []
     videos: list[dict] = []
@@ -999,14 +1000,23 @@ def day_page(child_id: int, taken_on: str, request: Request, db: Session = Depen
             photos = group["photos"]
             journals = group.get("journals") or []
             videos = group.get("videos") or []
-            age = group["age_label"]
+            age = group.get("age_label") or ""
             break
+    state = day_page_state(db, gate, day, child_id=child_id)
+    initial = {
+        "body": state["body"],
+        "childIds": state["selected_ids"],
+        "noteId": state["own_id"],
+        "mode": state["mode"],
+    }
     return render(
         request,
         "day.html",
         {
             **_flags(gate.user, gate.membership),
+            "family": gate.family,
             "child": child,
+            "family_entry": child is None,
             "taken_on": day.isoformat(),
             "date_label": date_label(day),
             "weekday": weekday_zh(day),
@@ -1014,11 +1024,37 @@ def day_page(child_id: int, taken_on: str, request: Request, db: Session = Depen
             "photos": photos,
             "journals": journals,
             "videos": videos,
+            "notes": state["notes"],
+            "state": state,
+            "back_href": back_href,
             "otd_year_meta": year_meta_for(day) or "",
             "show_nav": True,
             "tab": "timeline",
+            "initial_json": json.dumps(initial, ensure_ascii=True),
+            "children_json": json.dumps(state["children"], ensure_ascii=True),
         },
     )
+
+
+@router.get("/days/{taken_on}")
+def family_day_page(taken_on: str, request: Request, db: Session = Depends(get_db)):
+    gate = gate_member(request, db)
+    if isinstance(gate, RedirectResponse):
+        return gate
+    day = parse_iso_date(taken_on, invalid="拍摄日期无效", missing="拍摄日期无效")
+    assert day is not None
+    return _render_day(request, db, gate, day, child=None)
+
+
+@router.get("/children/{child_id}/days/{taken_on}")
+def day_page(child_id: int, taken_on: str, request: Request, db: Session = Depends(get_db)):
+    gate = gate_member(request, db)
+    if isinstance(gate, RedirectResponse):
+        return gate
+    child = require_child(db, family_id=gate.family.id, child_id=child_id)
+    day = parse_iso_date(taken_on, invalid="拍摄日期无效", missing="拍摄日期无效")
+    assert day is not None
+    return _render_day(request, db, gate, day, child=child)
 
 
 @router.get("/403")

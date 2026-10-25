@@ -135,5 +135,10 @@ from app.journal_copy import JOURNAL as JOURNAL
 from app.multi_child_copy import MULTI_CHILD as MULTI_CHILD
 from app.photo_copy import PHOTO_MULTI_CHILD as PHOTO_MULTI_CHILD
 from app.video_copy import VIDEO as VIDEO
+from app.day_note_copy import DAY_NOTE as DAY_NOTE
+from app.day_note_copy import DAY_NOTE_BODY_DISPLAY as DAY_NOTE_BODY_DISPLAY
+from app.day_note_copy import DAY_NOTE_BODY_MAX as DAY_NOTE_BODY_MAX
+from app.day_note_copy import DAY_NOTE_BODY_WARN as DAY_NOTE_BODY_WARN
+from app.day_note_copy import DAY_NOTE_SNIP as DAY_NOTE_SNIP
 from app.on_this_day_copy import ON_THIS_DAY as ON_THIS_DAY
 from app.whats_new_copy import ELDERS_WHATS_NEW as ELDERS_WHATS_NEW
