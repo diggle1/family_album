@@ -1,0 +1,154 @@
+{% extends "layout.html" %}
+{% block title %}{{ legacy.tray_lab }} · kids时光机{% endblock %}
+{% block content %}
+<div id="legacy-import" class="paper li-root"
+     data-max-files="{{ max_files }}"
+     data-max-file="{{ max_file }}"
+     data-max-batch="{{ max_batch }}"
+     data-max-edge="{{ max_edge }}"
+     data-concurrency="{{ concurrency }}"
+     data-who="{{ who }}"
+     data-single="{{ 1 if single else 0 }}"
+     {% for key, value in legacy.items() %}data-copy-{{ key }}="{{ value }}" {% endfor %}>
+  <div class="wtop">
+    <button type="button" class="back" id="li-close" aria-label="{{ legacy.re_pick }}">✕</button>
+    <span class="mid" id="li-title">{{ legacy.tray_lab }}</span>
+    <span class="balance"></span>
+  </div>
+
+  <section data-frame="tray">
+    <div class="li-tray" id="tray-shell">
+      <div class="li-tray-top">
+        <b id="tray-heading">{{ legacy.tray_lab }}</b>
+        <span class="li-count-badge" id="tray-count" hidden>0</span>
+      </div>
+      <div id="tray-empty">
+        <p class="li-empty-t">{{ legacy.tray_empty_t }}</p>
+        <p class="li-empty-s">{{ legacy.tray_empty_s }}</p>
+      </div>
+      <div class="li-grid" id="tray-grid" hidden></div>
+    </div>
+    <p class="li-hint">{{ legacy.pick_hint }}</p>
+    <p class="li-hint">{{ legacy.size_hint }}</p>
+    <div class="wfoot">
+      <button type="button" class="btn" id="pick-btn">{{ legacy.pick_cta }}</button>
+      <button type="button" class="btn" id="next-btn" hidden>{{ legacy.next }}</button>
+      <input id="pick-file" type="file" accept="image/*" multiple hidden>
+    </div>
+  </section>
+
+  <section data-frame="err_over50" hidden>
+    <div class="li-banner err">{{ legacy.err_over50 }}</div>
+    <div class="wfoot">
+      <button type="button" class="btn" data-back="tray">{{ legacy.re_pick }}</button>
+    </div>
+  </section>
+
+  <section data-frame="err_batch_mb" hidden>
+    <div class="li-banner warn">{{ legacy.err_batch_mb }}</div>
+    <div class="wfoot">
+      <button type="button" class="btn" data-back="tray">{{ legacy.re_pick }}</button>
+    </div>
+  </section>
+
+  <section data-frame="confirm" hidden>
+    <h2 class="li-h">{{ legacy.tray_title }}</h2>
+    <div class="li-field">
+      <div class="li-lab">{{ legacy.date_lab }}</div>
+      <div class="date-chip" id="date-chip">
+        <span class="mark" id="date-mark" hidden></span>
+        <span id="date-text">{{ legacy.date_pick_go }}</span>
+      </div>
+      <p class="li-hint" id="date-empty">{{ legacy.date_empty }}</p>
+      <input id="on-date" type="date" value="" autocomplete="off">
+    </div>
+    <div id="film-strip">
+      <div class="strip-wrap{% if single %} single{% endif %}" id="strip">
+        <div class="slbl">
+          <span>{{ legacy.child_lab }}</span>
+          <span class="hint" id="strip-hint"></span>
+        </div>
+        <div class="strip">
+          <span class="teeth l" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+          <div class="track" id="sticker-row">
+            {% for child in children %}
+            {% set on = child.id in selected_ids %}
+            <button type="button" class="sticker{% if on %} on{% else %} off{% endif %}" data-child-id="{{ child.id }}">
+              <span class="face c{{ loop.index0 % 3 }}">{{ child.name|initial }}<span class="ck">✓</span></span>
+              <span class="nm">{{ child.name }}</span>
+            </button>
+            {% endfor %}
+          </div>
+          <span class="teeth r" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+        </div>
+      </div>
+    </div>
+    <div class="wfoot">
+      <button type="button" class="errline" id="confirm-error" hidden></button>
+      <button type="button" class="btn" id="submit-btn">{{ legacy.submit }}</button>
+    </div>
+  </section>
+
+  <section data-frame="err_nodate" hidden>
+    <div class="li-banner warn">{{ legacy.err_nodate }}</div>
+    <div class="wfoot">
+      <button type="button" class="btn" data-back="confirm">{{ legacy.date_pick_go }}</button>
+    </div>
+  </section>
+
+  <section data-frame="err_child" hidden>
+    <div class="li-banner err">{{ legacy.err_child }}</div>
+    <div class="wfoot">
+      <button type="button" class="btn" data-back="confirm">{{ legacy.child_lab }}</button>
+    </div>
+  </section>
+
+  <section data-frame="progress" hidden>
+    <p class="li-progress-label">{{ legacy.progress }}</p>
+    <p class="li-big" id="progress-count">0/0</p>
+    <div class="li-bar" aria-hidden="true"><i id="progress-bar"></i></div>
+    <p class="li-hint">{{ legacy.keep_open }}</p>
+  </section>
+
+  <section data-frame="done_ok" hidden>
+    <h2 class="li-h">{{ legacy.done_title }}</h2>
+    <p class="li-ok" id="done-all"></p>
+    <p class="li-by" id="done-by-ok"></p>
+    <p class="li-hint">{{ legacy.day_photos }}</p>
+    <div class="wfoot">
+      <a class="btn" id="go-see-ok" href="/">{{ legacy.go_see }}</a>
+      <button type="button" class="btn ghost" id="re-ok">{{ legacy.re_pick }}</button>
+    </div>
+  </section>
+
+  <section data-frame="done_partial" hidden>
+    <h2 class="li-h">{{ legacy.done_title }}</h2>
+    <p class="li-ok" id="done-ok"></p>
+    <p class="li-bad" id="done-fail" hidden></p>
+    <ul class="li-fails" id="fail-list"></ul>
+    <p class="li-by" id="done-by-partial"></p>
+    <p class="li-hint">{{ legacy.day_photos }}</p>
+    <div class="wfoot">
+      <a class="btn" id="go-see-partial" href="/">{{ legacy.go_see }}</a>
+      <button type="button" class="btn ghost" id="re-partial">{{ legacy.re_pick }}</button>
+    </div>
+  </section>
+
+  <section data-frame="err_perm" hidden>
+    <div class="li-banner err">{{ legacy.err_perm }}</div>
+    <p class="li-hint">{{ legacy.ro_hint }}</p>
+    <p class="li-hint">{{ legacy.ro_body }}</p>
+    <p class="li-hint">{{ legacy.ro_note }}</p>
+  </section>
+
+  <section data-frame="deny" hidden>
+    <h2 class="li-h">{{ legacy.deny_title }}</h2>
+    <p class="li-hint">{{ legacy.deny_sub }}</p>
+  </section>
+
+  <p class="desk-aside">{{ legacy.desk_aside }}</p>
+</div>
+<script type="application/json" id="li-children">{{ children_json | safe }}</script>
+<script type="application/json" id="li-selected">{{ selected_json | safe }}</script>
+<script src="/static/legacy_import.js" defer></script>
+{% endblock %}

@@ -1024,8 +1024,10 @@
       if (!family && feed) id = feed.getAttribute("data-child-id") || "";
       var photo = sheet.querySelector("[data-fab-photo]");
       var video = sheet.querySelector("[data-fab-video]");
+      var legacy = sheet.querySelector("[data-fab-legacy]");
       if (photo) photo.setAttribute("href", id ? "/upload?child=" + id : "/upload");
       if (video) video.setAttribute("href", id ? "/videos/new?child=" + id : "/videos/new");
+      if (legacy) legacy.setAttribute("href", id ? "/legacy-import?child=" + id : "/legacy-import");
       sheet.hidden = false;
       return;
     }

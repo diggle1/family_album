@@ -15,6 +15,10 @@
       <span class="ic me">👤</span>
       <span><b>{{ photo_copy.entry_self }}</b><small>{{ photo_copy.entry_self_sub }}</small></span>
     </a>
+    <a class="opt" id="legacy-import-entry" href="/legacy-import{% if query_child %}?child={{ query_child }}{% endif %}">
+      <span class="ic child">▤</span>
+      <span><b>{{ legacy.cta }}</b><small>{{ legacy.entry_sub }}</small></span>
+    </a>
   </div>
 </div>
 {% else %}

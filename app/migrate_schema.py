@@ -42,6 +42,9 @@ index on active sentences. create_all builds them once the models are
 imported. The index statement below is idempotent. Rolling back to
 v2026.10.25.5 does not import those models, so create_all leaves the
 tables and their rows in place. Do not drop them.
+
+v2026.10.25.7 does not add a table or a column. Imported photos are ordinary
+child photos. Rolling back to v2026.10.25.6 leaves those rows in place.
 """
 
 from __future__ import annotations

@@ -45,7 +45,7 @@ class Settings:
         self.code_ttl_seconds = int(os.environ.get("AUTH_CODE_TTL_SECONDS", "600"))
         self.invite_ttl_days = int(os.environ.get("INVITE_TTL_DAYS", "7"))
         self.session_ttl_seconds = 14 * 24 * 3600
-        self.max_upload_bytes = 10 * 1024 * 1024
+        self.max_upload_bytes = 20 * 1024 * 1024
 
 
 def validate_settings(settings: Settings) -> None:

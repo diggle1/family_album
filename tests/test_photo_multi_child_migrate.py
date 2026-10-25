@@ -163,7 +163,7 @@ def test_rollback_schema_ignores_photo_children(tmp_path):
     assert "photo_children" in notes
     changelog = Path("CHANGELOG.md").read_text(encoding="utf-8")
     assert "## v2026.10.25.3" in changelog.split("## v2026.10.25.2", 1)[0]
-    assert app.version == "2026.10.25.6"
+    assert app.version == "2026.10.25.7"
     with engine.connect() as conn:
         assert conn.execute(text("select count(*) from photo_children")).scalar() == 1
     engine.dispose()

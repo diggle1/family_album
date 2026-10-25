@@ -23,10 +23,11 @@ from app.db import engine
 from app.gate import StorageGateMiddleware
 from app.http import safe_next, wants_json
 from app.migrate_schema import migrate_schema
-from app.routers import auth, children, day_notes, deploy, family, journals, me, pages, photos, export, videos
+from app.routers import auth, children, day_notes, deploy, export, family, journals, legacy_import, me, pages, photos, videos
 from app.services.elders import EldersError
 from app.services.day_notes import DayNoteError
 from app.services.journals import JournalError
+from app.services.legacy_import import LegacyImportError
 from app.services.photos import PhotoError
 from app.services.videos import VideoError, sweep_video_partials
 from app.services.export import sweep_temp_dir
@@ -122,7 +123,7 @@ class SecurityMiddleware:
         await self.app(scope, receive, send_with_headers)
 
 
-app = FastAPI(title="kids时光机", version="2026.10.25.6", lifespan=lifespan)
+app = FastAPI(title="kids时光机", version="2026.10.25.7", lifespan=lifespan)
 app.add_middleware(StorageGateMiddleware)
 app.add_middleware(SecurityMiddleware)
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
@@ -131,6 +132,7 @@ app.include_router(me.router)
 app.include_router(family.router)
 app.include_router(children.router)
 app.include_router(photos.router)
+app.include_router(legacy_import.router)
 app.include_router(export.router)
 app.include_router(journals.router)
 app.include_router(day_notes.router)
@@ -158,6 +160,29 @@ async def database_failed(request: Request, exc: OperationalError):
     logger.warning("database request failed error=%s", type(exc).__name__)
     request.app.state.db_error = "DB_DOWN"
     return storage_block_response(request, "DB_DOWN")
+
+
+@app.exception_handler(LegacyImportError)
+async def legacy_import_failed(request: Request, exc: LegacyImportError):
+    path = request.url.path
+    if wants_json(request) or path.startswith("/api/"):
+        response = JSONResponse({"detail": exc.detail, "code": exc.code}, status_code=exc.status)
+    elif exc.status == 403:
+        response = templates.TemplateResponse(
+            request,
+            "403.html",
+            {"show_nav": False, "toast": None},
+            status_code=403,
+        )
+    else:
+        response = templates.TemplateResponse(
+            request,
+            "error.html",
+            {"show_nav": False, "toast": None, "message": exc.detail, "next": "/"},
+            status_code=exc.status,
+        )
+    response.headers["Cache-Control"] = "private, no-store"
+    return response
 
 
 @app.exception_handler(PhotoError)

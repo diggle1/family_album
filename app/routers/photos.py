@@ -35,7 +35,7 @@ async def _read_limited(file: UploadFile, request: Request) -> bytes:
     limit = settings.max_upload_bytes
     header = request.headers.get("content-length")
     if header and header.isdigit() and int(header) > limit + 256 * 1024:
-        raise HTTPException(status_code=400, detail="单张照片不能超过 10MB")
+        raise HTTPException(status_code=400, detail="单张照片不能超过 20MB")
     chunks: list[bytes] = []
     total = 0
     while True:
@@ -44,7 +44,7 @@ async def _read_limited(file: UploadFile, request: Request) -> bytes:
             break
         total += len(chunk)
         if total > limit:
-            raise HTTPException(status_code=400, detail="单张照片不能超过 10MB")
+            raise HTTPException(status_code=400, detail="单张照片不能超过 20MB")
         chunks.append(chunk)
     return b"".join(chunks)
 
