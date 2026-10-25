@@ -375,6 +375,8 @@ button.li {
   border-radius: 999px; background: var(--accent-soft); color: var(--accent);
   font-size: 13px; font-weight: 700; text-decoration: none;
 }
+button.write-pill { border: 0; font: inherit; cursor: pointer; font-weight: 700; font-size: 13px; }
+.write-pill.day-note-pill { display: none; }
 .jcard {
   display: flex; gap: 12px; background: var(--surface); border-radius: 12px;
   padding: 14px 14px 12px 0; margin: 10px 0; text-decoration: none; color: inherit;
@@ -925,8 +927,60 @@ a.more-btn { text-decoration: none; display: inline-grid; place-items: center; }
 .amber-body .chip.vd { background: var(--ok-soft); color: var(--ok); }
 .amber-go { flex: none; font-size: 22px; color: var(--warn); font-weight: 700; opacity: .7; align-self: center; }
 .amber-card:focus-visible { outline: 2px solid var(--warn); outline-offset: 2px; }
+.day-sec { margin: 14px 16px 8px; font-size: 13px; font-weight: 800; color: var(--ink2); }
+.day-notes { padding: 0 16px 8px; }
+.warm-note {
+  position: relative; margin: 0 0 10px; padding: 12px 12px 10px 16px;
+  border-radius: 10px; border: 1px solid var(--line);
+  background: linear-gradient(180deg, var(--warn-soft) 0%, var(--surface) 72%);
+}
+.warm-note::before {
+  content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px;
+  border-radius: 2px; background: var(--accent);
+}
+.warm-note .wn-body { margin: 0; font-size: 16px; font-weight: 600; line-height: 1.45; color: var(--ink); }
+.warm-note .wn-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 10px; }
+.warm-note .wn-by { font-size: 11px; font-weight: 800; color: var(--ink3); }
+.warm-note .warm-x {
+  margin-left: auto; border: 0; background: transparent; color: var(--ink3);
+  font: inherit; font-size: 16px; cursor: pointer; min-width: 32px; min-height: 32px;
+}
+.kid-chip {
+  display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px 2px 2px;
+  border-radius: 999px; background: var(--family-soft); color: var(--family);
+  font-size: 11px; font-weight: 700;
+}
+.kid-chip .av {
+  width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center;
+  font-size: 10px; font-weight: 800; color: #fff;
+}
+.day-note-line {
+  display: block; margin-top: 8px; padding-top: 8px;
+  border-top: 1px dashed var(--line); font-size: 12px; font-weight: 600;
+  color: var(--ink2); text-decoration: none;
+}
+.day-note-form { margin: 8px 16px 16px; padding: 8px 12px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+.day-note-form textarea {
+  width: 100%; min-height: 120px; border: 0; resize: vertical; background: transparent;
+  font-family: inherit; font-size: 20px; font-weight: 700; color: var(--ink); line-height: 1.4;
+}
+.day-note-meta { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--ink3); font-weight: 600; }
+.day-note-count, #day-note-count { font-variant-numeric: tabular-nums; }
+#day-note-count.warn { color: var(--warn); }
+#day-note-count.over { color: var(--err); }
+.day-note-err { color: var(--err); font-size: 14px; font-weight: 700; margin: 8px 0 0; }
+.day-note-sub { color: var(--warn); background: var(--warn-soft); border-radius: 10px; padding: 8px 10px; font-size: 13px; margin: 8px 0 0; }
+.day-note-dock {
+  position: sticky; bottom: 0; display: flex; gap: 8px; z-index: 3;
+  padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+  background: var(--surface); border-top: 1px solid var(--line);
+}
+.day-note-dock .btn { flex: 1; }
 @media (min-width: 1024px) {
   .app:has(.wn-root),
-  .app:has(.amber-wrap) { width: min(720px, 100%); }
+  .app:has(.amber-wrap),
+  .app:has(.day-page) { width: min(720px, 100%); }
   .desk-aside { display: block; }
+  .write-pill.day-note-pill { display: inline-flex; }
+  .day-note-dock { display: none; }
 }

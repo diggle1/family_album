@@ -583,6 +583,15 @@ def build_feed(db: Session, child: Child) -> dict:
             by_date[key] = bucket
         bucket["videos"] = cards
         video_count += len(cards)
+    from app.services.day_notes import attach_day_note_snippets
+
+    attach_day_note_snippets(
+        db,
+        by_date,
+        family_id=child.family_id,
+        child_id=child.id,
+        birth=child.birth_date,
+    )
     days = sorted(by_date.values(), key=lambda day: day["taken_on"], reverse=True)
     base["days"] = days
     base["video_count"] = video_count
@@ -653,6 +662,9 @@ def build_family_feed(db: Session, family_id: int) -> dict:
             by_date[key] = bucket
         bucket["videos"] = cards
         video_count += len(cards)
+    from app.services.day_notes import attach_day_note_snippets
+
+    attach_day_note_snippets(db, by_date, family_id=family_id, child_id=None, birth=None)
     days = sorted(by_date.values(), key=lambda day: day["taken_on"], reverse=True)
     return {
         "child": {
