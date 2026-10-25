@@ -2,17 +2,28 @@
 {% block title %}{{ date_label }} · {{ child.name }}{% endblock %}
 {% block content %}
 <div class="top">
-  <a class="back" href="/?child={{ child.id }}">←</a>
+  <a class="back" href="/?child={{ child.id }}" aria-label="{{ wn_copy.day_back }}">←</a>
   <div class="title">{{ date_label }} {{ weekday }}
     <span class="meta">{{ child.name }}{% if age_label %} · {{ age_label }}{% endif %}</span>
   </div>
 </div>
+{% for item in journals %}
+{% include "fragments/journal_card.html" %}
+{% endfor %}
+{% for item in videos %}
+{% include "fragments/video_card.html" %}
+{% endfor %}
+{% if photos %}
 <div class="grid3">
   {% for photo in photos %}
   <a class="ph" href="/photos/{{ photo.id }}"><img src="{{ photo.media_url }}" alt="{{ date_label }}的照片"></a>
   {% endfor %}
 </div>
-{% if not photos %}
-<div class="center compact"><h3>这一天没有照片</h3></div>
+{% endif %}
+{% if not photos and not journals and not videos %}
+<div class="center compact">
+  <h3>{{ wn_copy.day_empty_title }}</h3>
+  <p>{{ wn_copy.day_empty_sub }}</p>
+</div>
 {% endif %}
 {% endblock %}

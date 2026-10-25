@@ -267,6 +267,25 @@ class AuthCodeRequest(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
+class TimelineLastSeen(Base):
+    """When this member last successfully opened this family's timeline.
+
+    One row per member and family. Rollback to v2026.10.25.3 leaves the table
+    in place and simply does not read it. Do not drop it.
+    """
+
+    __tablename__ = "timeline_last_seen"
+    __table_args__ = (
+        UniqueConstraint("user_id", "family_id", name="uq_timeline_last_seen_user_family"),
+        Index("ix_timeline_last_seen_family", "family_id"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    family_id: Mapped[int] = mapped_column(ForeignKey("families.id"))
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
 class AuthThrottle(Base):
     """Failed verify counts. kind is verify_email or verify_ip."""
 

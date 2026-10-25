@@ -121,7 +121,7 @@ class SecurityMiddleware:
         await self.app(scope, receive, send_with_headers)
 
 
-app = FastAPI(title="kids时光机", version="2026.10.25.3", lifespan=lifespan)
+app = FastAPI(title="kids时光机", version="2026.10.25.4", lifespan=lifespan)
 app.add_middleware(StorageGateMiddleware)
 app.add_middleware(SecurityMiddleware)
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")

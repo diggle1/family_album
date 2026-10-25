@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>kids时光机 · 长辈最近有更新 · FINAL「日签条」</title>
+<style>
+:root{
+  --bg:#FBF7F2; --surface:#FFFFFF; --line:#EDE5DC;
+  --ink:#2B2420; --ink2:#6F635A; --ink3:#9A8E85;
+  --accent:#C8553D; --accent-soft:#F8E6DF;
+  --family:#2F6F6A; --family-soft:#E4F0EE;
+  --ok:#3B7D4F; --ok-soft:#E3F1E6; --err:#B3261E; --err-soft:#FBE4E2;
+  --warn:#9A6200; --warn-soft:#FFF3D6;
+  --film-dark:#2B2420; --film-ink:#E8DED4;
+  --anno:#2563EB;
+  --font:"PingFang SC","Noto Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:#E5DFD7;color:var(--ink);padding:28px 20px 100px}
+h1.page{font-size:22px;font-weight:800;letter-spacing:.02em}
+p.lead{color:var(--ink2);font-size:13px;margin:6px 0 10px;line-height:1.55;max-width:1200px}
+.claim{display:inline-block;background:var(--accent-soft);color:var(--accent);font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px;margin-bottom:12px}
+.claim2{display:inline-block;background:var(--warn-soft);color:var(--warn);font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px;margin-bottom:18px;margin-left:6px;border:1px solid #F0E0B0}
+.nav{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:22px;max-width:1700px}
+.nav button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:8px 14px;font-size:12px;font-family:inherit;color:var(--ink2);cursor:pointer}
+.nav button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.group{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start}
+.group.hide{display:none}
+.gtitle{width:100%;font-size:15px;font-weight:800;color:var(--ink);margin-bottom:-12px}
+.frame{width:390px}
+.frame.desk{width:1024px}
+.frame .cap{font-size:12px;color:var(--ink2);font-weight:600;margin-bottom:8px;min-height:34px;line-height:1.45}
+.phone{width:390px;height:760px;background:var(--surface);border-radius:28px;overflow:hidden;position:relative;
+  box-shadow:0 0 0 8px #1f1b18,0 18px 40px rgba(0,0,0,.18);display:flex;flex-direction:column}
+.phone.paper{background:var(--bg)}
+.deskwin{width:1024px;height:720px;background:var(--bg);border-radius:12px;overflow:hidden;position:relative;
+  box-shadow:0 0 0 1px #cfc6bc,0 18px 40px rgba(0,0,0,.14);display:flex;flex-direction:column}
+.desk-chrome{flex:none;height:40px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;padding:0 16px}
+.desk-chrome .dots{display:flex;gap:6px}
+.desk-chrome .dots i{width:10px;height:10px;border-radius:50%;background:#E5DFD7;display:block}
+.desk-chrome .dots i:nth-child(1){background:#E8A07A}
+.desk-chrome .dots i:nth-child(2){background:#E8D9A8}
+.desk-chrome .dots i:nth-child(3){background:#A8C9B0}
+.desk-chrome .urlbar{flex:1;height:26px;border-radius:8px;background:var(--bg);border:1px solid var(--line);font-size:12px;color:var(--ink3);display:flex;align-items:center;padding:0 12px}
+.desk-body{flex:1;display:flex;min-height:0}
+.desk-side{width:200px;flex:none;background:#fff;border-right:1px solid var(--line);padding:20px 14px}
+.desk-side .logo{font-size:14px;font-weight:800;margin-bottom:18px}
+.desk-side .navi{display:flex;flex-direction:column;gap:4px}
+.desk-side .navi span{font-size:13px;font-weight:600;color:var(--ink3);padding:10px 12px;border-radius:10px}
+.desk-side .navi span.on{background:var(--accent-soft);color:var(--accent)}
+.desk-main{flex:1;overflow:hidden;display:flex;flex-direction:column;min-width:0}
+.desk-col{width:100%;max-width:720px;margin:0 auto;padding:16px 24px 32px;overflow:auto;height:100%}
+.status{height:28px;flex:none;font-size:12px;display:flex;justify-content:space-between;padding:6px 22px 0;color:var(--ink)}
+.scroll{flex:1;overflow:hidden;position:relative;background:var(--bg)}
+.top{display:flex;align-items:center;gap:10px;padding:8px 16px 10px;flex:none;background:var(--surface);border-bottom:1px solid var(--line)}
+.top .title{font-size:18px;font-weight:700;flex:1;min-width:0}
+.top .meta{font-size:12px;color:var(--ink2);font-weight:400;display:block;margin-top:2px}
+.ib{border:0;background:transparent;font-size:20px;width:44px;height:44px;display:grid;place-items:center;font-family:inherit;cursor:pointer;color:var(--ink);flex:none}
+.rometa{font-size:11px;font-weight:700;color:var(--ink3);background:#EFE9E1;padding:2px 8px;border-radius:999px}
+.anno{position:absolute;border:1.5px dashed var(--anno);border-radius:6px;pointer-events:none;z-index:7}
+.anno-tag{position:absolute;background:var(--anno);color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap;z-index:8;pointer-events:none;line-height:1.4}
+.note{margin-top:28px;padding:16px 18px;background:#fff;border-radius:12px;border:1px solid #ddd;max-width:1240px;font-size:13px;color:var(--ink2);line-height:1.65}
+.note b{color:var(--ink)}
+.tabbar{flex:none;display:flex;border-top:1px solid var(--line);background:#fff;height:56px}
+.tabbar span{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;color:var(--ink3);font-weight:600;gap:2px}
+.tabbar span.on{color:var(--accent)}
+.tabbar span i{font-style:normal;font-size:18px;line-height:1}
+
+/* ===== 日签条 FINAL：撕边 + 左竖 accent + 微暖黄底 · 非满宽 Banner ===== */
+.slipbar-wrap{padding:12px 14px 0}
+.slipbar{position:relative;
+  background:linear-gradient(180deg,#FFF8E8 0%,var(--bg) 72%);
+  border:1px solid #E8D9B8;border-radius:4px;
+  padding:14px 14px 14px 18px;cursor:pointer;
+  box-shadow:0 2px 8px rgba(43,36,32,.06)}
+.slipbar::before,.slipbar::after{content:"";position:absolute;left:0;right:0;height:8px;
+  background:radial-gradient(circle at 7px 0,#E5DFD7 4.5px,transparent 5.5px) repeat-x;
+  background-size:14px 8px;pointer-events:none}
+.slipbar::before{top:-4px;transform:rotate(180deg)}
+.slipbar::after{bottom:-4px}
+.slipbar .rail{position:absolute;left:0;top:6px;bottom:6px;width:4px;background:var(--accent);border-radius:0 2px 2px 0}
+.slipbar .row1{display:flex;align-items:baseline;gap:10px;padding-left:4px}
+.slipbar .ttl{font-size:17px;font-weight:800;color:var(--ink);letter-spacing:.02em;flex:1;line-height:1.3}
+.slipbar .corner{font-size:12px;font-weight:700;color:var(--warn);white-space:nowrap;flex:none}
+.slipbar .chev{font-size:14px;color:var(--ink3);margin-left:4px;font-weight:700}
+.slipbar.open .chev{transform:rotate(180deg);display:inline-block}
+
+/* 按日列表 · 吸 designer 大号日期数字 + 月·周几 */
+.sliplist{margin:8px 14px 4px;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.sliplist .item{display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--line);cursor:pointer}
+.sliplist .item:last-child{border-bottom:0}
+.sliplist .item:hover{background:var(--bg)}
+.cal{width:52px;height:56px;border-radius:12px;background:var(--warn-soft);border:1.5px solid #F0E0B0;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;flex:none}
+.cal .d{font-size:26px;font-weight:800;color:var(--warn);line-height:1}
+.cal .m{font-size:10px;font-weight:700;color:#B8842A;margin-top:2px}
+.sliplist .item .body{flex:1;min-width:0}
+.sliplist .item .dt{font-size:15px;font-weight:800;color:var(--ink)}
+.sliplist .item .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.sliplist .item .tot{font-size:12px;font-weight:700;color:var(--ink2);margin-top:4px}
+.sliplist .item .go{font-size:20px;color:var(--ink3);flex:none}
+.chip{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;line-height:1.2}
+.chip.ph{background:var(--accent-soft);color:var(--accent)}
+.chip.jn{background:var(--family-soft);color:var(--family)}
+.chip.vd{background:var(--ok-soft);color:var(--ok)}
+.chip .ico{font-size:10px;opacity:.85}
+
+/* 时光线简卡 */
+.tl{padding:6px 16px 20px}
+.dayh{display:flex;align-items:center;gap:8px;margin:12px 0 8px;font-size:15px;font-weight:800}
+.agechip{font-size:11px;font-weight:700;color:var(--accent);background:var(--accent-soft);padding:2px 8px;border-radius:999px}
+.jcard{display:flex;gap:12px;background:#fff;border-radius:12px;padding:14px 14px 12px 0;margin:10px 0;border:1px solid var(--line)}
+.jcard .rail{width:56px;flex:none;display:flex;flex-direction:column;align-items:center;position:relative}
+.jcard .rail::after{content:"";position:absolute;top:0;bottom:0;left:50%;width:2px;background:var(--accent);opacity:.55;transform:translateX(-50%)}
+.jcard .rail .d{position:relative;z-index:1;background:#fff;text-align:center;font-size:11px;color:var(--ink2);line-height:1.3;padding:2px 0 4px}
+.jcard .rail .d b{display:block;font-size:17px;color:var(--ink);font-weight:800}
+.jcard .c{flex:1;min-width:0;padding-right:12px}
+.jcard .c .q{font-size:16px;font-weight:700;line-height:1.45;margin-bottom:4px}
+.jcard .c .sub{font-size:13px;color:var(--ink3);line-height:1.45}
+.photogrid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:10px 0}
+.photogrid .p{height:110px;border-radius:8px}
+.p1{background:linear-gradient(145deg,#F2C4A0,#E8A07A)}.p2{background:linear-gradient(145deg,#B9D3C6,#7FA59A)}
+.p3{background:linear-gradient(145deg,#C9B8E8,#8F7BB8)}
+.vcard{position:relative;background:var(--film-dark);border-radius:10px;padding:10px 18px;margin:10px 0;color:var(--film-ink)}
+.vcard .teeth{position:absolute;top:0;bottom:0;width:12px;display:flex;flex-direction:column;justify-content:space-between;padding:8px 0}
+.vcard .teeth.l{left:0}.vcard .teeth.r{right:0}
+.vcard .teeth i{display:block;width:7px;height:7px;margin:0 auto;border-radius:1px;background:#5a524c}
+.vcard .body{padding:8px 4px;font-size:14px;font-weight:700}
+.vcard .dur{position:absolute;right:22px;bottom:10px;font-size:11px;background:rgba(0,0,0,.45);padding:2px 6px;border-radius:999px}
+
+.center{display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:24px 32px;height:100%}
+.center h3{font-size:20px;margin:16px 0 8px;font-weight:800}.center p{font-size:14px;color:var(--ink2);line-height:1.65;margin-bottom:12px}
+.illus{width:88px;height:88px;border-radius:50%;background:var(--accent-soft);display:grid;place-items:center;font-size:36px}
+.illus.mute{background:#EFE9E1}
+.illus.warn{background:var(--warn-soft);border:1px solid #F0E0B0}
+.sk{background:linear-gradient(90deg,#EFE9E1 25%,#F7F2EC 50%,#EFE9E1 75%);background-size:200% 100%;animation:sh 1.2s infinite;border-radius:8px}
+@keyframes sh{to{background-position:-200% 0}}
+.desk-topbar{display:flex;align-items:center;gap:12px;padding:8px 0 12px;border-bottom:1px solid var(--line);margin-bottom:12px}
+.desk-topbar .title{font-size:20px;font-weight:800;flex:1}
+.mute{font-size:12px;color:var(--ink3);text-align:center;padding:8px;font-weight:600}
+</style>
+</head>
+<body>
+<h1 class="page">长辈「最近有更新」（窄）· FINAL「日签条」</h1>
+<span class="claim">FINAL · 日签条</span>
+<span class="claim2">撕边+左竖条 · 大号日期牌 · 有才占位 · 双端内容柱顶</span>
+<p class="lead">依据 cut v2026.10.25.4 + 合并取舍。视觉主张<strong>日签条</strong>（门口笺同族撕边语言）：时光线顶撕边浅纸签 + 左竖 accent 色条，微带暖黄底；大字「最近有新内容」。展开吸暖黄日牌<strong>大号日期数字</strong> + 月·周几 + 类型角标 +「共 n 条」。无更新不渲染。桌面内容柱（~720）顶同组件。文案全在 <code>COPY</code>。<code>#s=状态id</code> / <code>#s=all</code>。示例「果果家」· 只读长辈主路径。不碰 elders-no-app/final · photo-multi-child/final。</p>
+<nav class="nav" id="nav"></nav>
+<div id="stages"></div>
+<p class="note" id="foot"></p>
+
+<script>
+const COPY = {
+  tab_time:'时光', tab_family:'家人', tab_settings:'设置',
+  ro_meta:'只读 · 只能看',
+  slip_title:'最近有新内容',
+  slip_sub_days:'{n} 天有新的',
+  slip_sub_peek:'点开看看',
+  slip_sub_7d:'近 7 天有新的',
+  row_date:'{mo}月{d}日',
+  row_date_w:'{mo}月{d}日 · {w}',
+  row_cal_m:'{mo}月·{w}',
+  row_total:'共 {n} 条',
+  chip_photo:'图',
+  chip_journal:'日志',
+  chip_video:'视频',
+  day_title:'{mo}月{d}日',
+  day_back:'时光',
+  day_empty_title:'这一天还没有内容',
+  day_empty_sub:'可能已经删掉了，回时光线看看别的日子',
+  err_perm:'你没有权限做这件事',
+  err_gone:'打不开这页',
+  err_gone_sub:'家里的内容不会在这里显示',
+  deny_title:'进不了这家',
+  deny_sub:'您不在这家的成员里，这里不会显示内容。',
+  role_note_admin:'管理员与可上传：同路径可见日签条，本刀不另开入口',
+  tl_family:'果果家',
+  tl_child:'果果',
+  age_chip:'3岁2个月',
+  j_quote:'「今天幼儿园画了大太阳」',
+  j_sub:'妈妈写 · 写给果果',
+  v_title:'公园滑梯 · 爸爸传',
+  load_hint:'正在打开时光线…',
+  seen_note:'顶条已消失 · last_seen 已推进',
+  seen_meta:'上次看过 · 暂无新的',
+  desk_aside:'电脑和手机看到的是同一本相册',
+  anno_slip:'日签条 · 撕边+左竖线 · 非 Banner',
+  anno_list:'大号日牌 + 角标 · 同区展开',
+  anno_desk:'桌面仍在内容柱顶 · 非右侧栏',
+  anno_none:'无新 → 顶条不渲染（对照）',
+  anno_seen:'打开后推进 · 再进无新则消失',
+  url_demo:'album.guoguo.home / 时光'
+};
+const f=(s,o)=>{if(!s)return'';let o2=s;if(o)Object.keys(o).forEach(k=>{o2=o2.replace(new RegExp('\\{'+k+'\\}','g'),o[k]);});return o2;};
+const C=(k,o)=>f(COPY[k],o);
+
+const S = [
+  ['tl_has','1 有更新·收起'],
+  ['tl_open','2 展开按日'],
+  ['tl_none','3 无新对照'],
+  ['day','4 某一天'],
+  ['tl_has_desk','5 桌面·收起'],
+  ['tl_open_desk','6 桌面·展开'],
+  ['seen','7 已读消失'],
+  ['fallback_7d','8 近7天兜底'],
+  ['empty_load','9 加载'],
+  ['empty_day','10 某日已空'],
+  ['err_perm','11 403/非成员']
+];
+
+function tabbar(on){
+  return `<div class="tabbar">
+    <span class="${on==='time'?'on':''}"><i>◷</i>${C('tab_time')}</span>
+    <span class="${on==='family'?'on':''}"><i>◎</i>${C('tab_family')}</span>
+    <span class="${on==='settings'?'on':''}"><i>⚙</i>${C('tab_settings')}</span>
+  </div>`;
+}
+function chips(kinds){
+  const map={ph:['ph',C('chip_photo'),'▣'],jn:['jn',C('chip_journal'),'✎'],vd:['vd',C('chip_video'),'▹']};
+  return kinds.map(k=>{const m=map[k];return `<span class="chip ${m[0]}"><span class="ico">${m[2]}</span>${m[1]}</span>`;}).join('');
+}
+function slipbar({open, days, subKey}={}){
+  const sub = subKey==='7d' ? C('slip_sub_7d') : (subKey==='peek' ? C('slip_sub_peek') : C('slip_sub_days',{n:days||3}));
+  return `<div class="slipbar-wrap"><div class="slipbar${open?' open':''}">
+    <div class="rail"></div>
+    <div class="row1"><div class="ttl">${C('slip_title')}</div><div class="corner">${sub}<span class="chev"> ▾</span></div></div>
+  </div></div>`;
+}
+function sliplist(rows){
+  return `<div class="sliplist">${rows.map(r=>`
+    <div class="item">
+      <div class="cal"><div class="d">${r.d}</div><div class="m">${C('row_cal_m',{mo:r.mo,w:r.w})}</div></div>
+      <div class="body">
+        <div class="dt">${C('row_date_w',{mo:r.mo,d:r.d,w:r.w})}</div>
+        <div class="chips">${chips(r.kinds)}</div>
+        <div class="tot">${C('row_total',{n:r.n})}</div>
+      </div>
+      <div class="go">›</div>
+    </div>`).join('')}</div>`;
+}
+const DEMO_ROWS=[
+  {mo:10,d:24,w:'五',kinds:['ph','jn'],n:5},
+  {mo:10,d:22,w:'三',kinds:['vd'],n:1},
+  {mo:10,d:20,w:'一',kinds:['ph','jn','vd'],n:8}
+];
+function tlCards(){
+  return `
+    <div class="dayh">10月24日 <span class="agechip">${C('age_chip')}</span></div>
+    <div class="jcard">
+      <div class="rail"><div class="d"><b>24</b>周五</div></div>
+      <div class="c"><div class="q">${C('j_quote')}</div><div class="sub">${C('j_sub')}</div></div>
+    </div>
+    <div class="photogrid"><div class="p p1"></div><div class="p p2"></div></div>
+    <div class="dayh">10月22日 <span class="agechip">${C('age_chip')}</span></div>
+    <div class="vcard"><div class="teeth l"><i></i><i></i><i></i><i></i></div><div class="teeth r"><i></i><i></i><i></i><i></i></div>
+      <div class="body">${C('v_title')}</div><div class="dur">0:18</div></div>`;
+}
+function phoneTL({slip, list, extra, topMeta}={}){
+  return `<div class="phone">
+    <div class="status"><span>9:41</span><span>${C('tl_family')}</span></div>
+    <div class="top"><div class="title">${C('tl_child')}<span class="meta">${topMeta||''}</span></div><span class="rometa">${C('ro_meta')}</span></div>
+    <div class="scroll">
+      <div class="tl" style="padding-top:0">
+        ${slip||''}
+        ${list||''}
+        ${tlCards()}
+      </div>
+      ${extra||''}
+    </div>
+    ${tabbar('time')}
+  </div>`;
+}
+function deskTL({slip, list, anno}={}){
+  return `<div class="deskwin">
+    <div class="desk-chrome"><div class="dots"><i></i><i></i><i></i></div><div class="urlbar">${C('url_demo')}</div></div>
+    <div class="desk-body">
+      <div class="desk-side"><div class="logo">kids时光机</div>
+        <div class="navi"><span class="on">${C('tab_time')}</span><span>${C('tab_family')}</span><span>${C('tab_settings')}</span></div>
+        <p style="font-size:11px;color:var(--ink3);margin-top:24px;line-height:1.5;padding:0 8px">${C('role_note_admin')}</p>
+      </div>
+      <div class="desk-main"><div class="desk-col" style="position:relative">
+        <div class="desk-topbar"><div class="title">${C('tl_child')}</div><span class="rometa">${C('ro_meta')}</span></div>
+        ${slip||''}
+        ${list||''}
+        ${tlCards()}
+        <div class="mute">${C('desk_aside')}</div>
+        ${anno||''}
+      </div></div>
+    </div>
+  </div>`;
+}
+function frame(cap,inner,desk){return `<div class="frame${desk?' desk':''}"><div class="cap">${cap}</div>${inner}</div>`;}
+
+const stages=document.getElementById('stages');
+
+/* 1 tl_has */
+stages.innerHTML += `<div class="group" id="tl_has">
+  <div class="gtitle">1 · 有更新 · 日签条收起（390）· AC-W1 / W4</div>
+  ${frame('只读长辈打开时光线：顶一条撕边日签「最近有新内容」· 角「3 天有新的」· 未展开',
+    phoneTL({slip:slipbar({days:3}),extra:`<div class="anno" style="left:18px;top:8px;width:354px;height:64px"></div><div class="anno-tag" style="left:18px;top:-2px">${C('anno_slip')}</div>`})
+  )}
+</div>`;
+
+/* 2 tl_open */
+stages.innerHTML += `<div class="group hide" id="tl_open">
+  <div class="gtitle">2 · 展开按日列表（390）· AC-W1 / W4</div>
+  ${frame('点日签条 → 同区下方按日列表；大号日期数字 + 月·周几 + 类型角标 + 共 n 条；点日进某一天',
+    phoneTL({slip:slipbar({open:1,days:3}),list:sliplist(DEMO_ROWS),
+      extra:`<div class="anno" style="left:18px;top:78px;width:354px;height:210px"></div><div class="anno-tag" style="left:18px;top:64px">${C('anno_list')}</div>`})
+  )}
+</div>`;
+
+/* 3 tl_none */
+stages.innerHTML += `<div class="group hide" id="tl_none">
+  <div class="gtitle">3 · 无新内容 · 顶条不渲染（对照）· AC-W2</div>
+  ${frame('无新内容：日签条完全不出现；不占位、不空框、不弹窗',
+    phoneTL({extra:`<div class="anno-tag" style="left:24px;top:12px">${C('anno_none')}</div>`})
+  )}
+</div>`;
+
+/* 4 day */
+stages.innerHTML += `<div class="group hide" id="day">
+  <div class="gtitle">4 · 点进某一天页（既有路由示意）· AC-W1</div>
+  ${frame('从日签列表点「10月24日」→ 已有某一天页；本刀不新开详情模型',
+    `<div class="phone">
+      <div class="status"><span>9:41</span><span>${C('tl_family')}</span></div>
+      <div class="top"><button class="ib">←</button><div class="title">${C('day_title',{mo:10,d:24})}<span class="meta">${C('age_chip')}</span></div><span class="rometa">${C('ro_meta')}</span></div>
+      <div class="scroll"><div class="tl">
+        <div class="jcard"><div class="rail"><div class="d"><b>24</b>周五</div></div><div class="c"><div class="q">${C('j_quote')}</div><div class="sub">${C('j_sub')}</div></div></div>
+        <div class="photogrid"><div class="p p1"></div><div class="p p2"></div><div class="p p3"></div><div class="p p1"></div></div>
+      </div></div>
+      ${tabbar('time')}
+    </div>`
+  )}
+</div>`;
+
+/* 5 tl_has_desk */
+stages.innerHTML += `<div class="group hide" id="tl_has_desk">
+  <div class="gtitle">5 · 桌面 ≥1024 · 有更新收起 · AC-W5</div>
+  ${frame('桌面：日签条仍在内容柱（max ~720）顶；左侧仅既有导航，不作第二「最近」栏',
+    deskTL({slip:slipbar({days:3}),
+      anno:`<div class="anno" style="left:24px;top:56px;width:672px;height:58px"></div><div class="anno-tag" style="left:24px;top:42px">${C('anno_desk')}</div>`}),
+    true
+  )}
+</div>`;
+
+/* 6 tl_open_desk */
+stages.innerHTML += `<div class="group hide" id="tl_open_desk">
+  <div class="gtitle">6 · 桌面 ≥1024 · 展开按日 · AC-W5</div>
+  ${frame('同文案同路径：大号日牌列表仍在内容柱内；点日进某一天',
+    deskTL({slip:slipbar({open:1,days:3}),list:sliplist(DEMO_ROWS),
+      anno:`<div class="anno" style="left:24px;top:120px;width:672px;height:200px"></div><div class="anno-tag" style="left:24px;top:106px">${C('anno_list')} · 桌面</div>`}),
+    true
+  )}
+</div>`;
+
+/* 7 seen */
+stages.innerHTML += `<div class="group hide" id="seen">
+  <div class="gtitle">7 · 已读后顶条消失 · AC-W7</div>
+  ${frame('成功打开时光线后推进 last_seen；再次进入若无更新 → 顶条消失（同无新）',
+    phoneTL({topMeta:C('seen_meta'),extra:`<div class="anno-tag" style="left:24px;top:12px">${C('anno_seen')}</div><div class="mute" style="position:absolute;left:0;right:0;bottom:12px">${C('seen_note')}</div>`})
+  )}
+</div>`;
+
+/* 8 fallback_7d */
+stages.innerHTML += `<div class="group hide" id="fallback_7d">
+  <div class="gtitle">8 · 无 last_seen · 近 7 天兜底 · W3</div>
+  ${frame('无 last_seen / 时钟异常：角标改「近 7 天有新的」；列表仍按日大号日牌',
+    phoneTL({slip:slipbar({open:1,subKey:'7d'}),list:sliplist(DEMO_ROWS.slice(0,2)),
+      extra:`<div class="anno-tag" style="left:20px;top:4px">无 last_seen → 近 7 天</div>`})
+  )}
+</div>`;
+
+/* 9 empty_load */
+stages.innerHTML += `<div class="group hide" id="empty_load">
+  <div class="gtitle">9 · 加载骨架</div>
+  ${frame('打开时光线：内容骨架；日签条位可先骨架后决断渲染/不渲染',
+    `<div class="phone">
+      <div class="status"><span>9:41</span><span>${C('tl_family')}</span></div>
+      <div class="top"><div class="title">${C('tl_child')}</div><span class="rometa">${C('ro_meta')}</span></div>
+      <div class="scroll"><div class="tl">
+        <div class="slipbar-wrap"><div class="sk" style="height:56px;border-radius:4px"></div></div>
+        <div class="sk" style="height:14px;width:120px;margin:16px 0 10px"></div>
+        <div class="sk" style="height:96px;margin:10px 0"></div>
+        <div class="sk" style="height:110px;margin:10px 0"></div>
+        <p class="mute" style="margin-top:20px">${C('load_hint')}</p>
+      </div></div>
+      ${tabbar('time')}
+    </div>`
+  )}
+</div>`;
+
+/* 10 empty_day */
+stages.innerHTML += `<div class="group hide" id="empty_day">
+  <div class="gtitle">10 · 某一天页已空 · 失败路径 5</div>
+  ${frame('点进后媒资已删：现网空态，不白屏、不吓人弹窗',
+    `<div class="phone paper">
+      <div class="status"><span>9:41</span><span>${C('tl_family')}</span></div>
+      <div class="top"><button class="ib">←</button><div class="title">${C('day_title',{mo:10,d:20})}</div></div>
+      <div class="scroll"><div class="center"><div class="illus mute">📭</div><h3>${C('day_empty_title')}</h3><p>${C('day_empty_sub')}</p></div></div>
+      ${tabbar('time')}
+    </div>`
+  )}
+</div>`;
+
+/* 11 err_perm / deny */
+stages.innerHTML += `<div class="group hide" id="err_perm">
+  <div class="gtitle">11 · 只读写 403 / 非成员 · AC-W8</div>
+  ${frame('本刀几乎无写；若只读写接口 → 403 真话，不假装成功',
+    `<div class="phone paper">
+      <div class="status"><span>9:41</span><span></span></div>
+      <div class="scroll"><div class="center"><div class="illus mute">🔒</div><h3>${C('err_perm')}</h3><p style="color:var(--ink3);font-size:13px">${C('role_note_admin')}</p></div></div>
+    </div>`
+  )}
+  ${frame('非成员 / 移出：拒绝码与现网一致，不泄露家庭内容（deny）',
+    `<div class="phone paper">
+      <div class="status"><span>9:41</span><span></span></div>
+      <div class="scroll"><div class="center"><div class="illus mute">🔒</div><h3>${C('deny_title')}</h3><p>${C('deny_sub')}</p></div></div>
+    </div>`
+  )}
+</div>`;
+
+window.FRAME_COUNT=document.querySelectorAll('.frame').length;
+document.getElementById('foot').innerHTML=
+  '<b>主张：</b>日签条——撕边浅纸签 + 左竖 accent 色条（微暖黄底一眼可见）；大字「最近有新内容」；同区展开<strong>大号日期数字</strong>+月·周几+类型角标+共 n 条；无更新不渲染；桌面内容柱顶非右栏。<br>'+
+  '<b>与「顶 Banner」差异：</b>不是满宽色块横幅/系统下拉条，而是门口笺同族撕边小纸签 + 日志卡同族左竖线。<br>'+
+  '<b>硬闸：</b>无第二导航/新 Tab；双端同文案同路径；只读主路径；COPY 无「会员|开通|商城|发现|广告|摘要|Feed|动态流|下载 App|应用商店」。<br>'+
+  '<b>文案：</b>全部来自 <code>COPY</code>（'+Object.keys(COPY).length+' keys）。帧数：'+window.FRAME_COUNT+' · 组数：'+S.length+'。<br>'+
+  '<b>自检禁词（脚注可列）：</b>会员、开通、商城、发现、广告、摘要、Feed、动态流、下载 App、应用商店 — COPY 区与产品 UI 须 0。';
+
+const nav=document.getElementById('nav');
+nav.innerHTML=S.map(([id,lab])=>`<button type="button" data-show="${id}">${lab}</button>`).join('')+
+  `<button type="button" data-show="all">全部</button>`;
+function show(id){
+  document.querySelectorAll('.group').forEach(g=>g.classList.toggle('hide',id!=='all'&&g.id!==id));
+  nav.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.show===id));
+}
+nav.addEventListener('click',e=>{const b=e.target.closest('button[data-show]');if(!b)return;show(b.dataset.show);history.replaceState(null,'','#s='+b.dataset.show);});
+(function init(){
+  const h=(location.hash||'').replace(/^#s=/,'').replace(/^#/,'');
+  if(h&&(h==='all'||S.some(([id])=>id===h)))show(h);else show('tl_has');
+})();
+</script>
+</body>
+</html>
