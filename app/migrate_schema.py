@@ -28,6 +28,10 @@ photos.child_id into one association row when that photo has none yet.
 It does not alter photos.child_id. Self photos are not inserted. Rolling
 back to v2026.10.25.2 does not import PhotoChild, so create_all leaves the
 table and its rows in place. Do not DROP TABLE.
+
+v2026.10.25.4 adds timeline_last_seen. create_all builds it once the model
+is imported. Rolling back to v2026.10.25.3 does not import TimelineLastSeen,
+so create_all leaves that table and its rows in place. Do not DROP TABLE.
 """
 
 from __future__ import annotations
@@ -106,6 +110,7 @@ def migrate_schema(bind: Engine | None = None) -> bool:
     Returns True when photos.storage_backend was added on this call.
     family_access_url is added the same way and is never dropped.
     Association tables are created and backfilled. They are never dropped.
+    timeline_last_seen is created with the other tables and is never dropped.
     """
     target = bind or default_engine
     import app.models  # noqa: F401

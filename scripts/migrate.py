@@ -28,6 +28,7 @@ from app.models import (  # noqa: F401
     Photo,
     PhotoChild,
     User,
+    TimelineLastSeen,
     Video,
     VideoChild,
 )
@@ -45,6 +46,7 @@ def main() -> None:
     print("videos ready")
     print("video_children ready")
     print("photo_children ready")
+    print("timeline_last_seen ready")
     print("schema ready")
 
 

@@ -1,0 +1,45 @@
+{% set slip_child = child if child else (children[0] if children else none) %}
+<div id="whats-new-root" class="wn-root"
+     data-ssr="1"
+     data-seen-url="/api/families/current/timeline-seen"
+     data-read-url="/api/families/current/whats-new"
+     data-fallback-child="{% if slip_child %}{{ slip_child.id }}{% endif %}"
+     data-prefer-child="{% if child and not family_view|default(false) %}{{ child.id }}{% endif %}"
+     data-copy-slip-title="{{ wn_copy.slip_title }}"
+     data-copy-slip-sub-days="{{ wn_copy.slip_sub_days }}"
+     data-copy-slip-sub-7d="{{ wn_copy.slip_sub_7d }}"
+     data-copy-slip-sub-peek="{{ wn_copy.slip_sub_peek }}"
+     data-copy-row-cal-m="{{ wn_copy.row_cal_m }}"
+     data-copy-row-date-w="{{ wn_copy.row_date_w }}"
+     data-copy-row-total="{{ wn_copy.row_total }}"
+     data-copy-chip-photo="{{ wn_copy.chip_photo }}"
+     data-copy-chip-journal="{{ wn_copy.chip_journal }}"
+     data-copy-chip-video="{{ wn_copy.chip_video }}"
+     data-copy-load-hint="{{ wn_copy.load_hint }}">
+  {% if wn.has_updates %}
+  <details class="wn-slip">
+    <summary class="slipbar">
+      <span class="rail"></span>
+      <span class="row1">
+        <span class="ttl">{{ wn_copy.slip_title }}</span>
+        <span class="corner">{{ wn.corner }}<span class="chev"> ▾</span></span>
+      </span>
+    </summary>
+    <div class="sliplist">
+      {% for row in wn.rows %}
+      <a class="item" href="{{ row.href }}">
+        <span class="cal"><span class="d">{{ row.day }}</span><span class="m">{{ row.cal_m }}</span></span>
+        <span class="body">
+          <span class="dt">{{ row.title }}</span>
+          <span class="chips">
+            {% for chip in row.chips %}<span class="chip {{ chip.kind }}">{{ chip.label }}</span>{% endfor %}
+          </span>
+          <span class="tot">{{ row.total }}</span>
+        </span>
+        <span class="go">›</span>
+      </a>
+      {% endfor %}
+    </div>
+  </details>
+  {% endif %}
+</div>

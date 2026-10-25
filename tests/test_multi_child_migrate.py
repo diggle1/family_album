@@ -172,7 +172,7 @@ def test_rollback_schema_ignores_assoc_tables(tmp_path):
     assert "v2026.10.24.4" in notes
     changelog = Path("CHANGELOG.md").read_text(encoding="utf-8")
     assert "## v2026.10.25.1" in changelog.split("## v2026.10.24.4", 1)[0]
-    assert app.version == "2026.10.25.3"
+    assert app.version == "2026.10.25.4"
     with engine.connect() as conn:
         assert conn.execute(text("select count(*) from journal_children")).scalar() == 1
         assert conn.execute(text("select count(*) from video_children")).scalar() == 1

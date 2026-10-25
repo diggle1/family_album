@@ -4,6 +4,7 @@
   <div class="sk block"></div>
   <div class="sk line short"></div>
   <div class="sk block"></div>
+  <p class="wn-load">{{ wn_copy.load_hint }}</p>
 </div>
 <p class="sr-only">{{ video_copy.skel_note }}</p>
 {% set on_family = family_view|default(false) %}
@@ -43,6 +44,7 @@
   {% if membership and membership.role == 'viewer' %}
   <div class="banner info">你的权限是「只读 · 只能看」。需要传照片请让家长改档位。</div>
   {% endif %}
+  {% include "fragments/whats_new_slip.html" %}
   {% if timeline.days %}
     {% for day in timeline.days %}
     <section class="day">
@@ -85,5 +87,6 @@
   {% if can_upload and timeline.days and timeline.video_count == 0 %}
   <p class="vempty"><a href="/videos/new{% if not on_family %}?child={{ child.id }}{% endif %}">{{ video_copy.empty_v_title }} · {{ video_copy.empty_v_btn }}</a></p>
   {% endif %}
+  <p class="desk-aside">{{ wn_copy.desk_aside }}</p>
   <div class="pad-bottom"></div>
 </div>

@@ -27,6 +27,7 @@ from app.services.children import (
     require_child,
 )
 from app.services.journals import build_family_feed, build_feed
+from app.services.whats_new import build_slip
 from app.services.clock import date_label, shanghai_today, weekday_zh
 from app.services.elders import EldersError, greeting_for, invite_absolute, normalize_access_url
 from app.services.families import (
@@ -197,6 +198,19 @@ def _photo_toast(params) -> str | None:
     return None
 
 
+def _slip(db, user, family, current, family_view: bool) -> dict:
+    # Family view passes no selected child. The day link then follows whoever the new item belongs to.
+    fallback = None if current is None else current.id
+    prefer = None if family_view or current is None else current.id
+    return build_slip(
+        db,
+        user_id=user.id,
+        family_id=family.id,
+        prefer_child_id=prefer,
+        fallback_child_id=fallback,
+    )
+
+
 def _timeline_response(request, db, user, membership, family, children, current, toast, family_view=False):
     flags = _flags(user, membership)
     if family_view:
@@ -226,6 +240,13 @@ def _timeline_response(request, db, user, membership, family, children, current,
             or _video_toast(request.query_params)
             or _journal_toast(request.query_params)
             or toast_text(toast),
+            "wn": _slip(
+                db,
+                user,
+                family,
+                current if current is not None else (children[0] if children else None),
+                family_view,
+            ),
         },
     )
 
@@ -267,6 +288,13 @@ def timeline_fragment(
             "family_view": family_view,
             "write_child": "" if family_view else str(found.id),
             "highlight_video": request.query_params.get("vhl") or "",
+            "wn": _slip(
+                db,
+                gate.user,
+                gate.family,
+                found if found is not None else (children[0] if children else None),
+                family_view,
+            ),
         },
     )
 
@@ -933,12 +961,16 @@ def day_page(child_id: int, taken_on: str, request: Request, db: Session = Depen
     child = require_child(db, family_id=gate.family.id, child_id=child_id)
     day = parse_iso_date(taken_on, invalid="拍摄日期无效", missing="拍摄日期无效")
     assert day is not None
-    timeline = build_timeline(db, child)
+    timeline = build_feed(db, child)
     photos: list[dict] = []
+    journals: list[dict] = []
+    videos: list[dict] = []
     age = ""
     for group in timeline["days"]:
         if group["taken_on"] == day.isoformat():
             photos = group["photos"]
+            journals = group.get("journals") or []
+            videos = group.get("videos") or []
             age = group["age_label"]
             break
     return render(
@@ -952,6 +984,8 @@ def day_page(child_id: int, taken_on: str, request: Request, db: Session = Depen
             "weekday": weekday_zh(day),
             "age_label": age,
             "photos": photos,
+            "journals": journals,
+            "videos": videos,
             "show_nav": True,
             "tab": "timeline",
         },

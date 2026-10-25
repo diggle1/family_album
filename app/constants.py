@@ -135,3 +135,4 @@ from app.journal_copy import JOURNAL as JOURNAL
 from app.multi_child_copy import MULTI_CHILD as MULTI_CHILD
 from app.photo_copy import PHOTO_MULTI_CHILD as PHOTO_MULTI_CHILD
 from app.video_copy import VIDEO as VIDEO
+from app.whats_new_copy import ELDERS_WHATS_NEW as ELDERS_WHATS_NEW
