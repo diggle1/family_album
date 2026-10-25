@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 from pathlib import Path
 from urllib.parse import quote
@@ -27,6 +28,7 @@ from app.services.children import (
     require_child,
 )
 from app.services.journals import build_family_feed, build_feed
+from app.services.on_this_day import year_card, year_meta_for
 from app.services.whats_new import build_slip
 from app.services.clock import date_label, shanghai_today, weekday_zh
 from app.services.elders import EldersError, greeting_for, invite_absolute, normalize_access_url
@@ -47,6 +49,14 @@ from app.config import get_settings
 from app.routers.photos import _read_limited
 
 router = APIRouter(tags=["pages"])
+logger = logging.getLogger("family_album.pages")
+_EMPTY_SLIP = {
+    "has_updates": False,
+    "window": "fallback_7d",
+    "last_seen_at": None,
+    "corner": "",
+    "rows": [],
+}
 
 
 def render(request: Request, name: str, context: dict, status_code: int = 200):
@@ -200,15 +210,31 @@ def _photo_toast(params) -> str | None:
 
 def _slip(db, user, family, current, family_view: bool) -> dict:
     # Family view passes no selected child. The day link then follows whoever the new item belongs to.
+    # A slip failure leaves the year card and the rest of the timeline in place.
     fallback = None if current is None else current.id
     prefer = None if family_view or current is None else current.id
-    return build_slip(
-        db,
-        user_id=user.id,
-        family_id=family.id,
-        prefer_child_id=prefer,
-        fallback_child_id=fallback,
-    )
+    try:
+        return build_slip(
+            db,
+            user_id=user.id,
+            family_id=family.id,
+            prefer_child_id=prefer,
+            fallback_child_id=fallback,
+        )
+    except Exception as exc:
+        logger.warning("whats-new slip skipped error=%s", type(exc).__name__)
+        return dict(_EMPTY_SLIP)
+
+
+def _year_card(timeline, current, children, family_view: bool):
+    prefer = None if family_view or current is None else current.id
+    if current is not None:
+        fallback = current.id
+    elif children:
+        fallback = children[0].id
+    else:
+        fallback = None
+    return year_card(timeline, prefer_child_id=prefer, fallback_child_id=fallback)
 
 
 def _timeline_response(request, db, user, membership, family, children, current, toast, family_view=False):
@@ -247,6 +273,7 @@ def _timeline_response(request, db, user, membership, family, children, current,
                 current if current is not None else (children[0] if children else None),
                 family_view,
             ),
+            "otd_card": _year_card(timeline, current, children, family_view),
         },
     )
 
@@ -295,6 +322,7 @@ def timeline_fragment(
                 found if found is not None else (children[0] if children else None),
                 family_view,
             ),
+            "otd_card": _year_card(timeline, found, children, family_view),
         },
     )
 
@@ -986,6 +1014,7 @@ def day_page(child_id: int, taken_on: str, request: Request, db: Session = Depen
             "photos": photos,
             "journals": journals,
             "videos": videos,
+            "otd_year_meta": year_meta_for(day) or "",
             "show_nav": True,
             "tab": "timeline",
         },

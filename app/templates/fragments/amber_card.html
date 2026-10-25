@@ -1,0 +1,34 @@
+{% if otd_card %}
+<div class="amber-wrap" id="on-this-day-root" data-ssr="1"
+     data-read-url="/api/families/current/on-this-day{% if not family_view|default(false) and child %}?child_id={{ child.id }}{% endif %}"
+     data-copy-amber-title="{{ otd_card.title }}"
+     data-copy-amber-sub="{{ otd_copy.amber_sub }}"
+     data-copy-amber-stamp-lab="{{ otd_card.stamp_lab }}"
+     data-copy-chip-photo="{{ otd_copy.chip_photo }}"
+     data-copy-chip-journal="{{ otd_copy.chip_journal }}"
+     data-copy-chip-video="{{ otd_copy.chip_video }}"
+     data-copy-chip-count="{{ otd_copy.chip_count }}">
+  <a class="amber-card" href="{{ otd_card.href }}">
+    <span class="amber-stamp"><span class="seal">
+      <span class="yy">{{ otd_card.year }}</span>
+      <span class="dot"></span>
+      <span class="lab">{{ otd_card.stamp_lab }}</span>
+    </span></span>
+    {% if otd_card.thumbs %}
+    <span class="amber-thumbs count-{{ otd_card.thumb_count }}">
+      {% for url in otd_card.thumbs %}<img src="{{ url }}" alt="">{% endfor %}
+    </span>
+    {% endif %}
+    <span class="amber-body">
+      <span class="ttl">{{ otd_card.title }}</span>
+      <span class="sub">{{ otd_card.sub }}</span>
+      {% if otd_card.chips %}
+      <span class="chips">
+        {% for chip in otd_card.chips %}<span class="chip {{ chip.kind }}">{{ chip.text }}</span>{% endfor %}
+      </span>
+      {% endif %}
+    </span>
+    <span class="amber-go">›</span>
+  </a>
+</div>
+{% endif %}

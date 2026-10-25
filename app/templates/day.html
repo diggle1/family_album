@@ -4,7 +4,7 @@
 <div class="top">
   <a class="back" href="/?child={{ child.id }}" aria-label="{{ wn_copy.day_back }}">←</a>
   <div class="title">{{ date_label }} {{ weekday }}
-    <span class="meta">{{ child.name }}{% if age_label %} · {{ age_label }}{% endif %}</span>
+    <span class="meta">{% if otd_year_meta %}{{ otd_year_meta }} · {% endif %}{{ child.name }}{% if age_label %} · {{ age_label }}{% endif %}</span>
   </div>
 </div>
 {% for item in journals %}
