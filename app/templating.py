@@ -13,6 +13,7 @@ from app.constants import (
     MULTI_CHILD,
     ON_THIS_DAY,
     PHOTO_MULTI_CHILD,
+    TIMELINE_CHILD_FILTER,
     VIDEO,
 )
 
@@ -27,6 +28,7 @@ templates.env.globals["wn_copy"] = ELDERS_WHATS_NEW
 templates.env.globals["otd_copy"] = ON_THIS_DAY
 templates.env.globals["day_note"] = DAY_NOTE
 templates.env.globals["legacy"] = LEGACY_IMPORT
+templates.env.globals["tcf"] = TIMELINE_CHILD_FILTER
 
 
 def _initial(name: str | None) -> str:

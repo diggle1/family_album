@@ -51,6 +51,7 @@ def main() -> None:
     print("timeline_last_seen ready")
     print("day_notes ready")
     print("legacy_import ready (no new tables)")
+    print("timeline_child_filter ready (no new tables)")
     print("schema ready")
 
 
