@@ -54,6 +54,12 @@ v2026.10.25.9 does not add a table or a column. Grouping old photos by
 capture day reads the file for that one request and does not keep a batch.
 Rolling back to v2026.10.25.8 leaves every row in place. Do not DROP TABLE
 and do not DROP COLUMN.
+
+v2026.11.14.1 does not add a table or a column. Daily upload progress,
+silent resize, and the new-photo outline stay in the browser. The self
+album day page reads the existing photos rows. Rolling back to
+v2026.10.25.9 leaves every row in place. Do not DROP TABLE and do not
+DROP COLUMN.
 """
 
 from __future__ import annotations

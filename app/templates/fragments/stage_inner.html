@@ -64,7 +64,7 @@
   {% if timeline.days %}
     {% for day in timeline.days %}
     <section class="day">
-      {% if day.photos or day.videos or day.day_note_snippet %}
+      {% if not day.photos and (day.videos or day.day_note_snippet) %}
       <div class="day-h">
         <b>{{ day.date_label }}</b>
         <span>{{ day.weekday }}</span>
@@ -78,12 +78,28 @@
       {% include "fragments/video_card.html" %}
       {% endfor %}
       {% if day.photos %}
-      <div class="pics photo-stack">
-        {% for ph in day.photos %}
-        {% include "fragments/photo_card.html" %}
-        {% endfor %}
-      </div>
-      <div class="byline">{{ day.byline }}</div>
+      {% set ns = namespace(names=[]) %}
+      {% for ph in day.photos %}
+        {% if ph.uploader_name not in ns.names %}
+          {% set ns.names = ns.names + [ph.uploader_name] %}
+        {% endif %}
+      {% endfor %}
+      <a class="daycard" href="{% if on_family %}/days/{{ day.taken_on }}{% else %}/children/{{ child.id }}/days/{{ day.taken_on }}{% endif %}">
+        <div class="dayh">
+          <b class="d">{{ day.date_label }}</b>
+          <span class="w">{{ day.weekday }}</span>
+          {% if not on_family and day.age_label %}<span class="agechip">{{ day.age_label }}</span>{% endif %}
+        </div>
+        <div class="strip-row">
+          <span class="thumbs">
+            {% for ph in day.photos[:4] %}
+            <span class="th" data-photo-id="{{ ph.id }}"><img src="{{ ph.media_url }}" alt=""></span>
+            {% endfor %}
+          </span>
+          <span class="n">{{ uds.count.format(n=day.photos|length) }}</span>
+        </div>
+        <div class="by">{{ uds.byline.format(who='、'.join(ns.names)) }}</div>
+      </a>
       {% endif %}
       {% if day.day_note_snippet %}
       <a class="day-note-line" href="{{ day.day_note_snippet.href }}">{{ day.day_note_snippet.line }}</a>
@@ -111,10 +127,9 @@
   {% else %}
   <div class="center compact">
     <div class="illus">📷</div>
-    <h3>{{ photo_copy.empty_tl_title }}</h3>
+    <h3>{{ uds.empty_tl }}</h3>
     {% if can_upload %}
-    <p>{{ photo_copy.empty_tl_sub }}</p>
-    <a class="btn" href="/upload?kind=child{% if not on_family %}&amp;child={{ child.id }}{% endif %}">{{ video_copy.empty_tl_btn }}</a>
+    <a class="btn" href="/upload?kind=child{% if not on_family and child %}&amp;child={{ child.id }}{% endif %}">{{ uds.empty_cta }}</a>
     <a class="btn ghost" href="/videos/new{% if not on_family %}?child={{ child.id }}{% endif %}">{{ video_copy.empty_v_btn }}</a>
     {% else %}
     <p>照片会按天出现在这里。</p>

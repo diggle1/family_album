@@ -514,10 +514,11 @@ def test_html_login_family_child_and_age(client: TestClient):
         follow_redirects=True,
     )
     assert uploaded.status_code == 200
-    assert "已传到时光线上" in uploaded.text
+    assert "已放进这一天" in uploaded.text
     assert "2岁3个月" in uploaded.text
     assert "10月22日" in uploaded.text
-    assert "小美 上传" in uploaded.text
+    assert "共 1 张" in uploaded.text
+    assert 'class="stamp' in uploaded.text
     me = client.get("/api/me").json()
     assert me["membership"]["relation_label"] == "果果妈妈"
 

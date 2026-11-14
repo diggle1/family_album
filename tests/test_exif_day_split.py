@@ -694,6 +694,6 @@ def test_release_notes_mention_body_size_and_buffering_off():
     assert "exif_day_split ready (no new tables)" in script
     assert "docker compose down -v" not in script
     changelog = Path("CHANGELOG.md").read_text(encoding="utf-8")
-    assert changelog.split("## v2026.10.25.8", 1)[0].startswith("# Changelog\n\n## v2026.10.25.9")
+    assert changelog.split("## v2026.10.25.8", 1)[0].startswith("# Changelog\n\n## v2026.11.14.1")
     assert "DROP TABLE" not in changelog.split("## v2026.10.25.8", 1)[0]
-    assert app.version == "2026.10.25.9"
+    assert app.version == "2026.11.14.1"

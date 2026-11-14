@@ -25,7 +25,7 @@
   <h3>还没有本人照片</h3>
   {% if can_upload and owner_is_me %}
   <p>记在你名下的照片只出现在这里。</p>
-  <a class="btn family" href="/upload?kind=self">上传到我的相册</a>
+  <a class="btn family" href="/upload?kind=self">{{ uds.submit_self }}</a>
   {% elif not can_upload %}
   <p>只读 · 只能看</p>
   {% else %}
