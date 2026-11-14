@@ -20,6 +20,8 @@
     {% if show_fab|default(false) %}
       {% if fab_menu|default(false) %}
       <button type="button" class="fab{% if fab_family|default(false) %} family{% endif %}" id="fab" data-fab-open aria-label="{{ video_copy.fab_sheet }}">＋</button>
+      {% elif fab_slip|default(false) %}
+      <button type="button" class="fab family" id="fab" data-slip-pick aria-label="上传">＋</button>
       {% else %}
       <a class="fab{% if fab_family|default(false) %} family{% endif %}" id="fab" href="{{ fab_href|default('/upload') }}" aria-label="上传">＋</a>
       {% endif %}

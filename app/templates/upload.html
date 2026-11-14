@@ -1,5 +1,5 @@
 {% extends "layout.html" %}
-{% block title %}{% if not kind %}{{ photo_copy.entry_title }}{% elif mode == 'edit' %}{{ photo_copy.u_title_edit }}{% else %}{{ uds.confirm_title }}{% endif %} · kids时光机{% endblock %}
+{% block title %}{% if mode == 'edit' %}{{ photo_copy.u_title_edit }}{% else %}{{ photo_copy.entry_title }}{% endif %} · kids时光机{% endblock %}
 {% block content %}
 {% if not kind %}
 <div class="sheet-page" id="photo-entry">
@@ -99,85 +99,5 @@
 <script type="application/json" id="photo-children">{{ children_json | safe }}</script>
 <script type="application/json" id="photo-selected">{{ selected_json | safe }}</script>
 <script src="/static/photo.js" defer></script>
-{% else %}
-{% set single = children|length == 1 %}
-{% set needs_child = kind == 'child' and not selected_ids %}
-<div id="photo-app" class="paper uds"
-     data-mode="new"
-     data-kind="{{ kind }}"
-     data-uid="{{ user.id }}"
-     data-today="{{ today }}"
-     data-anchor="{% if selected_ids %}{{ selected_ids[0] }}{% endif %}"
-     data-pre-name="{{ pre_name }}"
-     data-single="{{ 1 if single else 0 }}"
-     data-back="{{ back_href }}"
-     data-retry-text="{{ export_copy.upload_sheet_failed }}"
-     {% for key, value in uds.items() %}data-copy-{{ key }}="{{ value }}" {% endfor %}
-     data-copy-strip_hint_pick="{{ photo_copy.strip_hint_pick }}"
-     data-copy-strip_hint_last="{{ photo_copy.strip_hint_last }}"
-     data-copy-strip_hint_single="{{ photo_copy.strip_hint_single }}"
-     data-copy-err_no_child="{{ photo_copy.err_no_child }}">
-  <div class="wtop">
-    <a class="back" href="{{ back_href }}" id="photo-close">✕</a>
-    <span class="mid">{{ uds.confirm_title }}{% if kind == 'self' %}<span class="meta">{{ uds.self_album.format(name=user.name or '未命名') }}</span>{% endif %}</span>
-    <span class="balance"></span>
-  </div>
-  {% if error %}<div class="banner err">{{ error }}</div>{% endif %}
-  {% if kind == 'self' %}
-  <div class="selfban" id="self-banner">{{ uds.self_banner }}</div>
-  {% endif %}
-  <div class="pick-row" id="pick-row">
-    <div id="pick-minis"></div>
-    <button type="button" class="mini add" id="pick-open" tabindex="-1"><i></i></button>
-    <span class="pcnt" id="pick-count">{{ uds.pick_n.format(n=0) }}</span>
-    <input id="photo-file" type="file" accept="image/jpeg,image/png,image/webp" multiple hidden>
-  </div>
-  <div class="date-row">
-    <div class="lab">{{ uds.date_lab }}</div>
-    <label class="datechip">
-      <input id="photo-date" type="date" value="{{ today }}">
-      <span id="date-chip-text">{{ uds.date_today.format(mo=today_mo, d=today_d) }}</span>
-    </label>
-  </div>
-  {% if kind == 'child' %}
-  <div id="film-strip">
-    <div class="strip-wrap{% if single %} single{% endif %}" id="strip">
-      <div class="slbl">
-        <span>{{ uds.strip_label }}</span>
-        <span class="hint" id="strip-hint">{% if single %}{{ photo_copy.strip_hint_single }}{% elif pre_name %}{{ uds.strip_hint_pre.format(name=pre_name) }}{% elif not selected_ids %}{{ photo_copy.strip_hint_pick }}{% endif %}</span>
-      </div>
-      <div class="strip">
-        <span class="teeth l" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></span>
-        <div class="track" id="sticker-row">
-          {% for child in children %}
-          {% set on = child.id in selected_ids %}
-          <button type="button" class="sticker{% if on %} on{% else %} off{% endif %}" data-child-id="{{ child.id }}">
-            <span class="face c{{ loop.index0 % 3 }}">{{ child.name|initial }}<span class="ck">✓</span></span>
-            <span class="nm">{{ child.name }}</span>
-          </button>
-          {% endfor %}
-        </div>
-        <span class="teeth r" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></span>
-      </div>
-    </div>
-  </div>
-  <span id="film-end" hidden></span>
-  <div class="redbar" id="redbar"{% if not needs_child %} hidden{% endif %}>{{ photo_copy.err_no_child }}</div>
-  {% endif %}
-  <div class="up-spacer"></div>
-  <div class="wfoot" id="photo-foot">
-    <p class="hint warn" id="photo-hint" hidden></p>
-    <div class="ticket" id="progress-ticket" hidden>
-      <span class="stub"></span>
-      <span class="tx" id="progress-text"></span>
-      <span class="ule"><i id="progress-line"></i></span>
-    </div>
-    <button type="button" class="gosee" id="fail-go" hidden>{{ uds.fail_go }}</button>
-    <button type="button" class="btn{% if kind == 'self' %} family{% endif %} dis" id="photo-submit" disabled>{% if kind == 'self' %}{{ uds.submit_self }}{% else %}{{ uds.submit }}{% endif %}</button>
-  </div>
-</div>
-<script type="application/json" id="photo-children">{{ children_json | safe }}</script>
-<script type="application/json" id="photo-selected">{{ selected_json | safe }}</script>
-<script src="/static/upload_day_slim.js" defer></script>
 {% endif %}
 {% endblock %}

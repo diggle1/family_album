@@ -296,6 +296,11 @@ def _timeline_response(
             "show_fab": flags["can_upload"],
             "fab_menu": flags["can_upload"],
             "fab_href": "/upload?kind=child" if family_view else f"/upload?kind=child&child={current.id}",
+            "slip_today": shanghai_today().isoformat(),
+            "children_json": json.dumps(
+                [{"id": item.id, "name": item.name} for item in children],
+                ensure_ascii=True,
+            ),
             "tab": "timeline",
             "highlight_video": request.query_params.get("vhl") or "",
             "toast": _photo_toast(request.query_params)
@@ -752,8 +757,15 @@ def album_page(user_id: int, request: Request, toast: str | None = None, db: Ses
             "child_names": [child.name for child in children],
             "show_nav": True,
             "show_fab": flags["can_upload"],
-            "fab_href": "/upload?kind=self" if user_id == gate.user.id else "/upload",
+            "fab_href": "/upload" if user_id != gate.user.id else "/people/" + str(user_id) + "/album",
+            "fab_slip": user_id == gate.user.id and flags["can_upload"],
             "fab_family": True,
+            "children": children,
+            "slip_today": shanghai_today().isoformat(),
+            "children_json": json.dumps(
+                [{"id": item.id, "name": item.name} for item in children],
+                ensure_ascii=True,
+            ),
             "tab": "people",
             "toast": toast_text(toast),
         },
@@ -772,7 +784,21 @@ def upload_page(
         return gate
     if gate.membership.role not in {"admin", "uploader"}:
         raise HTTPException(status_code=403, detail=FORBIDDEN)
+    chosen = (kind or "").strip().lower()
+    if chosen in {"child", "self"}:
+        return RedirectResponse(_daily_upload_home(db, gate, chosen, child), status_code=302)
     return _upload_form(request, db, gate, kind=kind, child_id=child)
+
+
+def _daily_upload_home(db: Session, gate: MemberCtx, kind: str, child_id: int | None) -> str:
+    """Where a kinded daily-upload URL returns. The confirm form no longer lives there."""
+    if kind == "self":
+        return f"/people/{gate.user.id}/album"
+    if child_id is not None:
+        explicit = child_in_family(db, family_id=gate.family.id, child_id=child_id)
+        if explicit is not None:
+            return f"/?child={explicit.id}"
+    return "/"
 
 
 def _upload_form(
@@ -882,7 +908,10 @@ async def upload_save(
             taken_on_raw=taken_on,
             data=data,
         )
-    except PhotoError as exc:
+    except PhotoError:
+        chosen = (kind or "").strip().lower()
+        if chosen in {"child", "self"}:
+            return RedirectResponse(_daily_upload_home(db, gate, chosen, parsed_child), status_code=303)
         return _upload_form(
             request,
             db,
@@ -890,12 +919,15 @@ async def upload_save(
             kind=kind,
             child_id=parsed_child,
             error="没传上去，点重试",
-            status_code=exc.status,
+            status_code=400,
             selected_override=override,
         )
     except HTTPException as exc:
         if exc.status_code == 403:
             raise
+        chosen = (kind or "").strip().lower()
+        if chosen in {"child", "self"}:
+            return RedirectResponse(_daily_upload_home(db, gate, chosen, parsed_child), status_code=303)
         return _upload_form(
             request,
             db,

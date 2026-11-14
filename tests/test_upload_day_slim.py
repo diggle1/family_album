@@ -43,7 +43,7 @@ FINAL_KEYS = {
     "confirm_title": "放到这一天",
     "date_lab": "哪一天",
     "date_today": "今天 · {mo}月{d}日",
-    "submit": "放进这一天",
+    "submit": "放入",
     "submit_self": "放到我的相册",
     "pick_n": "已选 {n} 张",
     "progress": "正在放入 {i}/{n}",
@@ -81,6 +81,16 @@ def test_copy_final_keys_match_and_err_batch():
     for key, value in FINAL_KEYS.items():
         assert UPLOAD_DAY_SLIM[key] == value
     assert UPLOAD_DAY_SLIM["err_batch"] == "一次先放五十张就好，多的下次再放"
+    assert UPLOAD_DAY_SLIM["submit_other"] == "放进这一天"
+    assert UPLOAD_DAY_SLIM["chip_today"] == "今天"
+    assert UPLOAD_DAY_SLIM["chip_who"] == "{name}"
+    assert UPLOAD_DAY_SLIM["chip_pick"] == "选一天"
+    assert UPLOAD_DAY_SLIM["lab_day"] == "哪一天"
+    assert UPLOAD_DAY_SLIM["lab_who"] == "再贴人"
+    assert UPLOAD_DAY_SLIM["self_note"] == "记在我名下，不进孩子时光线"
+    assert UPLOAD_DAY_SLIM["dismiss"] == "拿掉这些"
+    assert UPLOAD_DAY_SLIM["n_zhang"] == "{n}张"
+    assert " " not in UPLOAD_DAY_SLIM["n_zhang"]
     assert UPLOAD_DAY_SLIM["done_toast_other"] == "已放进这一天"
     assert UPLOAD_DAY_SLIM["date_only"] == "{mo}月{d}日"
     assert UPLOAD_DAY_SLIM["day_title"] == "{mo}月{d}日 {weekday}"
@@ -106,14 +116,19 @@ def test_copy_forbidden_words_upload_day_slim():
 
 def test_copy_no_size_or_quality_jargon(client: TestClient):
     child_id = _family(client, "uds-copy@example.com", "妈妈", "文案家", child="果果")
-    page = client.get(f"/upload?kind=child&child={child_id}")
+    gone = client.get(f"/upload?kind=child&child={child_id}", follow_redirects=False)
+    assert gone.status_code == 302
+    page = client.get(f"/?child={child_id}")
     assert page.status_code == 200
     for word in JARGON:
         assert word not in page.text
     assert "画质" not in page.text
     assert "压缩" not in page.text
-    assert UPLOAD_DAY_SLIM["confirm_title"] in page.text
+    assert UPLOAD_DAY_SLIM["confirm_title"] not in page.text
     assert UPLOAD_DAY_SLIM["submit"] in page.text
+    button = page.text.split('id="photo-submit"', 1)[1].split("</button>", 1)[0]
+    assert ">放入<" in ">" + button.split(">", 1)[-1] + "<" or button.endswith("放入")
+    assert "放进这一天" not in button
     assert "照片放到哪里" not in page.text
     wizard = client.get("/upload")
     assert "照片放到哪里" in wizard.text
@@ -519,10 +534,12 @@ def test_migrate_upload_day_slim_noop(tmp_path: Path):
     script = Path("scripts/migrate.py").read_text(encoding="utf-8")
     source = Path("app/migrate_schema.py").read_text(encoding="utf-8")
     assert "upload_day_slim ready (no new tables)" in script
+    assert "upload_confirm_slim ready (no new tables)" in script
     assert "v2026.11.14.1 does not add a table or a column" in source
+    assert "v2026.11.14.2 does not add a table or a column" in source
     assert "DROP TABLE" not in script
     assert "docker compose down -v" not in script
-    assert app.version == "2026.11.14.1"
+    assert app.version == "2026.11.14.2"
 
 
 def test_four_roles_walk_upload_day(client: TestClient):
@@ -549,7 +566,11 @@ def test_four_roles_walk_upload_day(client: TestClient):
     assert "共 1 张" in seen.text
     home = viewer.get("/")
     assert 'class="daycard"' in home.text or "还没有" in home.text
-    confirm = uploader.get("/upload?kind=self")
-    assert confirm.status_code == 200
-    assert UPLOAD_DAY_SLIM["submit_self"] in confirm.text
-    assert "照片放到哪里" not in confirm.text
+    confirm = uploader.get("/upload?kind=self", follow_redirects=False)
+    assert confirm.status_code == 302
+    album = uploader.get(confirm.headers["location"])
+    assert album.status_code == 200
+    assert UPLOAD_DAY_SLIM["self_note"] in album.text
+    assert UPLOAD_DAY_SLIM["submit"] in album.text
+    assert UPLOAD_DAY_SLIM["submit_self"] not in album.text
+    assert "照片放到哪里" not in album.text

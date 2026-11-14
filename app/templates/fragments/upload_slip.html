@@ -1,0 +1,68 @@
+<div id="upload-dock" class="upload-dock" hidden>
+  <div id="upload-slip" class="slip"
+       data-kind="{{ slip_kind }}"
+       data-uid="{{ user.id }}"
+       data-today="{{ slip_today }}"
+       data-solo="{{ 1 if slip_kind == 'child' and children|length == 1 else 0 }}"
+       data-single-view="{{ 0 if slip_kind == 'self' or family_view|default(false) else 1 }}"
+       data-viewed="{% if slip_kind == 'child' and not family_view|default(false) and child %}{{ child.id }}{% endif %}"
+       data-retry-text="{{ export_copy.upload_sheet_failed }}"
+       data-copy-submit="{{ uds.submit }}"
+       data-copy-submit_other="{{ uds.submit_other }}"
+       data-copy-n_zhang="{{ uds.n_zhang }}"
+       data-copy-chip_today="{{ uds.chip_today }}"
+       data-copy-progress="{{ uds.progress }}"
+       data-copy-fail_one="{{ uds.fail_one }}"
+       data-copy-err_size="{{ uds.err_size }}"
+       data-copy-err_bad="{{ uds.err_bad }}"
+       data-copy-err_batch="{{ uds.err_batch }}"
+       data-copy-err_no_child="{{ photo_copy.err_no_child }}">
+    <div class="tear" aria-hidden="true"></div>
+    <div class="slip-body">
+      <div class="lift" id="slip-lift" hidden>
+        <div class="llab">{{ uds.lab_day }}</div>
+        <div class="dchips" id="slip-days">
+          <button type="button" data-iso="{{ slip_today }}" class="on">{{ uds.chip_today }}</button>
+          <button type="button" class="cal" id="slip-pick-day">{{ uds.chip_pick }}</button>
+        </div>
+        {% if slip_kind == 'child' and children|length > 1 %}
+        <div class="llab" id="slip-who-lab">{{ uds.lab_who }}</div>
+        <div class="faces" id="slip-faces">
+          {% for kid in children %}
+          <button type="button" class="facep" data-child-id="{{ kid.id }}">
+            <span class="av c{{ loop.index0 % 3 }}">{{ kid.name|initial }}</span>
+            <span class="ck" hidden>✓</span>
+            <span class="nm">{{ kid.name }}</span>
+          </button>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+      {% if slip_kind == 'self' %}
+      <div class="shint" id="slip-self-note">{{ uds.self_note }}</div>
+      {% endif %}
+      <p class="whint" id="slip-warn" hidden></p>
+      <div class="slip-row">
+        <button type="button" class="x-dismiss" id="slip-dismiss" aria-label="{{ uds.dismiss }}">✕</button>
+        <div class="tinies" id="slip-tinies"></div>
+        <span class="nmini" id="slip-count"></span>
+        <button type="button" class="chip{% if slip_kind == 'self' %} self{% endif %}" id="slip-chip"><em></em><span class="lab" id="slip-chip-lab">{{ uds.chip_today }}</span></button>
+        <button type="button" class="go{% if slip_kind == 'self' %} family{% endif %} dis" id="photo-submit" disabled>{{ uds.submit }}</button>
+      </div>
+    </div>
+  </div>
+  <div class="wfoot tick" id="progress-dock" hidden>
+    <p class="hint warn" id="progress-hint" hidden></p>
+    <div class="ticket" id="progress-ticket">
+      <span class="stub" aria-hidden="true"></span>
+      <span class="tx" id="progress-text"></span>
+      <span class="ule"><i id="progress-line"></i></span>
+    </div>
+    <button type="button" class="gosee" id="fail-go" hidden>{{ uds.fail_go }}</button>
+    <button type="button" class="go{% if slip_kind == 'self' %} family{% endif %}" id="slip-retry" hidden></button>
+  </div>
+  <input id="photo-file" type="file" accept="image/jpeg,image/png,image/webp" multiple hidden>
+  <input id="slip-native-date" type="date" value="{{ slip_today }}" tabindex="-1" aria-hidden="true">
+</div>
+<script type="application/json" id="slip-children">{{ children_json | safe }}</script>
+<script src="/static/upload_day_slim.js" defer></script>

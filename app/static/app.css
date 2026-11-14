@@ -101,6 +101,7 @@ a { color: inherit; }
   position: absolute; right: 18px; bottom: 72px; width: 56px; height: 56px; border-radius: 28px;
   background: var(--accent); color: #fff; font-size: 28px; display: grid; place-items: center;
   box-shadow: 0 6px 16px rgba(200, 85, 61, .4); text-decoration: none; z-index: 3;
+  border: 0; padding: 0; font-family: inherit; cursor: pointer;
 }
 .fab.family { background: var(--family); box-shadow: 0 6px 16px rgba(47, 111, 106, .4); }
 .btn {
@@ -1057,6 +1058,8 @@ a.more-btn { text-decoration: none; display: inline-grid; place-items: center; }
   .app:has(.li-root),
   .app:has(.who-strip),
   .app:has(.feed),
+  .app:has(.fam-bar),
+  .app:has(.upload-dock),
   .app:has(.uds) { width: min(720px, 100%); }
   .desk-aside { display: block; }
   .write-pill.day-note-pill { display: inline-flex; }
@@ -1308,3 +1311,95 @@ a.more-btn { text-decoration: none; display: inline-grid; place-items: center; }
   .lb { width: min(720px, 100%); }
   .qige-grid { grid-template-columns: repeat(5, 1fr); gap: 12px; }
 }
+
+/* upload-confirm-slip: torn paper at the footer. No sprocket on this decision bar. */
+.upload-dock {
+  position: absolute; left: 0; right: 0; bottom: 56px; z-index: 5;
+}
+.app:not(:has(.tabbar)) .upload-dock { bottom: 0; }
+#upload-dock[hidden] { display: none !important; }
+.app:has(#upload-dock:not([hidden])) .fab { display: none; }
+.upload-dock .slip { position: relative; background: transparent; }
+.upload-dock .tear {
+  height: 10px; pointer-events: none;
+  background-image: radial-gradient(circle at 8px 0, transparent 6px, var(--paper) 6.5px);
+  background-size: 16px 10px; background-repeat: repeat-x; background-color: transparent;
+}
+.upload-dock .slip-body { background: var(--paper); box-shadow: 0 -6px 18px rgba(43, 36, 32, .07); }
+.upload-dock .slip-row {
+  display: flex; align-items: center; gap: 5px; padding: 8px 8px 10px;
+  min-height: 56px; flex-wrap: nowrap; min-width: 0;
+}
+.upload-dock .x-dismiss {
+  width: 28px; height: 28px; border: 0; background: transparent; color: var(--ink2);
+  font-size: 16px; line-height: 1; cursor: pointer; flex: none; font-family: inherit;
+  border-radius: 50%; display: grid; place-items: center; padding: 0;
+}
+.upload-dock .tinies { display: flex; gap: 2px; flex: none; }
+.upload-dock .tinies i {
+  display: block; width: 18px; height: 18px; border-radius: 3px;
+  border: 1px solid var(--paper-edge); background: #E7DDD2 center/cover no-repeat;
+}
+.upload-dock .nmini { font-size: 11px; font-weight: 700; color: var(--ink3); flex: none; white-space: nowrap; }
+.upload-dock .chip {
+  flex: 1 1 auto; min-width: 0; height: 40px; border-radius: 10px;
+  border: 1px solid var(--paper-edge); background: #fff; color: var(--ink);
+  font-size: 12px; font-weight: 700; font-family: inherit; cursor: pointer;
+  text-align: left; padding: 0 8px; display: flex; align-items: center; gap: 5px;
+  white-space: nowrap; overflow: hidden;
+}
+.upload-dock .chip .lab { overflow: hidden; text-overflow: ellipsis; }
+.upload-dock .chip em { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex: none; display: inline-block; }
+.upload-dock .chip.open { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.upload-dock .chip.self em { background: var(--family); }
+.upload-dock .go {
+  flex: none; height: 40px; min-width: 80px; padding: 0 10px; border: 0; border-radius: 10px;
+  background: var(--accent); color: #fff; font-size: 13px; font-weight: 800;
+  font-family: inherit; cursor: pointer; white-space: nowrap;
+}
+.upload-dock .go.family { background: var(--family); }
+.upload-dock .go[disabled], .upload-dock .go.dis { opacity: .45; pointer-events: none; background: #C9BEB4; }
+.upload-dock .whint {
+  font-size: 12px; font-weight: 700; color: var(--warn); background: var(--warn-soft);
+  margin: 0 10px 0; padding: 6px 10px; border-radius: 8px; line-height: 1.4;
+}
+.upload-dock .shint { font-size: 12px; font-weight: 700; color: var(--family); padding: 8px 12px 0; line-height: 1.4; }
+.upload-dock .lift { padding: 6px 14px 10px; border-bottom: 1px dashed var(--paper-edge); }
+.upload-dock .llab { font-size: 11px; font-weight: 700; color: var(--ink3); margin: 0 0 6px; }
+.upload-dock .llab + .dchips { margin-bottom: 10px; }
+.upload-dock .dchips { display: flex; gap: 8px; flex-wrap: wrap; }
+.upload-dock .dchips button {
+  height: 32px; padding: 0 12px; border-radius: 999px; border: 1.5px solid var(--line);
+  background: #fff; font-size: 13px; font-weight: 700; color: var(--ink2);
+  display: inline-flex; align-items: center; cursor: pointer; font-family: inherit;
+}
+.upload-dock .dchips button.on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.upload-dock .dchips button.cal { font-weight: 600; color: var(--ink2); }
+.upload-dock .dchips button.cal.on { font-weight: 700; color: var(--accent); }
+.upload-dock .faces { display: flex; gap: 10px; align-items: flex-start; flex-wrap: wrap; }
+.upload-dock .facep {
+  width: 52px; text-align: center; position: relative; border: 0; background: transparent;
+  padding: 0; font-family: inherit; cursor: pointer;
+}
+.upload-dock .facep .av {
+  width: 44px; height: 44px; border-radius: 12px; margin: 0 auto;
+  display: grid; place-items: center; font-size: 16px; font-weight: 800; color: #fff;
+  border: 2px solid transparent;
+}
+.upload-dock .facep .av.c0 { background: linear-gradient(145deg, #E8A07A, #C86A3C); }
+.upload-dock .facep .av.c1 { background: linear-gradient(145deg, #7FA59A, #4E7A70); }
+.upload-dock .facep .av.c2 { background: linear-gradient(145deg, #8F7BB8, #5E4A86); }
+.upload-dock .facep.on .av { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+.upload-dock .facep .ck {
+  position: absolute; top: -4px; right: 0; width: 16px; height: 16px; border-radius: 50%;
+  background: var(--accent); color: #fff; font-size: 10px; font-weight: 800;
+  display: none; place-items: center;
+}
+.upload-dock .facep.on .ck { display: grid; }
+.upload-dock .facep .nm { font-size: 11px; font-weight: 700; color: var(--ink2); margin-top: 4px; }
+.upload-dock .facep.on .nm { color: var(--accent); }
+.upload-dock .tick { padding: 8px 12px 10px; background: var(--bg); }
+.upload-dock #slip-native-date {
+  position: absolute; width: 1px; height: 1px; padding: 0; border: 0; opacity: 0;
+}
+/* /upload-confirm-slip */

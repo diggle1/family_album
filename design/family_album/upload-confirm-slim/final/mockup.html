@@ -1,0 +1,616 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>kids时光机 · 上传确认前段（窄）· 「底签」</title>
+<style>
+:root{
+  --bg:#FBF7F2; --surface:#FFFFFF; --line:#EDE5DC;
+  --ink:#2B2420; --ink2:#6F635A; --ink3:#9A8E85;
+  --accent:#C8553D; --accent-soft:#F8E6DF;
+  --family:#2F6F6A; --family-soft:#E4F0EE;
+  --ok:#3B7D4F; --ok-soft:#E3F1E6; --err:#B3261E; --err-soft:#FBE4E2;
+  --warn:#9A6200; --warn-soft:#FFF3D6;
+  --film-dark:#2B2420; --film-ink:#E8DED4;
+  --film:#E8E2DA; --sprocket:#C8C0B6; --sprocket-hole:#1A1614;
+  --paper:#FFFCF7; --paper-line:#E8DFD2; --paper-edge:#E8D9C4;
+  --anno:#2563EB;
+  --font:"PingFang SC","Noto Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:#E5DFD7;color:var(--ink);padding:28px 20px 100px}
+h1.page{font-size:22px;font-weight:800;letter-spacing:.02em}
+p.lead{color:var(--ink2);font-size:13px;margin:6px 0 10px;line-height:1.55;max-width:1240px}
+.claim{display:inline-block;background:var(--accent-soft);color:var(--accent);font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px;margin-bottom:12px;border:1px solid #E8C4B8}
+.claim2{display:inline-block;background:var(--warn-soft);color:var(--warn);font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px;margin-bottom:18px;margin-left:6px;border:1px solid #F0E0B0}
+.nav{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:22px;max-width:1700px}
+.nav button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:8px 14px;font-size:12px;font-family:inherit;color:var(--ink2);cursor:pointer}
+.nav button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.group{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start}
+.group.hide{display:none}
+.gtitle{width:100%;font-size:15px;font-weight:800;color:var(--ink);margin-bottom:-12px}
+.frame{width:390px}
+.frame.desk{width:1024px}
+.frame .cap{font-size:12px;color:var(--ink2);font-weight:600;margin-bottom:8px;min-height:34px;line-height:1.45}
+.phone{width:390px;height:760px;background:var(--bg);border-radius:28px;overflow:hidden;position:relative;
+  box-shadow:0 0 0 8px #1f1b18,0 18px 40px rgba(0,0,0,.18);display:flex;flex-direction:column}
+.status{height:28px;flex:none;font-size:12px;display:flex;justify-content:space-between;padding:6px 22px 0;color:var(--ink)}
+.scroll{flex:1;overflow:hidden;position:relative;background:var(--bg);min-height:0}
+.scroll.clip{overflow:hidden}
+.top{display:flex;align-items:center;gap:8px;padding:4px 8px 8px;flex:none;background:var(--bg)}
+.top.solid{background:var(--surface);border-bottom:1px solid var(--line);padding:8px 8px 10px}
+.top .title{font-size:17px;font-weight:800;flex:1;min-width:0}
+.top .meta{font-size:12px;color:var(--ink2);font-weight:500;display:block;margin-top:2px}
+.ib{border:0;background:transparent;font-size:20px;width:44px;height:44px;display:grid;place-items:center;font-family:inherit;cursor:pointer;color:var(--ink);flex:none}
+.rometa{font-size:11px;font-weight:700;color:var(--family);background:var(--family-soft);padding:3px 8px;border-radius:999px;flex:none}
+.anno{position:absolute;border:1.5px dashed var(--anno);border-radius:6px;pointer-events:none;z-index:7}
+.anno-tag{position:absolute;background:var(--anno);color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap;z-index:8;pointer-events:none;line-height:1.4}
+.note{margin-top:28px;padding:16px 18px;background:#fff;border-radius:12px;border:1px solid #ddd;max-width:1240px;font-size:13px;color:var(--ink2);line-height:1.65}
+.note b{color:var(--ink)}
+.tabbar{flex:none;display:flex;border-top:1px solid var(--line);background:#fff;height:56px}
+.tabbar span{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;color:var(--ink3);font-weight:600;gap:2px}
+.tabbar span.on{color:var(--accent)}
+.tabbar span i{font-style:normal;font-size:18px;line-height:1}
+.fab{position:absolute;right:18px;bottom:72px;width:56px;height:56px;border-radius:28px;background:var(--accent);color:#fff;font-size:28px;display:grid;place-items:center;box-shadow:0 6px 16px rgba(200,85,61,.4);border:0;cursor:pointer;font-family:inherit;z-index:3}
+.btn{display:block;width:100%;height:48px;border-radius:12px;background:var(--accent);color:#fff;font-size:15px;font-weight:800;border:0;text-align:center;line-height:48px;font-family:inherit;cursor:pointer}
+.btn.family{background:var(--family)}
+.btn[disabled],.btn.dis{opacity:.45;pointer-events:none;background:#C9BEB4;color:#fff}
+.wfoot{flex:none;padding:10px 16px 16px;background:var(--bg)}
+.wfoot.tick{padding:8px 12px 10px;background:var(--bg)}
+.hint{font-size:12px;color:var(--ink2);line-height:1.5;font-weight:600}
+.hint.warn{color:var(--warn)}
+.hint.err{color:var(--err)}
+.gosee{display:block;width:100%;margin-top:8px;background:transparent;border:0;color:var(--accent);font-size:13px;font-weight:800;font-family:inherit;cursor:pointer;text-align:center;padding:2px 0}
+.toast{position:absolute;left:50%;transform:translateX(-50%);bottom:96px;background:#2B2420;color:#fff;font-size:14px;font-weight:600;padding:10px 16px;border-radius:20px;white-space:nowrap;z-index:5;box-shadow:0 4px 12px rgba(0,0,0,.2)}
+.center{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:24px 32px}
+.center h3{font-size:20px;font-weight:800;margin:16px 0 8px}
+.center p{font-size:14px;color:var(--ink2);line-height:1.65}
+.illus{width:88px;height:88px;border-radius:50%;background:var(--accent-soft);display:grid;place-items:center;font-size:36px}
+.illus-c{width:88px;height:88px;border-radius:50%;background:var(--err-soft);display:grid;place-items:center;font-size:36px}
+.fam-head{margin:4px 14px 8px;background:var(--family-soft);color:var(--family);font-size:13px;font-weight:700;padding:8px 12px;border-radius:10px}
+
+/* 看谁签 · 原样继承，不改 */
+.who-strip-wrap{padding:10px 0 6px;background:var(--bg);flex:none}
+.who-strip{
+  margin:0 14px;
+  background:linear-gradient(180deg,#FFFCF7 0%,#FFF8F0 100%);
+  border:1px solid var(--paper-line);
+  border-radius:12px;
+  padding:8px 10px 8px 12px;
+  box-shadow:0 1px 4px rgba(43,36,32,.04);
+}
+.who-strip .lbl{font-size:11px;font-weight:700;color:var(--ink3);letter-spacing:.04em;margin-bottom:6px;padding-left:2px}
+.who-row{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:2px 2px 2px 0}
+.who-row::-webkit-scrollbar{display:none}
+.ntag{flex:none;display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 14px 0 10px;border-radius:999px;background:#fff;border:1.5px solid var(--line);font-size:14px;font-weight:700;color:var(--ink2);font-family:inherit;cursor:pointer;white-space:nowrap;box-shadow:0 1px 0 rgba(43,36,32,.03)}
+.ntag .dot{width:10px;height:10px;border-radius:50%;flex:none;background:linear-gradient(145deg,#F2C4A0,#E8A07A);border:1px solid rgba(43,36,32,.08)}
+.ntag .dot.s2{background:linear-gradient(145deg,#B9D3C6,#7FA59A)}
+.ntag .dot.s3{background:linear-gradient(145deg,#C9B8E8,#8F7BB8)}
+.ntag .dot.fam{background:var(--family-soft);border:1.5px solid var(--family);box-shadow:inset 0 0 0 1.5px #fff}
+.ntag.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.ntag.all.on{border-color:var(--family);background:var(--family-soft);color:var(--family);box-shadow:0 0 0 1px var(--family)}
+
+/* 桌面 */
+.deskwin{width:1024px;height:720px;background:var(--bg);border-radius:12px;overflow:hidden;position:relative;
+  box-shadow:0 0 0 1px #cfc6bc,0 18px 40px rgba(0,0,0,.14);display:flex;flex-direction:column}
+.desk-chrome{flex:none;height:40px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;padding:0 16px}
+.desk-chrome .dots{display:flex;gap:6px}
+.desk-chrome .dots i{width:10px;height:10px;border-radius:50%;background:#E5DFD7;display:block}
+.desk-chrome .dots i:nth-child(1){background:#E8A07A}
+.desk-chrome .dots i:nth-child(2){background:#E8D9A8}
+.desk-chrome .dots i:nth-child(3){background:#A8C9B0}
+.desk-chrome .urlbar{flex:1;height:26px;border-radius:8px;background:var(--bg);border:1px solid var(--line);font-size:12px;color:var(--ink3);display:flex;align-items:center;padding:0 12px}
+.desk-body{flex:1;display:flex;min-height:0}
+.desk-side{width:200px;flex:none;background:#fff;border-right:1px solid var(--line);padding:20px 14px}
+.desk-side .logo{font-size:14px;font-weight:800;margin-bottom:18px}
+.desk-side .navi{display:flex;flex-direction:column;gap:4px}
+.desk-side .navi span{font-size:13px;font-weight:600;color:var(--ink3);padding:10px 12px;border-radius:10px}
+.desk-side .navi span.on{background:var(--accent-soft);color:var(--accent)}
+.desk-main{flex:1;overflow:hidden;display:flex;flex-direction:column;min-width:0}
+.desk-col{width:100%;max-width:720px;margin:0 auto;padding:16px 24px 24px;overflow:hidden;height:100%;position:relative;display:flex;flex-direction:column}
+.desk-topbar{display:flex;align-items:center;gap:12px;padding:4px 0 12px;flex:none}
+.desk-topbar .title{font-size:20px;font-weight:800;flex:1}
+.desk-topbar .meta{font-size:13px;color:var(--ink2);font-weight:600}
+
+/* 进度签：一行暖纸票；底边细线只跟当前这张，不是整批 2/5。齐格签可有左齿孔，决策底签没有。 */
+.ticket{
+  position:relative;
+  height:40px;
+  background:linear-gradient(180deg,#FFFCF7 0%,#FFF6EC 100%);
+  border:1px solid var(--paper-edge);
+  border-radius:8px;
+  display:flex;align-items:center;
+  padding:0 12px 0 0;
+  box-shadow:0 1px 2px rgba(43,36,32,.04);
+  overflow:hidden;
+}
+.ticket .stub{
+  width:10px;flex:none;align-self:stretch;
+  background:
+    radial-gradient(circle at 0 6px, transparent 3px, var(--paper-edge) 3.5px, transparent 4px) 0 0 / 10px 12px,
+    linear-gradient(90deg, var(--accent-soft), transparent 90%);
+  border-right:1px dashed var(--paper-edge);
+  margin-right:10px;
+}
+.ticket .tx{font-size:15px;font-weight:800;color:var(--ink);letter-spacing:.02em;white-space:nowrap;flex:1}
+.ticket .tx .fail{color:var(--warn);font-weight:700}
+.ticket .ule{
+  position:absolute;left:0;right:0;bottom:0;height:3px;background:#F0E4D6;
+}
+.ticket .ule>i{display:block;height:100%;background:var(--accent);width:0;border-radius:0 2px 0 0}
+.ticket.warn .tx{color:var(--warn)}
+.ticket.warn .ule>i{background:var(--warn)}
+.ticket.fail-done .ule{display:none}
+
+/* 天页齐格：暖纸上等大邮票，舒适间距 10，齿孔，非密缝 */
+.sheet{
+  margin:8px 12px 16px;
+  background:linear-gradient(180deg,#FFFCF7 0%,#FFF6EC 100%);
+  border:1px solid var(--paper-edge);
+  border-radius:14px;
+  padding:10px;
+  box-shadow:0 1px 4px rgba(43,36,32,.04);
+}
+.grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:10px;
+}
+.desk-col .grid{grid-template-columns:repeat(5,1fr);gap:12px}
+.stamp{
+  aspect-ratio:1;
+  background:#fff;
+  padding:5px;
+  border-radius:2px;
+  box-shadow:0 1px 3px rgba(43,36,32,.08);
+  background-image:
+    linear-gradient(#fff,#fff),
+    repeating-linear-gradient(90deg, var(--paper-edge) 0 4px, transparent 4px 8px),
+    repeating-linear-gradient(0deg, var(--paper-edge) 0 4px, transparent 4px 8px);
+  background-origin:border-box,border-box,border-box;
+  background-clip:content-box,border-box,border-box;
+  border:2px solid transparent;
+  position:relative;
+  cursor:pointer;
+}
+.stamp i{display:block;width:100%;height:100%;border-radius:1px}
+.stamp.new{box-shadow:0 0 0 2px var(--accent),0 1px 3px rgba(43,36,32,.08)}
+.stamp.sk{
+  background:#EDE5DC;
+  background-image:linear-gradient(90deg,#EDE5DC 0%,#F6F0E8 50%,#EDE5DC 100%);
+  background-size:200% 100%;
+  border:0;padding:0;
+  box-shadow:none;
+}
+
+/* 时光线当天卡：沿用现网日卡结构，不另起票根 */
+.tl{padding:6px 14px 20px;display:flex;flex-direction:column;gap:10px}
+.daycard{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px 12px;cursor:pointer}
+.dayh{display:flex;align-items:baseline;gap:8px}
+.dayh .d{font-size:15px;font-weight:800}
+.dayh .w{font-size:12px;color:var(--ink2);font-weight:600}
+.agechip{margin-left:auto;font-size:11px;font-weight:700;color:var(--accent);background:var(--accent-soft);padding:2px 8px;border-radius:999px}
+.strip-row{display:flex;align-items:center;gap:8px;margin-top:10px}
+.strip-row .thumbs{display:flex;gap:6px;flex:1;min-width:0}
+.strip-row .th{width:48px;height:48px;border-radius:6px;flex:none;overflow:hidden}
+.strip-row .th i{display:block;width:100%;height:100%}
+.strip-row .n{font-size:13px;font-weight:800;color:var(--ink);white-space:nowrap}
+.by{font-size:11px;color:var(--ink3);font-weight:600;margin-top:8px}
+
+/* 日志卡示意（不改日志主路径） */
+.jcard{display:flex;gap:12px;background:#fff;border-radius:12px;padding:14px 14px 12px 0;border:1px solid var(--line)}
+.jcard .rail{width:56px;flex:none;display:flex;flex-direction:column;align-items:center;position:relative}
+.jcard .rail::after{content:"";position:absolute;top:0;bottom:0;left:50%;width:2px;background:var(--accent);opacity:.55;transform:translateX(-50%)}
+.jcard .rail .dd{position:relative;z-index:1;background:#fff;text-align:center;font-size:11px;color:var(--ink2);line-height:1.3;padding:2px 0 4px}
+.jcard .rail .dd b{display:block;font-size:17px;color:var(--ink);font-weight:800}
+.jcard .c{flex:1;min-width:0;padding-right:12px}
+.jcard .c .q{font-size:16px;font-weight:700;line-height:1.45;margin-bottom:4px}
+.jcard .c .sub{font-size:13px;color:var(--ink3);line-height:1.45}
+
+.p1{background:linear-gradient(145deg,#F2C4A0,#E8A07A)}
+.p2{background:linear-gradient(145deg,#B9D3C6,#7FA59A)}
+.p3{background:linear-gradient(145deg,#C9B8E8,#8F7BB8)}
+.p4{background:linear-gradient(145deg,#E8C96A,#D4A84B)}
+.p5{background:linear-gradient(145deg,#D9B3D0,#B884AE)}
+.p6{background:linear-gradient(145deg,#C5D99B,#8FAE5E)}
+.p7{background:linear-gradient(145deg,#B7C7E0,#7A94BE)}
+.p8{background:linear-gradient(145deg,#F0B8C0,#D98892)}
+
+/* 「底签」：撕边暖纸决策条 + 上掀同一张纸。决策条不再叠齿孔。 */
+.slip{flex:none;position:relative;z-index:4;background:transparent}
+.slip .tear{
+  height:10px;
+  background-image:radial-gradient(circle at 8px 0, transparent 6px, var(--paper) 6.5px);
+  background-size:16px 10px;
+  background-repeat:repeat-x;
+  background-color:transparent;
+  pointer-events:none;
+}
+.slip .slip-body{background:var(--paper);box-shadow:0 -6px 18px rgba(43,36,32,.07)}
+.slip .slip-row{display:flex;align-items:center;gap:5px;padding:8px 8px 10px;min-height:56px;flex-wrap:nowrap;min-width:0}
+.x-dismiss{
+  width:28px;height:28px;border:0;background:transparent;color:var(--ink2);
+  font-size:16px;line-height:1;cursor:pointer;flex:none;font-family:inherit;border-radius:50%;
+  display:grid;place-items:center;padding:0
+}
+.slip .tinies{display:flex;gap:2px;flex:none}
+.slip .tinies i{display:block;width:18px;height:18px;border-radius:3px;border:1px solid var(--paper-edge)}
+.slip .nmini{font-size:11px;font-weight:700;color:var(--ink3);flex:none;white-space:nowrap}
+.chip{flex:1 1 auto;min-width:0;height:40px;border-radius:10px;border:1px solid var(--paper-edge);background:#fff;color:var(--ink);font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;text-align:left;padding:0 8px;display:flex;align-items:center;gap:5px;white-space:nowrap;overflow:hidden}
+.chip span.lab{overflow:hidden;text-overflow:ellipsis}
+.chip em{width:7px;height:7px;border-radius:50%;background:var(--accent);flex:none;display:inline-block}
+.chip.open{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.chip.self em{background:var(--family)}
+.go{flex:none;height:40px;min-width:80px;padding:0 10px;border:0;border-radius:10px;background:var(--accent);color:#fff;font-size:13px;font-weight:800;font-family:inherit;cursor:pointer;white-space:nowrap}
+.go.family{background:var(--family)}
+.go[disabled],.go.dis{opacity:.45;pointer-events:none;background:#C9BEB4}
+.slip .whint{font-size:12px;font-weight:700;color:var(--warn);background:var(--warn-soft);margin:0 10px 0;padding:6px 10px;border-radius:8px;line-height:1.4}
+.slip .shint{font-size:12px;font-weight:700;color:var(--family);padding:8px 12px 0;line-height:1.4}
+.lift{padding:6px 14px 10px;border-bottom:1px dashed var(--paper-edge)}
+.lift .llab{font-size:11px;font-weight:700;color:var(--ink3);margin:0 0 6px}
+.lift .llab + .dchips{margin-bottom:10px}
+.dchips{display:flex;gap:8px;flex-wrap:wrap}
+.dchips span{height:32px;padding:0 12px;border-radius:999px;border:1.5px solid var(--line);background:#fff;font-size:13px;font-weight:700;color:var(--ink2);display:inline-flex;align-items:center;cursor:pointer;font-family:inherit}
+.dchips span.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.dchips span.cal{font-weight:600;color:var(--ink2)}
+.dchips span.cal.on{font-weight:700;color:var(--accent)}
+.faces{display:flex;gap:10px;align-items:flex-start}
+.facep{width:52px;text-align:center;position:relative}
+.facep .av{width:44px;height:44px;border-radius:12px;margin:0 auto;display:grid;place-items:center;font-size:16px;font-weight:800;color:#fff;border:2px solid transparent}
+.facep .av.k1{background:linear-gradient(145deg,#E8A07A,#C86A3C)}
+.facep .av.k2{background:linear-gradient(145deg,#7FA59A,#4E7A70)}
+.facep .av.k3{background:linear-gradient(145deg,#8F7BB8,#5E4A86)}
+.facep.on .av{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+.facep .ck{position:absolute;top:-4px;right:0;width:16px;height:16px;border-radius:50%;background:var(--accent);color:#fff;font-size:10px;font-weight:800;display:grid;place-items:center}
+.facep .nm{font-size:11px;font-weight:700;color:var(--ink2);margin-top:4px}
+.facep.on .nm{color:var(--accent)}
+</style>
+</head>
+<body>
+<h1 class="page">kids时光机 · 上传确认前段（窄）· 「底签」</h1>
+<span class="claim">FINAL · 底签 · 待核</span>
+<span class="claim2">选完不跳页 · 撕边暖纸底签 · 轻叉 · 选一天 · 纸上小脸 · 禁止自动传</span>
+<p class="lead">依据 cut v2026.11.14.2（观察锁体 md5 <code>8cf25f26801ee0d41d82ec9c3a47d78e</code>），回退 <code>v2026.11.14.1</code>。定名<strong>底签</strong>：选完图停在原处，当前页脚一条<strong>撕边暖纸</strong>决策条（撕边在顶，不再叠一套齿孔）。左轻叉放弃（不上传）+ 已选小缩略与「n张」+ 口语芯片「今天 · 果果」（默今天、默上次挂的孩子），右主钮「放入」；不是今天则芯片写所选日期，主钮改成「放进这一天」。芯片与主钮分开。点芯片才上掀同一张纸改日子（今天 / 近几日 /「选一天」，选一天走系统日期选择，不另开整页），再贴人用<strong>纸上小脸</strong>（圆角纸脸+名，选中描边与勾），不用黑底胶片条。独孩芯片只写「今天」，无改挂谁；家人走家人 tab，同一条底签、无小脸，青绿一句「记在我名下，不进孩子时光线」须看得见。禁止选完即自动上传。点主钮后，同一条换成已上线的<strong>齐格签</strong>进度（「正在放入 2/5」，底边细线跟当前这张；进度签可保留齿孔）。天页齐格与时光线当天卡原样继承 <code>upload-day-slim/final</code>。先前脚下签 final <code>ffaf1ef8a06515526f5cc227c89e174f</code> 的 14:27 PASS 已撤回，不作工程认据。过程稿不作工程认据。微信仍停。<code>#s=状态id</code> / <code>#s=all</code>。示例「果果家」，今天 = 2026-11-14。本目录<strong>待核</strong>。</p>
+<nav class="nav" id="nav"></nav>
+<div id="stage"></div>
+<div class="note" id="foot"></div>
+<script>
+const COPY={
+  tab_time:'时光', tab_family:'家人', tab_settings:'设置',
+  who_label:'看谁的', who_all:'全家',
+  kid_a:'果果', kid_b:'豆豆', kid_c:'安安',
+  tl_family:'果果家', tl_title:'时光',
+  ro_meta:'只读 · 只能看',
+  age_a:'3岁3个月',
+  put:'放入', put_day:'放进这一天',
+  chip_today:(kid)=> kid ? `今天 · ${kid}` : '今天',
+  chip_day:(d,kid)=> kid ? `${d} · ${kid}` : d,
+  day_short:'11月10日',
+  day_d13:'11月13日',
+  day_d12:'11月12日',
+  pick_day:'选一天',
+  day_title:'11月14日 周六',
+  progress:(i,n)=>`正在放入 ${i}/${n}`,
+  fail_one:'4 张已放入，有 1 张没成功',
+  fail_go:'去看已放入的',
+  done_toast:'已放进今天',
+  err_size:'有一张太大了，先拿掉再放',
+  err_bad:'有一张不是照片，已跳过。其余可以继续放。',
+  self_line:'记在我名下，不进孩子时光线',
+  self_album:'家人相册 · 妈妈',
+  dismiss:'拿掉这些',
+  count:(n)=>`共 ${n} 张`,
+  n_zhang:(n)=>`${n}张`,
+  empty_tl:'还没有照片',
+  empty_cta:'放入第一张',
+  byline:'妈妈传',
+  err_perm:'你没有权限做这件事',
+  err_perm_sub:'家里的内容不会在这里显示',
+  url_demo:'album.guoguo.home / 时光',
+  brand:'kids时光机',
+  j_quote:'「今天幼儿园画了大太阳」',
+  j_sub:'妈妈写 · 写给果果',
+  lab_day:'哪一天',
+  lab_who:'再贴人',
+  anno_bar:'停在原处 · 撕边底签 · 不跳填表整屏 · 不再叠齿孔',
+  anno_open:'同一张纸上掀 · 纸上小脸 · 有选一天 · 轻叉仍在 · 非新页、非黑底胶片',
+  anno_put:'主钮「放入」· 与芯片分开 · 禁止自动传',
+  anno_day:'不是今天则主钮改成「放进这一天」',
+  anno_solo:'独孩芯片只写「今天」· 无改挂谁、无小脸',
+  anno_self:'家人 tab · 同一条底签 · 无小脸 · 「记在我名下」看得见',
+  anno_ticket:'同一条换成齐格签 · 细线跟当前这张 · 不是整批 2/5',
+  anno_new:'完成后落到当天齐格 · 与 .1 一致',
+  anno_x:'轻叉放弃所选 · 不会放入',
+  anno_tl:'当天卡沿用现网结构 · 一小排+共 N 张 · 不另起票根',
+  anno_ro:'只读同路径 · 无 FAB、无底签'
+};
+const S=[
+  ['tl','1 时光线·选图前'],
+  ['bar','2 选完·底签默认今天'],
+  ['bar_open','3 上掀·纸上小脸+选一天'],
+  ['bar_day','4 不是今天·放进这一天'],
+  ['solo','5 独孩·无改挂谁'],
+  ['self','6 家人·记在我名下'],
+  ['self_open','7 家人·只改日子'],
+  ['tl_empty_bar','8 空态时光线+底签'],
+  ['progress','9 进行中·换成齐格签'],
+  ['fail_one','10 一张失败其余已入'],
+  ['err_size','11 超帽拦在底签'],
+  ['err_bad','12 非图已跳过其余可放'],
+  ['done_day','13 完成·当天齐格（.1）'],
+  ['ro_tl','14 只读·无入口'],
+  ['ro_day','15 只读·天页可看'],
+  ['err_perm','16 非成员'],
+  ['desk_bar','17 桌面·底签'],
+  ['desk_open','18 桌面·上掀小页'],
+  ['desk_bar_day','19 桌面·放进这一天'],
+  ['desk_progress','20 桌面·进度签'],
+  ['desk_day','21 桌面·当天齐格（.1）'],
+  ['desk_self','22 桌面·家人路径']
+];
+
+function tabbar(on){
+  return `<div class="tabbar">
+    <span class="${on==='time'?'on':''}"><i>◷</i>${COPY.tab_time}</span>
+    <span class="${on==='family'?'on':''}"><i>◎</i>${COPY.tab_family}</span>
+    <span class="${on==='settings'?'on':''}"><i>⚙</i>${COPY.tab_settings}</span>
+  </div>`;
+}
+function whoStrip(sel, {solo=false}={}){
+  const on=k=>sel===k?' on':'';
+  const more = solo ? '' : `
+      <button type="button" class="ntag${on('b')}"><span class="dot s2"></span><span class="nm">${COPY.kid_b}</span></button>
+      <button type="button" class="ntag${on('c')}"><span class="dot s3"></span><span class="nm">${COPY.kid_c}</span></button>`;
+  return `<div class="who-strip-wrap"><div class="who-strip">
+    <div class="lbl">${COPY.who_label}</div>
+    <div class="who-row">
+      <button type="button" class="ntag all${on('all')}"><span class="dot fam"></span><span class="nm">${COPY.who_all}</span></button>
+      <button type="button" class="ntag${on('a')}"><span class="dot"></span><span class="nm">${COPY.kid_a}</span></button>${more}
+    </div>
+  </div></div>`;
+}
+function ticket(text, pct, {warn, noLine}={}){
+  return `<div class="ticket${warn?' warn':''}${noLine?' fail-done':''}">
+    <div class="stub"></div>
+    <div class="tx">${text}</div>
+    ${noLine?'':`<div class="ule"><i style="width:${pct}%"></i></div>`}
+  </div>`;
+}
+function stamps(n, {neu=0, start=0, sk=false}={}){
+  const cls=['p1','p2','p3','p4','p5','p6','p7','p8'];
+  let h='';
+  for(let i=0;i<n;i++){
+    if(sk){ h+=`<div class="stamp sk"></div>`; continue; }
+    const isNew=i<neu;
+    h+=`<div class="stamp${isNew?' new':''}"><i class="${cls[(i+start)%8]}"></i></div>`;
+  }
+  return `<div class="grid">${h}</div>`;
+}
+function sheet(n, o={}){ return `<div class="sheet">${stamps(n,o)}</div>`; }
+function dayCard({d,w,n,start=0,age}){
+  const cls=['p1','p2','p3','p4','p5','p6','p7','p8'];
+  const show=Math.min(4,n);
+  let th='';
+  for(let i=0;i<show;i++) th+=`<div class="th"><i class="${cls[(i+start)%8]}"></i></div>`;
+  const ageHtml = (age===false || age==='') ? '' : `<span class="agechip">${age||COPY.age_a}</span>`;
+  return `<div class="daycard">
+    <div class="dayh"><span class="d">${d}</span><span class="w">${w}</span>${ageHtml}</div>
+    <div class="strip-row"><div class="thumbs">${th}</div><div class="n">${COPY.count(n)}</div></div>
+    <div class="by">${COPY.byline}</div>
+  </div>`;
+}
+function jmini(){
+  return `<div class="jcard"><div class="rail"><div class="dd"><b>10</b>周一</div></div>
+    <div class="c"><div class="q">${COPY.j_quote}</div><div class="sub">${COPY.j_sub}</div></div></div>`;
+}
+const status=`<div class="status"><span>9:41</span><span>${COPY.tl_family}</span></div>`;
+const anno=(css,tag,tcss)=>`<div class="anno" style="${css}"></div>${tag?`<div class="anno-tag" style="${tcss}">${tag}</div>`:''}`;
+
+function phone(inner,{tab,fab,toast,extra,tabOn='time',anon}={}){
+  const st = anon ? `<div class="status"><span>9:41</span><span></span></div>` : status;
+  return `<div class="phone">${st}${inner}${fab?`<button class="fab" type="button">＋</button>`:''}${tab?tabbar(tabOn):''}${toast?`<div class="toast">${toast}</div>`:''}${extra||''}</div>`;
+}
+function dayBody({n,neu=0,title=COPY.day_title,count,many=false,ro=false,self=false}){
+  const c=count!=null?count:n;
+  const meta = self ? `${COPY.self_album} · ${COPY.count(c)}` : `${COPY.kid_a} · ${COPY.age_a} · ${COPY.count(c)}`;
+  return `<div class="top solid"><button class="ib">←</button><div class="title">${title}<span class="meta">${meta}</span></div>${ro?`<span class="rometa">${COPY.ro_meta}</span>`:''}</div>
+    <div class="scroll${many?' clip':''}">${sheet(n,{neu})}</div>`;
+}
+function deskShell(colInner,{title,meta,side='time'}={}){
+  const on=k=>side===k?' on':'';
+  return `<div class="deskwin">
+    <div class="desk-chrome"><div class="dots"><i></i><i></i><i></i></div><div class="urlbar">${COPY.url_demo}</div></div>
+    <div class="desk-body">
+      <div class="desk-side"><div class="logo">${COPY.brand}</div>
+        <div class="navi"><span class="${on('time')}">${COPY.tab_time}</span><span class="${on('family')}">${COPY.tab_family}</span><span class="${on('settings')}">${COPY.tab_settings}</span></div>
+      </div>
+      <div class="desk-main"><div class="desk-col">
+        <div class="desk-topbar"><div class="title">${title||COPY.tl_title}</div>${meta?`<div class="meta">${meta}</div>`:''}</div>
+        ${colInner}
+      </div></div>
+    </div>
+  </div>`;
+}
+const frame=(id,cap,ph,desk)=>`<div class="frame${desk?' desk':''}" id="${id}" data-s="${id}"><div class="cap">${cap}</div>${ph}</div>`;
+
+function tinies(n){
+  const cls=['p1','p2','p3','p4','p5'];
+  const show=Math.min(3,n);
+  let h='';
+  for(let i=0;i<show;i++) h+=`<i class="${cls[i]}"></i>`;
+  return `<div class="tinies">${h}</div><span class="nmini">${COPY.n_zhang(n)}</span>`;
+}
+function faces(sel='a'){
+  const kids=[['a',COPY.kid_a,'k1'],['b',COPY.kid_b,'k2'],['c',COPY.kid_c,'k3']];
+  return `<div class="faces">${kids.map(([k,nm,av])=>`<div class="facep${sel===k?' on':''}"><div class="av ${av}">${nm[0]}</div>${sel===k?'<span class="ck">✓</span>':''}<div class="nm">${nm}</div></div>`).join('')}</div>`;
+}
+function lift({today=true, who=true, kid='a'}={}){
+  const d1 = today ? 'on' : '';
+  const d2 = today ? '' : 'on';
+  return `<div class="lift">
+    <div class="llab">${COPY.lab_day}</div>
+    <div class="dchips">
+      <span class="${d1}">今天</span>
+      <span>${COPY.day_d13}</span>
+      <span class="${d2}">${today?COPY.day_d12:COPY.day_short}</span>
+      <span class="cal">${COPY.pick_day}</span>
+    </div>
+    ${who?`<div class="llab">${COPY.lab_who}</div>${faces(kid)}`:''}
+  </div>`;
+}
+function slip({kid='果果', today=true, open=false, self=false, warn, n=5, goDis=false, who=true}={}){
+  const label = today ? COPY.chip_today(self?'':kid) : COPY.chip_day(COPY.day_short, self?'':kid);
+  const go = today ? COPY.put : COPY.put_day;
+  const liftHtml = open ? lift({today, who: who && !self, kid: kid==='果果'||kid===''?'a':'a'}) : '';
+  return `<div class="slip">
+    <div class="tear"></div>
+    <div class="slip-body">
+      ${liftHtml}
+      ${self?`<div class="shint">${COPY.self_line}</div>`:''}
+      ${warn?`<div class="whint">${warn}</div>`:''}
+      <div class="slip-row">
+        <button type="button" class="x-dismiss" aria-label="${COPY.dismiss}">✕</button>
+        ${tinies(n)}
+        <button type="button" class="chip${open?' open':''}${self?' self':''}"><em></em><span class="lab">${label}</span></button>
+        <button type="button" class="go${self?' family':''}${goDis?' dis':''}"${goDis?' disabled':''}>${go}</button>
+      </div>
+    </div>
+  </div>`;
+}
+function progressDock(mode='progress'){
+  if(mode==='fail'){
+    return `<div class="wfoot tick">${ticket(COPY.fail_one,0,{warn:true,noLine:true})}<button class="gosee" type="button">${COPY.fail_go}</button></div>`;
+  }
+  return `<div class="wfoot tick">${ticket(COPY.progress(2,5),62)}</div>`;
+}
+
+function tlBlock(opts={}){
+  const {fab,ro,foot,empty,solo,extra,tabOn='time'}=opts;
+  const top = `<div class="top"><div class="title">${COPY.tl_title}</div>${ro?`<span class="rometa">${COPY.ro_meta}</span>`:''}</div>
+    ${whoStrip('all',{solo:!!solo})}`;
+  const body = empty
+    ? `<div class="center"><div class="illus">📷</div><h3>${COPY.empty_tl}</h3>${foot?'':`<p>${COPY.empty_cta}</p>`}</div>`
+    : `<div class="scroll"><div class="tl">
+        ${dayCard({d:'11月14日',w:'周六',n:8})+dayCard({d:'11月12日',w:'周四',n:2,start:5})+jmini()}
+      </div></div>`;
+  return phone(`${top}${body}${foot||''}`,{tab:1,fab:!!fab && !foot,extra,tabOn});
+}
+function familyBlock({foot,extra}={}){
+  const top = `<div class="top"><div class="title">${COPY.tab_family}</div></div>
+    <div class="fam-head">${COPY.self_album}</div>`;
+  const body = `<div class="scroll"><div class="tl">${dayCard({d:'11月14日',w:'周六',n:3,start:4,age:false})}</div></div>`;
+  return phone(`${top}${body}${foot||''}`,{tab:1,tabOn:'family',extra});
+}
+function deskTl(foot){
+  return deskShell(`
+    ${whoStrip('all')}
+    <div style="overflow:hidden;flex:1;display:flex;flex-direction:column;gap:10px;position:relative;min-height:0">
+      ${dayCard({d:'11月14日',w:'周六',n:8})}
+      ${dayCard({d:'11月12日',w:'周四',n:2,start:5})}
+    </div>
+    ${foot||''}
+  `,{title:COPY.tl_title});
+}
+function deskFamily(foot){
+  return deskShell(`
+    <div class="fam-head">${COPY.self_album}</div>
+    <div style="overflow:hidden;flex:1;display:flex;flex-direction:column;gap:10px;position:relative;min-height:0">
+      ${dayCard({d:'11月14日',w:'周六',n:3,start:4,age:false})}
+    </div>
+    ${foot||''}
+  `,{title:COPY.tab_family, side:'family'});
+}
+
+function render(){
+  const G=(id,title,frames)=>`<div class="group" data-g="${id}"><div class="gtitle">${title}</div>${frames}</div>`;
+  return [
+    G('g-bar','选完停在原处 · 底签',
+      frame('tl','选图前：时光线 + FAB，无底签。看谁签仍在顶，当天卡一小排+共 N 张，不另起票根。',
+        tlBlock({fab:true, extra:anno('top:86px;left:14px;right:14px;height:64px',COPY.anno_tl,'top:64px;left:14px')}))+
+      frame('bar','选完图不跳页。撕边底签贴在页脚：左轻叉 + 已选小缩略与「5张」+ 芯片「今天 · 果果」，右主钮「放入」。芯片与主钮分开。禁止自动传。不再叠齿孔。',
+        tlBlock({foot:slip({}), extra:anno('top:auto;bottom:56px;left:8px;right:8px;height:72px',COPY.anno_bar,'bottom:136px;left:12px')+anno('top:auto;bottom:72px;left:14px;width:32px;height:32px',COPY.anno_x,'bottom:112px;left:14px')+anno('top:auto;bottom:64px;right:14px;width:88px;height:44px',COPY.anno_put,'bottom:116px;right:14px')}))+
+      frame('bar_open','点芯片：同一张撕边纸上掀。改一天含「选一天」（走系统日期选择）；再贴人是纸上小脸，不是黑底胶片条。轻叉仍在。',
+        tlBlock({foot:slip({open:true}), extra:anno('top:auto;bottom:56px;left:8px;right:8px;height:210px',COPY.anno_open,'bottom:274px;left:12px')}))+
+      frame('bar_day','改成 11月10日 后，芯片写日期，主钮换成「放进这一天」。轻叉仍在。',
+        tlBlock({foot:slip({today:false}), extra:anno('top:auto;bottom:64px;right:12px;width:112px;height:44px',COPY.anno_day,'bottom:116px;right:12px')}))+
+      frame('solo','家里只有一个孩子：芯片只写「今天」；上掀只有改一天（含选一天），不出现再贴人、没有小脸。',
+        tlBlock({solo:true, foot:slip({kid:'',open:true,who:false}), extra:anno('top:auto;bottom:56px;left:8px;right:8px;height:170px',COPY.anno_solo,'bottom:234px;left:12px')}))+
+      frame('self','家人路径在家人 tab，不叠在孩子时光线。同一条底签，无小脸；青绿一句「记在我名下，不进孩子时光线」须看得见；主钮青绿「放入」。',
+        familyBlock({foot:slip({self:true,kid:''}), extra:anno('top:auto;bottom:56px;left:8px;right:8px;height:96px',COPY.anno_self,'bottom:160px;left:12px')}))+
+      frame('self_open','家人点芯片只出改一天（含选一天），仍然没有小脸。轻叉与主钮留在底签上。',
+        familyBlock({foot:slip({self:true,kid:'',open:true,who:false})}))+
+      frame('tl_empty_bar','时光线还空着，选完第一批同样用底签，不跳填表整屏。',
+        tlBlock({empty:true, foot:slip({})}))
+    ),
+    G('g-in','进行中 / 失败 / 完成 · 继承 .1',
+      frame('progress','点「放入」后，底签换成已上线的齐格签：一行「正在放入 2/5」，底边细线跟当前这张（约 62%），不是整批填到 2/5；无第二面板。仍停在原处。',
+        tlBlock({foot:progressDock(), extra:anno('top:auto;bottom:56px;left:12px;right:12px;height:56px',COPY.anno_ticket,'bottom:120px;left:16px')}))+
+      frame('fail_one','同一张进度签写明「4 张已放入，有 1 张没成功」，可「去看已放入的」；不假装成功、不加第二块面板。',
+        tlBlock({foot:progressDock('fail')}))+
+      frame('err_size','超过单张帽：拦在底签上，口语「有一张太大了，先拿掉再放」；主钮先不可用。不另开说明页。',
+        tlBlock({foot:slip({warn:COPY.err_size,goDis:true})}))+
+      frame('err_bad','损坏 / 非图片：跳过该张，底签上口语「有一张不是照片，已跳过。其余可以继续放。」其余仍可放入。',
+        tlBlock({foot:slip({n:4,warn:COPY.err_bad})}))+
+      frame('done_day','完成后落到当天齐格（原样继承 .1）：一句「已放进今天」+ 新图细描边；不盖「刚放进」角标。日期只出现一次，并带「共 N 张」。',
+        phone(dayBody({n:8,neu:5}),{tab:1,toast:COPY.done_toast,extra:anno('top:118px;left:22px;width:230px;height:120px',COPY.anno_new,'top:96px;left:22px')}))
+    ),
+    G('g-perm','权限',
+      frame('ro_tl','只读长辈：看谁签+当天卡可看；无 FAB、无底签、无上传入口。',
+        tlBlock({ro:true, extra:anno('bottom:70px;right:16px;width:80px;height:28px',COPY.anno_ro,'bottom:104px;right:16px')}))+
+      frame('ro_day','只读可走同一条「看」路：普通天页顶栏一枚只读签，并带「共 N 张」；无上传钮、无底签。',
+        phone(dayBody({n:8,ro:true}),{tab:1}))+
+      frame('err_perm','非成员 / 移出：拒绝码与现网一致，不露出家庭名。',
+        phone(`<div class="center"><div class="illus-c">!</div><h3>${COPY.err_perm}</h3><p>${COPY.err_perm_sub}</p></div>`,{anon:true}))
+    ),
+    G('g-desk','桌面 ≥1024 · 内容柱 720 · 同路径同规则',
+      frame('desk_bar','桌面选完：底签停在内容柱脚（max 720），不跳确认整屏。撕边暖纸，左轻叉+小缩略与「5张」+芯片「今天 · 果果」，右主钮「放入」。不再叠齿孔。',
+        deskTl(slip({})), true)+
+      frame('desk_open','桌面上掀同一张纸：改一天含「选一天」，再贴人是纸上小脸，不是黑底胶片。轻叉仍在。',
+        deskTl(slip({open:true})), true)+
+      frame('desk_bar_day','桌面改成非今天：主钮换成「放进这一天」。',
+        deskTl(slip({today:false})), true)+
+      frame('desk_progress','桌面进行中：底签换成齐格签，细线跟当前这张。',
+        deskTl(progressDock()), true)+
+      frame('desk_day','桌面完成：5 列齐格，与 .1 一致；新图细描边。',
+        deskShell(`${sheet(8,{neu:5})}`,{title:COPY.day_title,meta:`${COPY.kid_a} · ${COPY.age_a} · ${COPY.count(8)}`}), true)+
+      frame('desk_self','桌面家人路径：侧栏家人，同一条底签，无小脸，「记在我名下」看得见。',
+        deskFamily(slip({self:true,kid:''})), true)
+    )
+  ].join('');
+}
+
+function show(id){
+  document.querySelectorAll('.group').forEach(g=>g.classList.toggle('hide', id!=='all' && !g.querySelector('[data-s="'+id+'"]')));
+  document.querySelectorAll('.frame').forEach(f=>f.style.display = (id==='all'||f.dataset.s===id)?'block':'none');
+  document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on', b.dataset.show===id));
+}
+function buildNav(){
+  const nav=document.getElementById('nav');
+  nav.innerHTML = S.map(([id,lab])=>`<button type="button" data-show="${id}">${lab}</button>`).join('')
+    + `<button type="button" data-show="all">全部</button>`;
+  nav.addEventListener('click',e=>{
+    const b=e.target.closest('button[data-show]'); if(!b) return;
+    history.replaceState(null,'','#s='+b.dataset.show);
+    show(b.dataset.show);
+  });
+}
+document.getElementById('stage').innerHTML = render();
+document.getElementById('foot').innerHTML =
+  '<b>主张：</b>底签——选完图<strong>不跳页</strong>，当前页脚一条撕边暖纸决策条（撕边在顶，不再叠一套齿孔）。左轻叉放弃（不上传）+ 已选小缩略与「n张」+ 芯片「今天 · 果果」，右主钮「放入」。点开才上掀同一张纸；再贴人用纸上小脸，不用黑底胶片；日期含「选一天」。独孩不改挂谁；家人走家人 tab，同一条、无小脸，「记在我名下」看得见。禁止自动传。点主钮后同一条换成 .1 齐格签进度。天页与时光线当天卡继承 .1。<br>'+
+  '<b>合并：</b>主形态取过程稿「底签」；吸过程稿「脚下签」的轻叉、「选一天」、同一条换成齐格签进度。14:27 对脚下签 final <code>ffaf1ef8a06515526f5cc227c89e174f</code> 所盖 PASS 已撤回，该 md5 不作工程认据。过程稿 md5 亦不作工程认据。<br>'+
+  '<b>硬闸：</b>COPY 与产品 UI 不出现「会员|开通|商城|发现|广告|筛选器|过滤器|下载 App|应用商店|去商店|更高清|加时长|朋友圈|发动态|发到时光线」。不改 .1 已上线的进度签 / 天页齐格 / 时光线小排。微信仍停。本脚注只列禁则。<br>'+
+  '<b>本目录待核。</b> cut 观察 md5 <code>8cf25f26801ee0d41d82ec9c3a47d78e</code>，回退 <code>v2026.11.14.1</code>。';
+window.ORDER = S.map(x=>x[0]);
+buildNav();
+(function(){
+  const h=(location.hash||'').replace(/^#s=/,'').replace(/^#/,'');
+  show(h && (h==='all' || S.some(s=>s[0]===h)) ? h : 'bar');
+})();
+window.addEventListener('hashchange',()=>{
+  const h=(location.hash||'').replace(/^#s=/,'').replace(/^#/,'');
+  if(h) show(h);
+});
+</script>
+</body>
+</html>

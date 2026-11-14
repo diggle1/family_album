@@ -6,11 +6,13 @@
 {% endblock %}
 {% block overlay %}
 {% if can_upload %}
+{% set slip_kind = 'child' %}
+{% include "fragments/upload_slip.html" %}
 <div class="sheet-mask" id="fab-sheet" hidden>
   <div class="sheet" role="dialog" aria-label="{{ video_copy.fab_sheet }}">
     <div class="grab"></div>
     <h4>{{ video_copy.fab_sheet }}</h4>
-    <a class="btn ghost" id="fab-photo" data-fab-photo href="{% if family_view|default(false) %}/upload?kind=child{% else %}/upload?kind=child&amp;child={{ child.id }}{% endif %}">{{ video_copy.fab_photo }}</a>
+    <button type="button" class="btn ghost" id="fab-photo" data-fab-photo data-slip-pick>{{ video_copy.fab_photo }}</button>
     <a class="btn ghost" id="fab-legacy" data-fab-legacy href="{% if family_view|default(false) %}/legacy-import{% else %}/legacy-import?child={{ child.id }}{% endif %}">{{ legacy.cta }}</a>
     <a class="btn" id="fab-video" data-fab-video href="{% if family_view|default(false) %}/videos/new{% else %}/videos/new?child={{ child.id }}{% endif %}">{{ video_copy.fab_video }}</a>
     <button type="button" class="btn text" data-fab-close>{{ video_copy.cancel }}</button>
