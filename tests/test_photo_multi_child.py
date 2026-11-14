@@ -239,9 +239,12 @@ def test_preselect_from_child_a_add_sibling(client: TestClient):
     assert 'id="film-strip"' not in home.text
     assert "已贴果果，可再贴兄弟姐妹" not in home.text
     entry = client.get(f"/upload?child={elder}")
-    assert 'id="photo-entry"' in entry.text
+    assert 'id="photo-entry"' not in entry.text
+    assert "照片放到哪里" not in entry.text
+    assert 'id="pick-card"' in entry.text
     assert 'id="film-strip"' not in entry.text
-    assert f"/upload?kind=child&amp;child={elder}" in entry.text or f"/upload?kind=child&child={elder}" in entry.text
+    assert f"/upload?kind=child&amp;child={elder}" not in entry.text
+    assert f"/upload?kind=child&child={elder}" not in entry.text
     bare = client.get("/upload?kind=child", follow_redirects=False)
     assert bare.status_code == 302
     assert 'class="sticker on"' not in bare.text
@@ -259,7 +262,9 @@ def test_family_entry_does_not_preselect_child_page_does(client: TestClient):
     assert f'data-child-id="{younger}"' in feed
     assert "data-family-view" not in feed
     photo_entry = client.get(f"/upload?child={younger}")
-    assert f"/upload?kind=child&amp;child={younger}" in photo_entry.text
+    assert f"/upload?kind=child&amp;child={younger}" not in photo_entry.text
+    assert 'id="pick-card"' in photo_entry.text
+    assert 'id="photo-entry"' not in photo_entry.text
     photo_form = client.get(f"/upload?kind=child&child={younger}", follow_redirects=False)
     assert photo_form.status_code == 302
     assert photo_form.headers["location"] == f"/?child={younger}"
@@ -580,7 +585,8 @@ def test_film_strip_has_no_age(client: TestClient):
     assert "再贴人" not in solo.text
     assert 'id="slip-faces"' not in solo.text
     entry = client.get("/upload")
-    assert PHOTO_MULTI_CHILD["entry_title"] in entry.text
+    assert PHOTO_MULTI_CHILD["entry_title"] not in entry.text
+    assert 'id="pick-card"' in entry.text
     assert 'id="film-strip"' not in entry.text
     assert "sticker" not in entry.text
 

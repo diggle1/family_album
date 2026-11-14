@@ -172,7 +172,7 @@ def test_viewer_no_legacy_import_entry(client: TestClient):
     viewer = _invite(client, "li-view@example.com", "viewer", "奶奶")
     uploader = _invite(client, "li-up@example.com", "uploader", "爸爸")
     assert LEGACY_IMPORT["cta"] in client.get("/family/settings").text
-    assert LEGACY_IMPORT["cta"] in client.get("/upload").text
+    assert LEGACY_IMPORT["cta"] not in client.get("/upload").text
     assert 'id="fab-legacy"' in client.get("/").text
     assert LEGACY_IMPORT["cta"] not in viewer.get("/family/settings").text
     assert LEGACY_IMPORT["cta"] not in viewer.get("/").text
@@ -477,8 +477,8 @@ def test_release_notes_mention_body_size_and_buffering_off():
     assert "d0c08c0e390b4facf25a738f4cd20ca4" in notes
     assert "legacy_import ready (no new tables)" in notes
     changelog = Path("CHANGELOG.md").read_text(encoding="utf-8")
-    assert changelog.split("## v2026.10.25.6", 1)[0].startswith("# Changelog\n\n## v2026.11.14.2")
-    assert app.version == "2026.11.14.2"
+    assert changelog.split("## v2026.10.25.6", 1)[0].startswith("# Changelog\n\n## v2026.11.15.1")
+    assert app.version == "2026.11.15.1"
 
 
 def test_copy_cta_wording():

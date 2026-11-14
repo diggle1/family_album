@@ -1,27 +1,7 @@
 {% extends "layout.html" %}
-{% block title %}{% if mode == 'edit' %}{{ photo_copy.u_title_edit }}{% else %}{{ photo_copy.entry_title }}{% endif %} · kids时光机{% endblock %}
+{% block title %}{% if mode == 'edit' %}{{ photo_copy.u_title_edit }}{% else %}{{ uds.pick_title }}{% endif %} · kids时光机{% endblock %}
 {% block content %}
-{% if not kind %}
-<div class="sheet-page" id="photo-entry">
-  <div class="sheet">
-    <h4>{{ photo_copy.entry_title }}</h4>
-    <p class="sub">{{ photo_copy.entry_sub }}</p>
-    {% if error %}<div class="banner err">{{ error }}</div>{% endif %}
-    <a class="opt" href="/upload?kind=child{% if query_child %}&amp;child={{ query_child }}{% endif %}">
-      <span class="ic child">🧒</span>
-      <span><b>{{ photo_copy.entry_child }}</b><small>{{ photo_copy.entry_child_sub }}</small></span>
-    </a>
-    <a class="opt fam" href="/upload?kind=self">
-      <span class="ic me">👤</span>
-      <span><b>{{ photo_copy.entry_self }}</b><small>{{ photo_copy.entry_self_sub }}</small></span>
-    </a>
-    <a class="opt" id="legacy-import-entry" href="/legacy-import{% if query_child %}?child={{ query_child }}{% endif %}">
-      <span class="ic child">▤</span>
-      <span><b>{{ legacy.cta }}</b><small>{{ legacy.entry_sub }}</small></span>
-    </a>
-  </div>
-</div>
-{% elif mode == 'edit' %}
+{% if mode == 'edit' %}
 {% set single = children|length == 1 %}
 {% set needs_file = mode != 'edit' %}
 {% set blocked = show_red or needs_file %}
@@ -99,5 +79,25 @@
 <script type="application/json" id="photo-children">{{ children_json | safe }}</script>
 <script type="application/json" id="photo-selected">{{ selected_json | safe }}</script>
 <script src="/static/photo.js" defer></script>
+{% else %}
+<div id="kindless-upload" class="kindless" data-kindless="1">
+  {% if error %}<div class="banner err">{{ error }}</div>{% endif %}
+  <div class="pick-card" id="pick-card">
+    <div class="ico" aria-hidden="true">📷</div>
+    <h3>{{ uds.pick_title }}</h3>
+    <p>{{ uds.pick_sub }}</p>
+    <button type="button" class="btn ghost" id="pick-cta" data-slip-pick>{{ uds.pick_cta }}</button>
+  </div>
+  <div class="kept" id="kept-grid" hidden>
+    <div class="kgrid" id="kept-thumbs"></div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+{% block overlay %}
+{% if mode != 'edit' %}
+{% set slip_kind = 'child' %}
+{% set slip_today = today %}
+{% include "fragments/upload_slip.html" %}
 {% endif %}
 {% endblock %}

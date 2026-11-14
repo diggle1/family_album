@@ -56,7 +56,7 @@ FINAL_KEYS = {
     "self_album": "家人相册 · {name}",
     "count": "共 {n} 张",
     "empty_tl": "还没有照片",
-    "empty_cta": "放入第一张",
+    "empty_cta": "去上传",
     "swipe": "左右滑，看这一天",
     "lb_count": "{i} / {n}",
     "ro_meta": "只读 · 只能看",
@@ -131,7 +131,9 @@ def test_copy_no_size_or_quality_jargon(client: TestClient):
     assert "放进这一天" not in button
     assert "照片放到哪里" not in page.text
     wizard = client.get("/upload")
-    assert "照片放到哪里" in wizard.text
+    assert "照片放到哪里" not in wizard.text
+    assert 'id="photo-entry"' not in wizard.text
+    assert UPLOAD_DAY_SLIM["pick_title"] in wizard.text
 
 
 def test_daily_upload_over_50_blocked_client():
@@ -539,7 +541,7 @@ def test_migrate_upload_day_slim_noop(tmp_path: Path):
     assert "v2026.11.14.2 does not add a table or a column" in source
     assert "DROP TABLE" not in script
     assert "docker compose down -v" not in script
-    assert app.version == "2026.11.14.2"
+    assert app.version == "2026.11.15.1"
 
 
 def test_four_roles_walk_upload_day(client: TestClient):
