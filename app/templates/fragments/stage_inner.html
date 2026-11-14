@@ -129,7 +129,7 @@
     <div class="illus">📷</div>
     <h3>{{ uds.empty_tl }}</h3>
     {% if can_upload %}
-    <a class="btn" href="/upload?kind=child{% if not on_family and child %}&amp;child={{ child.id }}{% endif %}">{{ uds.empty_cta }}</a>
+    <button type="button" class="btn" data-slip-pick>{{ uds.empty_cta }}</button>
     <a class="btn ghost" href="/videos/new{% if not on_family %}?child={{ child.id }}{% endif %}">{{ video_copy.empty_v_btn }}</a>
     {% else %}
     <p>照片会按天出现在这里。</p>

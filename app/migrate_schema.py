@@ -60,6 +60,11 @@ silent resize, and the new-photo outline stay in the browser. The self
 album day page reads the existing photos rows. Rolling back to
 v2026.10.25.9 leaves every row in place. Do not DROP TABLE and do not
 DROP COLUMN.
+
+v2026.11.14.2 does not add a table or a column. The last tagged child
+stays in this browser under the signed-in account. Rolling back to
+v2026.11.14.1 leaves every row in place. Do not DROP TABLE and do not
+DROP COLUMN.
 """
 
 from __future__ import annotations

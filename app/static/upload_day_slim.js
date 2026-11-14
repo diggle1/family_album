@@ -193,6 +193,108 @@
     return next();
   }
 
+  function lastTaggedKey(userId) {
+    return "fa.last_tagged_child." + String(userId == null ? "" : userId);
+  }
+
+  function readLastTagged(storage, userId) {
+    if (!storage || typeof storage.getItem !== "function") return "";
+    try {
+      var raw = storage.getItem(lastTaggedKey(userId));
+      return raw == null ? "" : String(raw);
+    } catch (err) {
+      return "";
+    }
+  }
+
+  function writeLastTagged(storage, userId, childId) {
+    if (!storage || typeof storage.setItem !== "function") return false;
+    if (childId == null || String(childId) === "") return false;
+    try {
+      storage.setItem(lastTaggedKey(userId), String(childId));
+      return true;
+    } catch (err) {
+      return false;
+    }
+  }
+
+  function resolveDefaultChild(opts) {
+    var options = opts || {};
+    var children = options.children || [];
+    var ids = [];
+    for (var i = 0; i < children.length; i += 1) ids.push(String(children[i].id));
+    var pref = options.pref == null ? "" : String(options.pref);
+    if (pref && ids.indexOf(pref) !== -1) return pref;
+    var viewed = options.viewedId == null ? "" : String(options.viewedId);
+    if (options.singleView && viewed && ids.indexOf(viewed) !== -1) return viewed;
+    return ids.length ? ids[0] : "";
+  }
+
+  function shiftIso(iso, delta) {
+    var parts = String(iso || "").split("-");
+    if (parts.length !== 3) return "";
+    var y = parseInt(parts[0], 10);
+    var m = parseInt(parts[1], 10);
+    var d = parseInt(parts[2], 10);
+    if (!y || !m || !d) return "";
+    var dt = new Date(Date.UTC(y, m - 1, d));
+    dt.setUTCDate(dt.getUTCDate() + delta);
+    var mm = dt.getUTCMonth() + 1;
+    var dd = dt.getUTCDate();
+    return dt.getUTCFullYear() + "-" + (mm < 10 ? "0" : "") + mm + "-" + (dd < 10 ? "0" : "") + dd;
+  }
+
+  function monthDay(iso) {
+    var parts = String(iso || "").split("-");
+    if (parts.length !== 3) return "";
+    return String(parseInt(parts[1], 10)) + "月" + String(parseInt(parts[2], 10)) + "日";
+  }
+
+  function recentDays(todayIso, pastCount) {
+    var count = pastCount == null ? 2 : Number(pastCount);
+    if (!isFinite(count) || count < 0) count = 0;
+    if (count > 3) count = 3;
+    var days = [String(todayIso || "")];
+    for (var i = 1; i <= count; i += 1) days.push(shiftIso(todayIso, -i));
+    return days;
+  }
+
+  function chipLabel(opts) {
+    var options = opts || {};
+    var today = String(options.today || "");
+    var taken = String(options.takenOn || today);
+    var day = taken === today ? "今天" : monthDay(taken);
+    if (options.self || options.solo || !options.name) return day;
+    return day + " · " + options.name;
+  }
+
+  function submitKey(today, takenOn) {
+    return String(takenOn || "") === String(today || "") ? "submit" : "submit_other";
+  }
+
+  function selectStartsUpload() {
+    return false;
+  }
+
+  function dismissUploads() {
+    return false;
+  }
+
+  function requestFieldNames(kind) {
+    var names = ["kind", "taken_on", "file"];
+    if (kind === "child") names.push("child_ids");
+    return names;
+  }
+
+  function submitBlocked(opts) {
+    var options = opts || {};
+    if (options.batch) return true;
+    if (options.over) return true;
+    if (options.kind === "child" && !(options.selected && options.selected.length)) return true;
+    if (!options.ready) return true;
+    return false;
+  }
+
   var api = {
     MAX_UPLOAD_BYTES: MAX_UPLOAD_BYTES,
     SILENT_MAX_EDGE: SILENT_MAX_EDGE,
@@ -218,6 +320,19 @@
     landingUrl: landingUrl,
     jpegName: jpegName,
     runSerial: runSerial,
+    lastTaggedKey: lastTaggedKey,
+    readLastTagged: readLastTagged,
+    writeLastTagged: writeLastTagged,
+    resolveDefaultChild: resolveDefaultChild,
+    shiftIso: shiftIso,
+    monthDay: monthDay,
+    recentDays: recentDays,
+    chipLabel: chipLabel,
+    submitKey: submitKey,
+    selectStartsUpload: selectStartsUpload,
+    dismissUploads: dismissUploads,
+    requestFieldNames: requestFieldNames,
+    submitBlocked: submitBlocked,
   };
 
   if (typeof module !== "undefined" && module.exports) module.exports = api;
@@ -225,17 +340,11 @@
   if (!global.document) return;
 
   function boot() {
-    var root = global.document.getElementById("photo-app");
-    if (!root || root.getAttribute("data-mode") === "edit") return;
-    var selectedNode = global.document.getElementById("photo-selected");
-    var childrenNode = global.document.getElementById("photo-children");
-    var selected = [];
+    var document = global.document;
+    var root = document.getElementById("upload-slip");
+    if (!root) return;
+    var childrenNode = document.getElementById("slip-children");
     var children = [];
-    try {
-      selected = JSON.parse(selectedNode ? selectedNode.textContent || "[]" : "[]").map(String);
-    } catch (err) {
-      selected = [];
-    }
     try {
       children = JSON.parse(childrenNode ? childrenNode.textContent || "[]" : "[]");
     } catch (err) {
@@ -245,11 +354,16 @@
       items: [],
       bad: 0,
       over: 0,
+      block: "",
+      pickedCount: 0,
       busy: false,
       xhr: null,
       run: null,
       pickGen: 0,
-      lastHint: "",
+      selected: [],
+      anchorSeed: "",
+      lifted: false,
+      takenOn: root.getAttribute("data-today") || "",
     };
 
     function copy(key) {
@@ -270,21 +384,13 @@
       return null;
     }
     function dateValue() {
-      var input = global.document.getElementById("photo-date");
-      if (input && input.value) return input.value;
-      return root.getAttribute("data-today") || "";
+      return state.takenOn || root.getAttribute("data-today") || "";
     }
-    function chipText(iso) {
-      var parts = String(iso || "").split("-");
-      if (parts.length !== 3) return "";
-      var mo = String(parseInt(parts[1], 10));
-      var d = String(parseInt(parts[2], 10));
-      var today = root.getAttribute("data-today") || "";
-      if (iso === today) return fill("date_today", { mo: mo, d: d });
-      return fill("date_only", { mo: mo, d: d });
+    function browserStorage() {
+      try { return global.localStorage || null; } catch (err) { return null; }
     }
-    function showHintText(text) {
-      var node = global.document.getElementById("photo-hint");
+    function showWarn(text) {
+      var node = document.getElementById("slip-warn");
       if (!node) return;
       node.hidden = !text;
       node.textContent = text || "";
@@ -296,27 +402,46 @@
       }
       return list;
     }
-    function paintHint() {
-      var hint = global.document.getElementById("strip-hint");
-      if (!hint || kind() !== "child") return;
-      if (root.getAttribute("data-single") === "1") {
-        hint.textContent = copy("strip_hint_single");
-        return;
-      }
-      if (state.lastHint) {
-        hint.textContent = state.lastHint;
-        return;
-      }
-      if (!selected.length) {
-        hint.textContent = copy("strip_hint_pick");
-        return;
-      }
-      var named = findChild(selected[0]);
-      var pre = root.getAttribute("data-pre-name") || (named ? named.name : "");
-      hint.textContent = fill("strip_hint_pre", { name: pre || (named ? named.name : "") });
+    function showDecision() {
+      var dock = document.getElementById("upload-dock");
+      var progress = document.getElementById("progress-dock");
+      if (dock) dock.hidden = false;
+      root.hidden = false;
+      if (progress) progress.hidden = true;
     }
-    function paintStickers() {
-      var row = global.document.getElementById("sticker-row");
+    function showProgress() {
+      var dock = document.getElementById("upload-dock");
+      var progress = document.getElementById("progress-dock");
+      if (dock) dock.hidden = false;
+      root.hidden = true;
+      if (progress) progress.hidden = false;
+    }
+    function paintDays() {
+      var row = document.getElementById("slip-days");
+      if (!row) return;
+      var today = root.getAttribute("data-today") || "";
+      var taken = dateValue();
+      var days = recentDays(today, 2);
+      var pick = document.getElementById("slip-pick-day");
+      var existing = row.querySelectorAll("[data-iso]");
+      for (var i = existing.length - 1; i >= 0; i -= 1) {
+        existing[i].parentNode.removeChild(existing[i]);
+      }
+      var preset = false;
+      for (var j = 0; j < days.length; j += 1) {
+        var iso = days[j];
+        var btn = document.createElement("button");
+        btn.type = "button";
+        btn.setAttribute("data-iso", iso);
+        btn.textContent = iso === today ? (copy("chip_today") || "今天") : monthDay(iso);
+        btn.className = iso === taken ? "on" : "";
+        if (iso === taken) preset = true;
+        row.insertBefore(btn, pick);
+      }
+      if (pick) pick.className = preset ? "cal" : "cal on";
+    }
+    function paintFaces() {
+      var row = document.getElementById("slip-faces");
       if (!row) return;
       var nodes = row.children || [];
       for (var i = 0; i < nodes.length; i += 1) {
@@ -324,77 +449,106 @@
         if (!node.getAttribute) continue;
         var id = node.getAttribute("data-child-id");
         if (!id) continue;
-        node.className = selected.indexOf(String(id)) !== -1 ? "sticker on" : "sticker off";
+        var on = state.selected.indexOf(String(id)) !== -1;
+        node.className = on ? "facep on" : "facep";
+        var mark = node.querySelector ? node.querySelector(".ck") : null;
+        if (mark) mark.hidden = !on;
       }
     }
-    function paintMinis() {
-      var row = global.document.getElementById("pick-minis");
+    function paintTinies() {
+      var row = document.getElementById("slip-tinies");
       if (!row) return;
       while (row.firstChild) row.removeChild(row.firstChild);
-      for (var i = 0; i < state.items.length; i += 1) {
+      var shown = 0;
+      for (var i = 0; i < state.items.length && shown < 3; i += 1) {
         var item = state.items[i];
-        var mini = global.document.createElement("button");
-        mini.type = "button";
-        mini.className = item.over ? "mini over" : "mini";
-        mini.setAttribute("data-mini", String(i));
-        if (item.over) mini.setAttribute("data-over", "1");
-        var frame = global.document.createElement("i");
+        var frame = document.createElement("i");
         if (!item.over && item.file && global.URL && global.URL.createObjectURL) {
           if (!item.url) item.url = global.URL.createObjectURL(item.file);
           frame.style.backgroundImage = "url(\"" + item.url + "\")";
-          frame.style.backgroundSize = "cover";
         }
-        mini.appendChild(frame);
-        row.appendChild(mini);
+        row.appendChild(frame);
+        shown += 1;
       }
-      var count = global.document.getElementById("pick-count");
-      if (count) count.textContent = fill("pick_n", { n: String(state.items.length) });
+      var count = document.getElementById("slip-count");
+      var n = state.block === "err_batch" ? state.pickedCount : state.items.length;
+      if (count) count.textContent = fill("n_zhang", { n: String(n) });
     }
-    function paintDate() {
-      var label = global.document.getElementById("date-chip-text");
-      if (label) label.textContent = chipText(dateValue());
-    }
-    function paintBar() {
-      var bar = global.document.getElementById("redbar");
-      if (!bar) return;
-      var empty = kind() === "child" && !selected.length;
-      bar.hidden = !empty;
-      bar.textContent = empty ? copy("err_no_child") : "";
+    function paintChip() {
+      var label = document.getElementById("slip-chip-lab");
+      var chip = document.getElementById("slip-chip");
+      var today = root.getAttribute("data-today") || "";
+      var solo = root.getAttribute("data-solo") === "1";
+      var self = kind() === "self";
+      var name = "";
+      if (!self && !solo && state.selected.length) {
+        var child = findChild(state.selected[0]);
+        name = child && child.name ? child.name : "";
+      }
+      if (label) {
+        var dayWord = dateValue() === today ? (copy("chip_today") || "今天") : monthDay(dateValue());
+        label.textContent = (self || solo || !name) ? dayWord : dayWord + " · " + name;
+      }
+      if (chip && chip.classList) {
+        chip.classList.toggle("open", state.lifted);
+        chip.classList.toggle("self", self);
+      }
+      var lift = document.getElementById("slip-lift");
+      if (lift) lift.hidden = !state.lifted;
     }
     function paintButton() {
-      var btn = global.document.getElementById("photo-submit");
+      var btn = document.getElementById("photo-submit");
       if (!btn || state.busy) return;
-      var needsChild = kind() === "child" && !selected.length;
-      var blocked = needsChild || state.over > 0 || readyItems().length === 0;
+      var today = root.getAttribute("data-today") || "";
+      var blocked = submitBlocked({
+        kind: kind(),
+        selected: state.selected,
+        over: state.over > 0,
+        ready: readyItems().length > 0,
+        batch: state.block === "err_batch",
+      });
       btn.disabled = blocked;
       btn.hidden = false;
-      if (btn.classList) btn.classList.toggle("dis", blocked);
-      btn.textContent = kind() === "self" ? copy("submit_self") : copy("submit");
+      if (btn.classList) {
+        btn.classList.toggle("dis", blocked);
+        btn.classList.toggle("family", kind() === "self");
+      }
+      btn.textContent = copy(submitKey(today, dateValue()));
     }
     function paintNotice() {
       if (state.busy) return;
-      if (state.over > 0) showHintText(copy("err_size"));
-      else if (state.bad > 0) showHintText(copy("err_bad"));
-      else if (!state.run) showHintText("");
+      if (state.over > 0) showWarn(copy("err_size"));
+      else if (state.block === "err_batch") showWarn(copy("err_batch"));
+      else if (kind() === "child" && !state.selected.length && (state.items.length || state.bad)) showWarn(copy("err_no_child"));
+      else if (state.bad > 0) showWarn(copy("err_bad"));
+      else if (!state.run) showWarn("");
     }
-    function paint() {
-      paintHint();
-      paintStickers();
-      paintMinis();
-      paintDate();
-      paintBar();
+    function paintSlip() {
+      paintDays();
+      paintFaces();
+      paintTinies();
+      paintChip();
       paintNotice();
       paintButton();
     }
-    function toggle(raw) {
-      if (root.getAttribute("data-single") === "1" || state.busy) return;
-      var id = String(raw);
-      var index = selected.indexOf(id);
-      state.lastHint = "";
-      if (index === -1) selected.push(id);
-      else if (selected.length <= 1) state.lastHint = copy("strip_hint_last");
-      else selected.splice(index, 1);
-      paint();
+    function applyDefaults() {
+      state.takenOn = root.getAttribute("data-today") || "";
+      state.lifted = false;
+      var native = document.getElementById("slip-native-date");
+      if (native) native.value = state.takenOn;
+      if (kind() !== "child") {
+        state.selected = [];
+        state.anchorSeed = "";
+        return;
+      }
+      var id = resolveDefaultChild({
+        children: children,
+        pref: readLastTagged(browserStorage(), root.getAttribute("data-uid") || ""),
+        viewedId: root.getAttribute("data-viewed") || "",
+        singleView: root.getAttribute("data-single-view") === "1",
+      });
+      state.selected = id ? [id] : [];
+      state.anchorSeed = id;
     }
     function releaseItems(items) {
       for (var i = 0; i < items.length; i += 1) {
@@ -447,7 +601,7 @@
       var scale = edge > maxEdge ? maxEdge / edge : 1;
       var w = Math.max(1, Math.round(width * scale));
       var h = Math.max(1, Math.round(height * scale));
-      var canvas = global.document.createElement("canvas");
+      var canvas = document.createElement("canvas");
       canvas.width = w;
       canvas.height = h;
       var ctx = canvas.getContext("2d");
@@ -517,25 +671,29 @@
         throw new Error("decode");
       });
     }
-    function acceptFiles(list) {
+    function openWithFiles(list) {
+      if (state.busy) return;
       var gen = state.pickGen + 1;
       state.pickGen = gen;
       releaseItems(state.items);
       state.items = [];
       state.bad = 0;
       state.over = 0;
+      state.block = "";
+      state.pickedCount = list.length;
       state.run = null;
+      applyDefaults();
+      showDecision();
       if (batchBlock(list.length)) {
-        showHintText(copy("err_batch"));
-        paintButton();
-        paintMinis();
+        state.block = "err_batch";
+        paintSlip();
         return;
       }
       var index = 0;
       function step() {
         if (gen !== state.pickGen) return;
         if (index >= list.length) {
-          paint();
+          paintSlip();
           return;
         }
         var file = list[index];
@@ -561,22 +719,22 @@
       step();
     }
     function paintProgress(i, n, width) {
-      var ticket = global.document.getElementById("progress-ticket");
-      var text = global.document.getElementById("progress-text");
-      var line = global.document.getElementById("progress-line");
-      var btn = global.document.getElementById("photo-submit");
-      if (ticket) {
-        ticket.hidden = false;
-        ticket.className = "ticket";
-      }
+      showProgress();
+      var ticket = document.getElementById("progress-ticket");
+      var text = document.getElementById("progress-text");
+      var line = document.getElementById("progress-line");
+      if (ticket) ticket.className = "ticket";
       if (text) text.textContent = fill("progress", { i: String(i), n: String(n) });
       if (line) line.style.width = String(width) + "%";
-      if (btn) btn.hidden = true;
-      var go = global.document.getElementById("fail-go");
+      var go = document.getElementById("fail-go");
       if (go) go.hidden = true;
+      var retry = document.getElementById("slip-retry");
+      if (retry) retry.hidden = true;
+      var hint = document.getElementById("progress-hint");
+      if (hint) hint.hidden = true;
     }
     function destination(ids) {
-      var anchor = anchorChild(selected, root.getAttribute("data-anchor") || "");
+      var anchor = anchorChild(state.selected, state.anchorSeed);
       return landingUrl(
         kind(),
         anchor,
@@ -586,24 +744,33 @@
         root.getAttribute("data-today") || ""
       );
     }
+    function rememberAnchor(run) {
+      if (kind() !== "child" || !run.successes.length) return;
+      var anchor = anchorChild(state.selected, state.anchorSeed);
+      writeLastTagged(browserStorage(), root.getAttribute("data-uid") || "", anchor);
+    }
     function showSettled(run, planned) {
       state.busy = false;
+      rememberAnchor(run);
       var result = outcome(run, planned);
       if (result.redirect) {
         global.location.href = destination(run.successes);
         return;
       }
-      var ticket = global.document.getElementById("progress-ticket");
-      var text = global.document.getElementById("progress-text");
-      var go = global.document.getElementById("fail-go");
-      var btn = global.document.getElementById("photo-submit");
-      if (ticket) {
-        ticket.hidden = false;
-        ticket.className = "ticket warn fail-done";
+      if (run.childRequired && result.ok === 0) {
+        showDecision();
+        showWarn(copy("err_no_child"));
+        paintSlip();
+        return;
       }
-      if (text) {
-        text.textContent = fill("fail_one", { ok: String(result.ok), fail: String(result.fail) });
-      }
+      showProgress();
+      var ticket = document.getElementById("progress-ticket");
+      var text = document.getElementById("progress-text");
+      var go = document.getElementById("fail-go");
+      var hint = document.getElementById("progress-hint");
+      var retry = document.getElementById("slip-retry");
+      if (ticket) ticket.className = "ticket warn fail-done";
+      if (text) text.textContent = fill("fail_one", { ok: String(result.ok), fail: String(result.fail) });
       if (go) {
         if (result.failGo) {
           go.hidden = false;
@@ -612,15 +779,20 @@
           go.hidden = true;
         }
       }
-      if (run.childRequired && result.ok === 0) showHintText(copy("err_no_child"));
-      else if (run.retry) showHintText(root.getAttribute("data-retry-text") || "");
-      else showHintText("");
-      if (btn) {
-        var again = run.retry && !run.aborted;
-        btn.hidden = !again;
-        btn.disabled = !again;
-        if (btn.classList) btn.classList.toggle("dis", !again);
-        btn.textContent = kind() === "self" ? copy("submit_self") : copy("submit");
+      var hintText = run.retry ? (root.getAttribute("data-retry-text") || "") : "";
+      if (hint) {
+        hint.hidden = !hintText;
+        hint.textContent = hintText;
+      }
+      if (retry) {
+        var again = !!(run.retry && !run.aborted);
+        retry.hidden = !again;
+        retry.disabled = !again;
+        retry.textContent = copy(submitKey(root.getAttribute("data-today") || "", dateValue()));
+        if (retry.classList) {
+          retry.classList.toggle("family", kind() === "self");
+          retry.classList.toggle("dis", !again);
+        }
       }
     }
     function postOne(run, file, onProgress) {
@@ -652,7 +824,7 @@
         form.append("taken_on", dateValue());
         form.append("file", file, (file && file.name) || "photo.jpg");
         if (kind() === "child") {
-          selected.forEach(function (id) { form.append("child_ids", id); });
+          state.selected.forEach(function (id) { form.append("child_ids", id); });
         }
         xhr.send(form);
       });
@@ -660,13 +832,13 @@
     function uploadAll() {
       if (state.busy) return;
       var ready = readyItems();
-      if (batchBlock(state.items.length) || state.over || !ready.length) {
-        paint();
+      if (state.block === "err_batch" || state.over || !ready.length) {
+        paintSlip();
         return;
       }
-      if (kind() === "child" && !selected.length) {
-        showHintText(copy("err_no_child"));
-        paintBar();
+      if (kind() === "child" && !state.selected.length) {
+        showWarn(copy("err_no_child"));
+        paintButton();
         return;
       }
       state.busy = true;
@@ -728,87 +900,123 @@
       }
       next();
     }
-    function leaveOrSettle() {
-      if (state.run && (state.busy || state.run.successes.length)) {
-        abortRun(state.run);
-        if (state.xhr) {
-          try { state.xhr.abort(); } catch (err) { /* finished */ }
-        }
-        if (state.run.successes.length) {
-          showSettled(state.run, readyItems().length || state.run.successes.length);
-          return;
-        }
-      } else if (state.xhr) {
-        if (state.run) abortRun(state.run);
-        try { state.xhr.abort(); } catch (err) { /* finished */ }
+    function abandon(event) {
+      if (event && event.preventDefault) event.preventDefault();
+      if (state.busy) return;
+      releaseItems(state.items);
+      state.items = [];
+      state.bad = 0;
+      state.over = 0;
+      state.block = "";
+      state.pickedCount = 0;
+      state.lifted = false;
+      state.selected = [];
+      state.run = null;
+      var dock = document.getElementById("upload-dock");
+      if (dock) dock.hidden = true;
+      root.hidden = false;
+      var progress = document.getElementById("progress-dock");
+      if (progress) progress.hidden = true;
+    }
+    function toggleChild(raw) {
+      if (root.getAttribute("data-solo") === "1" || state.busy || kind() !== "child") return;
+      var id = String(raw);
+      var index = state.selected.indexOf(id);
+      if (index === -1) state.selected.push(id);
+      else state.selected.splice(index, 1);
+      paintSlip();
+    }
+    function openNativeDate() {
+      var input = document.getElementById("slip-native-date");
+      if (!input) return;
+      if (typeof input.showPicker === "function") {
+        var picked = input.showPicker();
+        if (picked && typeof picked.catch === "function") picked.catch(function () { input.focus(); });
+        return;
       }
-      global.location.href = root.getAttribute("data-back") || "/";
+      input.focus();
+      input.click();
     }
-    var row = global.document.getElementById("sticker-row");
-    if (row) {
-      row.addEventListener("click", function (event) {
+    var faces = document.getElementById("slip-faces");
+    if (faces) {
+      faces.addEventListener("click", function (event) {
         var node = event.target;
-        while (node && node !== row) {
+        while (node && node !== faces) {
           if (node.getAttribute && node.getAttribute("data-child-id")) {
-            toggle(node.getAttribute("data-child-id"));
+            toggleChild(node.getAttribute("data-child-id"));
             return;
           }
           node = node.parentNode;
         }
       });
     }
-    var pick = global.document.getElementById("pick-row");
-    var fileInput = global.document.getElementById("photo-file");
-    if (pick && fileInput) {
-      pick.addEventListener("click", function (event) {
+    var days = document.getElementById("slip-days");
+    if (days) {
+      days.addEventListener("click", function (event) {
         var node = event.target;
-        while (node && node !== pick) {
-          if (node.getAttribute && node.getAttribute("data-mini") != null) {
-            if (node.getAttribute("data-over") === "1" && !state.busy) {
-              var at = parseInt(node.getAttribute("data-mini"), 10);
-              if (state.items[at]) {
-                releaseItems([state.items[at]]);
-                state.items.splice(at, 1);
-                state.over = 0;
-                for (var i = 0; i < state.items.length; i += 1) {
-                  if (state.items[i].over) state.over += 1;
-                }
-                paint();
-              }
-            }
+        while (node && node !== days) {
+          if (node.id === "slip-pick-day") {
+            openNativeDate();
+            return;
+          }
+          if (node.getAttribute && node.getAttribute("data-iso")) {
+            state.takenOn = node.getAttribute("data-iso");
+            var nativePick = document.getElementById("slip-native-date");
+            if (nativePick) nativePick.value = state.takenOn;
+            paintSlip();
             return;
           }
           node = node.parentNode;
         }
-        if (!state.busy) fileInput.click();
       });
+    }
+    var chip = document.getElementById("slip-chip");
+    if (chip) {
+      chip.addEventListener("click", function () {
+        if (state.busy) return;
+        state.lifted = !state.lifted;
+        paintChip();
+      });
+    }
+    var nativeDate = document.getElementById("slip-native-date");
+    if (nativeDate) {
+      nativeDate.addEventListener("change", function () {
+        if (nativeDate.value) state.takenOn = nativeDate.value;
+        paintSlip();
+      });
+    }
+    var fileInput = document.getElementById("photo-file");
+    if (fileInput) {
       fileInput.addEventListener("change", function () {
         var files = fileInput.files ? Array.prototype.slice.call(fileInput.files) : [];
         fileInput.value = "";
-        acceptFiles(files);
+        if (!files.length) return;
+        openWithFiles(files);
       });
     }
-    var dateInput = global.document.getElementById("photo-date");
-    if (dateInput) dateInput.addEventListener("change", paintDate);
-    var submitBtn = global.document.getElementById("photo-submit");
+    document.addEventListener("click", function (event) {
+      var pick = event.target && event.target.closest ? event.target.closest("[data-slip-pick]") : null;
+      if (!pick || state.busy) return;
+      event.preventDefault();
+      var sheet = document.getElementById("fab-sheet");
+      if (sheet) sheet.hidden = true;
+      if (fileInput) fileInput.click();
+    });
+    var dismiss = document.getElementById("slip-dismiss");
+    if (dismiss) dismiss.addEventListener("click", abandon);
+    var submitBtn = document.getElementById("photo-submit");
     if (submitBtn) submitBtn.addEventListener("click", uploadAll);
-    var go = global.document.getElementById("fail-go");
+    var retryBtn = document.getElementById("slip-retry");
+    if (retryBtn) retryBtn.addEventListener("click", uploadAll);
+    var go = document.getElementById("fail-go");
     if (go) {
       go.addEventListener("click", function () {
         var href = go.getAttribute("data-href") || "";
         if (href) global.location.href = href;
       });
     }
-    function onCancel(event) {
-      if (event && event.preventDefault) event.preventDefault();
-      leaveOrSettle();
-    }
-    var cancelBtn = global.document.getElementById("photo-cancel");
-    if (cancelBtn) cancelBtn.addEventListener("click", onCancel);
-    var closeBtn = global.document.getElementById("photo-close");
-    if (closeBtn) closeBtn.addEventListener("click", onCancel);
-    global.document.addEventListener("visibilitychange", function () {
-      if (global.document.visibilityState === "hidden" && state.busy) {
+    document.addEventListener("visibilitychange", function () {
+      if (document.visibilityState === "hidden" && state.busy) {
         if (state.run) abortRun(state.run);
         if (state.xhr) {
           try { state.xhr.abort(); } catch (err) { /* finished */ }
@@ -821,7 +1029,15 @@
         try { state.xhr.abort(); } catch (err) { /* finished */ }
       }
     });
-    paint();
+    document.body.addEventListener("htmx:afterSwap", function () {
+      if (kind() !== "child") return;
+      var feed = document.querySelector(".feed");
+      if (!feed) return;
+      var family = feed.getAttribute("data-family-view") === "1";
+      root.setAttribute("data-single-view", family ? "0" : "1");
+      root.setAttribute("data-viewed", family ? "" : (feed.getAttribute("data-child-id") || ""));
+    });
+    paintDays();
   }
 
   if (global.document.readyState === "loading") global.document.addEventListener("DOMContentLoaded", boot);

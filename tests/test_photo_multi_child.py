@@ -56,6 +56,14 @@ def _film(html: str) -> str:
     return chunk
 
 
+def _picker(html: str, element_id: str) -> str:
+    for chunk in html.split("<button "):
+        tag = chunk.split(">", 1)[0]
+        if f'id="{element_id}"' in tag:
+            return tag
+    raise AssertionError(element_id)
+
+
 def _tag_href(html: str, element_id: str) -> str:
     for chunk in html.split("<a "):
         tag = chunk.split(">", 1)[0]
@@ -160,17 +168,14 @@ def test_empty_child_ids_400(client: TestClient):
     assert denied.status_code == 400
     assert denied.json()["code"] == "child_required"
     assert denied.json()["detail"] == PHOTO_MULTI_CHILD["err_no_child"]
-    page = client.get("/upload?kind=child")
-    assert page.text.index('id="pick-row"') < page.text.index('id="photo-date"') < page.text.index('id="film-strip"')
-    assert page.text.index('id="film-strip"') < page.text.index('id="redbar"') < page.text.index('id="photo-submit"')
-    block = _film(page.text)
-    assert 'id="redbar"' not in block
-    assert PHOTO_MULTI_CHILD["err_no_child"] in page.text.split('id="redbar"', 1)[1].split('id="photo-submit"', 1)[0]
-    assert PHOTO_MULTI_CHILD["strip_hint_pick"] in block
-    assert "sticker on" not in block
-    assert "btn dis" in page.text
-    assert "disabled" in page.text.split('id="photo-submit"', 1)[1].split(">", 1)[0]
-    assert 'class="mid"' in page.text
+    page = client.get("/upload?kind=child", follow_redirects=False)
+    assert page.status_code == 302
+    assert page.headers["location"] == "/"
+    home = client.get("/")
+    assert 'id="upload-slip"' in home.text
+    assert 'id="film-strip"' not in home.text
+    assert PHOTO_MULTI_CHILD["err_no_child"] in home.text
+    assert "disabled" in home.text.split('id="photo-submit"', 1)[1].split(">", 1)[0]
     assert _photo(client, [elder]).status_code == 201
 
 
@@ -225,19 +230,20 @@ def test_edit_assoc_updates_both_feeds_age_on_taken_on(client: TestClient):
 def test_preselect_from_child_a_add_sibling(client: TestClient):
     elder = _family(client, "p-pre@example.com", "妈妈", "预选家", child="果果")
     _add(client, "豆豆", "2025-03-01")
-    page = client.get(f"/upload?kind=child&child={elder}")
-    assert page.status_code == 200
-    assert "已贴果果，可再贴兄弟姐妹" in page.text
-    assert page.text.index('id="pick-row"') < page.text.index('id="photo-date"') < page.text.index('id="film-strip"')
-    block = _film(page.text)
-    assert block.count('class="sticker on"') == 1
-    assert "豆豆" in block and "果果" in block
+    page = client.get(f"/upload?kind=child&child={elder}", follow_redirects=False)
+    assert page.status_code == 302
+    assert page.headers["location"] == f"/?child={elder}"
+    home = client.get(f"/?child={elder}")
+    assert "再贴人" in home.text
+    assert "果果" in home.text and "豆豆" in home.text
+    assert 'id="film-strip"' not in home.text
+    assert "已贴果果，可再贴兄弟姐妹" not in home.text
     entry = client.get(f"/upload?child={elder}")
     assert 'id="photo-entry"' in entry.text
     assert 'id="film-strip"' not in entry.text
     assert f"/upload?kind=child&amp;child={elder}" in entry.text or f"/upload?kind=child&child={elder}" in entry.text
-    bare = client.get("/upload?kind=child")
-    assert PHOTO_MULTI_CHILD["strip_hint_pick"] in bare.text
+    bare = client.get("/upload?kind=child", follow_redirects=False)
+    assert bare.status_code == 302
     assert 'class="sticker on"' not in bare.text
 
 
@@ -245,36 +251,43 @@ def test_family_entry_does_not_preselect_child_page_does(client: TestClient):
     elder = _family(client, "p-fab@example.com", "妈妈", "入口家", child="果果")
     younger = _add(client, "豆豆", "2025-03-01")
     child_page = client.get(f"/?child={younger}")
-    assert _tag_href(child_page.text, "fab-photo") == f"/upload?kind=child&amp;child={younger}"
+    photo_tag = _picker(child_page.text, "fab-photo")
+    assert "data-slip-pick" in photo_tag
+    assert "href" not in photo_tag
     assert _tag_href(child_page.text, "fab-video") == f"/videos/new?child={younger}"
     feed = child_page.text.split('class="feed"', 1)[1].split(">", 1)[0]
     assert f'data-child-id="{younger}"' in feed
     assert "data-family-view" not in feed
     photo_entry = client.get(f"/upload?child={younger}")
     assert f"/upload?kind=child&amp;child={younger}" in photo_entry.text
-    photo_form = client.get(f"/upload?kind=child&child={younger}")
-    picked = [part for part in photo_form.text.split("<button") if 'class="sticker on"' in part]
-    assert len(picked) == 1 and f'data-child-id="{younger}"' in picked[0]
+    photo_form = client.get(f"/upload?kind=child&child={younger}", follow_redirects=False)
+    assert photo_form.status_code == 302
+    assert photo_form.headers["location"] == f"/?child={younger}"
     video_form = client.get(f"/videos/new?child={younger}")
     video_picked = [part for part in video_form.text.split("<button") if "chip on" in part]
     assert len(video_picked) == 1 and f'data-child-id="{younger}"' in video_picked[0]
-    assert _tag_href(client.get(f"/?child={elder}").text, "fab-photo") == f"/upload?kind=child&amp;child={elder}"
-    assert _tag_href(client.get(f"/?child={elder}").text, "fab-video") == f"/videos/new?child={elder}"
+    elder_home = client.get(f"/?child={elder}")
+    assert "data-slip-pick" in _picker(elder_home.text, "fab-photo")
+    assert _tag_href(elder_home.text, "fab-video") == f"/videos/new?child={elder}"
 
     family = client.get("/?view=family")
-    assert _tag_href(family.text, "fab-photo") == "/upload?kind=child"
+    family_photo = _picker(family.text, "fab-photo")
+    assert "data-slip-pick" in family_photo
+    assert "/upload" not in family_photo
     assert _tag_href(family.text, "fab-video") == "/videos/new"
     assert "/upload?child=" not in family.text
     assert "/videos/new?child=" not in family.text
     family_feed = family.text.split('class="feed"', 1)[1].split(">", 1)[0]
     assert "data-child-id" not in family_feed
     assert 'data-family-view="1"' in family_feed
-    assert 'class="sticker on"' not in client.get("/upload?kind=child").text
+    assert 'class="sticker on"' not in client.get("/upload?kind=child", follow_redirects=False).text
     video_bare = client.get("/videos/new").text.split('id="sib"', 1)[1].split('id="film-preview"', 1)[0]
     assert "chip on" not in video_bare
 
     switched = client.get("/fragments/timeline?view=family")
-    assert _tag_href(switched.text, "fab-photo") == "/upload?kind=child"
+    switched_photo = _picker(switched.text, "fab-photo")
+    assert "data-slip-pick" in switched_photo
+    assert "/upload" not in switched_photo
     assert _tag_href(switched.text, "fab-video") == "/videos/new"
     assert "/upload?child=" not in switched.text
     assert "/videos/new?child=" not in switched.text
@@ -295,18 +308,19 @@ def test_family_entry_does_not_preselect_child_page_does(client: TestClient):
 def test_self_photo_path_no_film_strip(client: TestClient):
     child_id = _family(client, "p-self@example.com", "妈妈", "本人家", child="果果")
     _add(client, "豆豆", "2025-03-01")
-    page = client.get("/upload?kind=self")
-    assert page.status_code == 200
-    assert page.text.index('id="self-banner"') < page.text.index('id="pick-row"') < page.text.index('id="photo-date"')
-    assert 'id="film-strip"' not in page.text
-    assert 'class="caprow"' not in page.text
-    assert 'id="redbar"' not in page.text
-    assert "sticker" not in page.text
+    page = client.get("/upload?kind=self", follow_redirects=False)
+    assert page.status_code == 302
     from app.constants import UPLOAD_DAY_SLIM
-    assert UPLOAD_DAY_SLIM["self_banner"] in page.text
-    assert PHOTO_MULTI_CHILD["self_banner"] not in page.text
-    assert UPLOAD_DAY_SLIM["submit_self"] in page.text
-    assert "btn family" in page.text
+    album_now = client.get(page.headers["location"])
+    assert album_now.status_code == 200
+    assert 'id="slip-self-note"' in album_now.text
+    assert UPLOAD_DAY_SLIM["self_note"] in album_now.text
+    assert 'id="film-strip"' not in album_now.text
+    assert 'id="slip-faces"' not in album_now.text
+    assert "sticker" not in album_now.text
+    assert UPLOAD_DAY_SLIM["submit_self"] not in album_now.text
+    assert 'class="go family' in album_now.text
+    assert ">放入<" in album_now.text
     created = upload(client, kind="self", taken_on=DAY, send_child=False)
     assert created.status_code == 201, created.text
     assert created.json()["child_id"] is None
@@ -546,17 +560,25 @@ process.stdout.write(JSON.stringify({ stillOn, afterLast, both }));
 def test_film_strip_has_no_age(client: TestClient):
     elder = _family(client, "p-strip@example.com", "妈妈", "胶片家", child="果果")
     _add(client, "豆豆", "2025-03-01")
-    page = client.get(f"/upload?kind=child&child={elder}")
-    block = _film(page.text)
+    gone = client.get(f"/upload?kind=child&child={elder}", follow_redirects=False)
+    assert gone.status_code == 302
+    home = client.get(f"/?child={elder}")
+    faces = home.text.split('id="slip-faces"', 1)[1].split('class="slip-row"', 1)[0]
+    assert "岁" not in faces
+    assert "个月" not in faces
+    assert "再贴人" in home.text
+    created = _photo(client, [elder])
+    edit = client.get(f"/photos/{created.json()['id']}/edit")
+    assert edit.status_code == 200
+    block = _film(edit.text)
     assert "岁" not in block
     assert "个月" not in block
     assert PHOTO_MULTI_CHILD["strip_label"] in block
     single = TestClient(app)
     only = _family(single, "p-solo@example.com", "妈妈", "单孩胶片", child="果果")
-    solo = single.get(f"/upload?kind=child&child={only}")
-    hint = _film(solo.text)
-    assert PHOTO_MULTI_CHILD["strip_hint_single"] in hint
-    assert "岁" not in hint
+    solo = single.get(f"/?child={only}")
+    assert "再贴人" not in solo.text
+    assert 'id="slip-faces"' not in solo.text
     entry = client.get("/upload")
     assert PHOTO_MULTI_CHILD["entry_title"] in entry.text
     assert 'id="film-strip"' not in entry.text
