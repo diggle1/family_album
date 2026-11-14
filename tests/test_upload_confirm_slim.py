@@ -233,10 +233,12 @@ def test_edit_and_kindless_upload_unchanged(client: TestClient):
     assert 'class="slip"' not in edit.text
     kindless = client.get("/upload")
     assert kindless.status_code == 200
-    assert "照片放到哪里？" in kindless.text
-    assert 'id="photo-entry"' in kindless.text
-    assert 'id="legacy-import-entry"' in kindless.text
-    assert 'id="upload-slip"' not in kindless.text
+    assert "照片放到哪里？" not in kindless.text
+    assert 'id="photo-entry"' not in kindless.text
+    assert 'id="legacy-import-entry"' not in kindless.text
+    assert 'id="pick-card"' in kindless.text
+    assert 'id="upload-slip"' in kindless.text
+    assert UPLOAD_DAY_SLIM["pick_title"] in kindless.text
     assert 'class="uds"' not in kindless.text
 
 
@@ -317,7 +319,12 @@ def test_viewer_has_no_slip(client: TestClient):
 def test_empty_state_picks_in_place(client: TestClient):
     _family(client, "ucs-empty@example.com", "妈妈", "空态家", child="果果")
     page = client.get("/?view=family")
-    assert "放入第一张" in page.text
-    assert "data-slip-pick" in page.text
-    assert 'href="/upload' not in page.text
+    block = page.text.split('class="center compact"', 1)[1].split('class="pad-bottom"', 1)[0]
+    assert "还没有照片" in block
+    assert "去上传" in block
+    assert "放入第一张" not in block
+    assert 'class="go-upload"' in block
+    assert 'href="/upload"' in block
+    assert "data-slip-pick" not in block
+    assert 'class="btn"' not in block.split('class="go-upload"', 1)[0].split("<h3>", 1)[-1]
     assert JPEG

@@ -295,6 +295,20 @@
     return false;
   }
 
+  function kindlessSurface(opts) {
+    var options = opts || {};
+    var open = !!options.dockOpen;
+    var count = Number(options.count);
+    if (!isFinite(count) || count < 0) count = 0;
+    return {
+      pickHidden: open,
+      keptHidden: !open,
+      thumbs: open ? count : 0,
+      choicePage: false,
+      leaveUpload: false,
+    };
+  }
+
   var api = {
     MAX_UPLOAD_BYTES: MAX_UPLOAD_BYTES,
     SILENT_MAX_EDGE: SILENT_MAX_EDGE,
@@ -333,6 +347,7 @@
     dismissUploads: dismissUploads,
     requestFieldNames: requestFieldNames,
     submitBlocked: submitBlocked,
+    kindlessSurface: kindlessSurface,
   };
 
   if (typeof module !== "undefined" && module.exports) module.exports = api;
@@ -402,12 +417,36 @@
       }
       return list;
     }
+    function paintKindless() {
+      var card = document.getElementById("pick-card");
+      var kept = document.getElementById("kept-grid");
+      if (!card && !kept) return;
+      var dock = document.getElementById("upload-dock");
+      var open = !!(dock && !dock.hidden);
+      var view = kindlessSurface({ dockOpen: open, count: state.items.length });
+      if (card) card.hidden = view.pickHidden;
+      if (kept) kept.hidden = view.keptHidden;
+      var grid = document.getElementById("kept-thumbs");
+      if (!grid) return;
+      while (grid.firstChild) grid.removeChild(grid.firstChild);
+      if (!view.thumbs) return;
+      for (var i = 0; i < state.items.length; i += 1) {
+        var item = state.items[i];
+        var frame = document.createElement("i");
+        if (!item.over && item.file && global.URL && global.URL.createObjectURL) {
+          if (!item.url) item.url = global.URL.createObjectURL(item.file);
+          frame.style.backgroundImage = "url(\"" + item.url + "\")";
+        }
+        grid.appendChild(frame);
+      }
+    }
     function showDecision() {
       var dock = document.getElementById("upload-dock");
       var progress = document.getElementById("progress-dock");
       if (dock) dock.hidden = false;
       root.hidden = false;
       if (progress) progress.hidden = true;
+      paintKindless();
     }
     function showProgress() {
       var dock = document.getElementById("upload-dock");
@@ -415,6 +454,7 @@
       if (dock) dock.hidden = false;
       root.hidden = true;
       if (progress) progress.hidden = false;
+      paintKindless();
     }
     function paintDays() {
       var row = document.getElementById("slip-days");
@@ -530,6 +570,7 @@
       paintChip();
       paintNotice();
       paintButton();
+      paintKindless();
     }
     function applyDefaults() {
       state.takenOn = root.getAttribute("data-today") || "";
@@ -917,6 +958,7 @@
       root.hidden = false;
       var progress = document.getElementById("progress-dock");
       if (progress) progress.hidden = true;
+      paintKindless();
     }
     function toggleChild(raw) {
       if (root.getAttribute("data-solo") === "1" || state.busy || kind() !== "child") return;
@@ -1038,6 +1080,7 @@
       root.setAttribute("data-viewed", family ? "" : (feed.getAttribute("data-child-id") || ""));
     });
     paintDays();
+    paintKindless();
   }
 
   if (global.document.readyState === "loading") global.document.addEventListener("DOMContentLoaded", boot);

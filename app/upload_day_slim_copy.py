@@ -15,6 +15,11 @@ for a day that is not today. The full-screen strings confirm_title, pick_n,
 submit_self, self_banner, and strip_* stay in this module so older imports
 keep working. The 底签 does not render them.
 
+v2026.11.15.1 changes empty_cta to 去上传 for the empty timeline text link.
+The self-album empty button keeps 放入第一张 on empty_self. pick_title,
+pick_sub, and pick_cta are the kindless /upload card. self_note stays on
+the family entry only.
+
 Draft notes (anno_*) stay out of this module. Placeholders stand in for
 names, counts, and dates so the mock's sample day is not hard-coded.
 """
@@ -49,7 +54,11 @@ UPLOAD_DAY_SLIM = {
     "self_album": "家人相册 · {name}",
     "count": "共 {n} 张",
     "empty_tl": "还没有照片",
-    "empty_cta": "放入第一张",
+    "empty_cta": "去上传",
+    "empty_self": "放入第一张",
+    "pick_title": "选几张放进来",
+    "pick_sub": "从本机选照片，一次可以选多张。",
+    "pick_cta": "从相册选",
     "swipe": "左右滑，看这一天",
     "lb_count": "{i} / {n}",
     "lb_open": "看这张",

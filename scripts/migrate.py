@@ -55,6 +55,7 @@ def main() -> None:
     print("exif_day_split ready (no new tables)")
     print("upload_day_slim ready (no new tables)")
     print("upload_confirm_slim ready (no new tables)")
+    print("upload_kindless_slim ready (no new tables)")
     print("schema ready")
 
 

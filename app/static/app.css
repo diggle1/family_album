@@ -1403,3 +1403,43 @@ a.more-btn { text-decoration: none; display: inline-grid; place-items: center; }
   position: absolute; width: 1px; height: 1px; padding: 0; border: 0; opacity: 0;
 }
 /* /upload-confirm-slip */
+
+/* kindless /upload: pick card, this-batch grid, empty text link. Not the slip. */
+.kindless { min-height: 40%; }
+.pick-card {
+  margin: 36px 20px 16px;
+  background: linear-gradient(180deg, #FFFCF7 0%, #FFF6EC 100%);
+  border: 1px solid var(--paper-edge);
+  border-radius: 16px;
+  padding: 28px 22px 24px;
+  text-align: center;
+  box-shadow: 0 1px 4px rgba(43, 36, 32, .04);
+}
+.pick-card .ico {
+  width: 72px; height: 72px; border-radius: 50%; background: var(--accent-soft);
+  display: grid; place-items: center; font-size: 30px; margin: 0 auto 14px;
+}
+.pick-card h3 { font-size: 17px; font-weight: 800; margin: 0 0 6px; }
+.pick-card p { font-size: 13px; color: var(--ink2); line-height: 1.55; margin: 0; }
+.pick-card .btn.ghost {
+  width: auto; display: inline-block; padding: 0 22px; height: 44px;
+  line-height: 42px; margin-top: 14px;
+}
+.pick-card[hidden], .kept[hidden] { display: none !important; }
+.kept { padding: 8px 14px 88px; }
+.kept .kgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.kept .kgrid i {
+  display: block; aspect-ratio: 1; border-radius: 8px;
+  background: #E7DDD2 center/cover no-repeat;
+}
+.go-upload {
+  margin-top: 12px; border: 0; background: transparent; color: var(--accent);
+  font-size: 15px; font-weight: 800; font-family: inherit; cursor: pointer;
+  padding: 6px 8px; text-decoration: none; display: inline-block;
+}
+.app:has(#upload-dock:not([hidden])) .kindless { padding-bottom: 120px; }
+@media (min-width: 1024px) {
+  .app:has(.kindless) { width: min(720px, 100%); }
+  .app:has(.kindless) .pick-card { margin: 24px auto 0; max-width: 640px; }
+  .app:has(.kindless) .kept { max-width: 720px; margin: 0 auto; padding: 8px 24px 88px; }
+}
