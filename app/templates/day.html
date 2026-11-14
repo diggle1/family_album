@@ -3,7 +3,10 @@
 {% block content %}
 <div class="day-page" id="day-note-app"
      data-on-date="{{ taken_on }}"
-     data-can-write="{{ 1 if can_upload else 0 }}"
+     data-copy-swipe="{{ uds.swipe }}"
+     data-copy-lb_count="{{ uds.lb_count }}"
+     data-copy-lb_open="{{ uds.lb_open }}"
+     data-can-write="{{ 1 if can_upload and notes_on else 0 }}"
      data-body-max="200"
      data-body-display="80"
      data-body-warn="70"
@@ -23,15 +26,15 @@
      data-copy-err_perm="{{ day_note.err_perm }}"
      data-copy-err_perm_sub="{{ day_note.err_perm_sub }}"
      {% endif %}>
-<div class="top">
+<div class="top solid">
   <a class="back" href="{{ back_href }}" aria-label="{{ wn_copy.day_back }}">←</a>
   <div class="title">{{ date_label }} {{ weekday }}
-    <span class="meta">{% if otd_year_meta %}{{ otd_year_meta }} · {% endif %}{% if child %}{{ child.name }}{% if age_label %} · {{ age_label }}{% endif %}{% else %}{{ family.name }}{% endif %}</span>
+    <span class="meta">{% if self_mode %}{{ uds.self_album.format(name=self_owner.name) }} · {{ uds.count.format(n=photos|length) }}{% elif child %}{{ child.name }}{% if age_label %} · {{ age_label }}{% endif %} · {{ uds.count.format(n=photos|length) }}{% else %}{{ family.name }} · {{ uds.count.format(n=photos|length) }}{% endif %}{% if otd_year_meta %} · {{ otd_year_meta }}{% endif %}</span>
   </div>
   {% if membership and membership.role == 'viewer' %}
-  <span class="rochip">{{ day_note.ro_meta }}</span>
+  <span class="rochip">{{ uds.ro_meta }}</span>
   {% endif %}
-  {% if can_upload %}
+  {% if can_upload and notes_on %}
   <button type="button" class="write-pill day-note-pill" data-open-note>{{ day_note.entry_edit if state.mode == 'edit' else day_note.entry_write }}</button>
   {% endif %}
 </div>
@@ -45,12 +48,37 @@
 {% include "fragments/video_card.html" %}
 {% endfor %}
 {% if photos %}
-<h2 class="day-sec">{{ day_note.sec_photos }}</h2>
-<div class="grid3">
-  {% for photo in photos %}
-  <a class="ph" href="/photos/{{ photo.id }}"><img src="{{ photo.media_url }}" alt="{{ date_label }}的照片"></a>
-  {% endfor %}
+<div class="sheet qige-sheet">
+  <template id="qige-skel">
+    <div class="grid qige-grid">
+      <div class="stamp sk"></div><div class="stamp sk"></div><div class="stamp sk"></div>
+      <div class="stamp sk"></div><div class="stamp sk"></div><div class="stamp sk"></div>
+      <div class="stamp sk"></div><div class="stamp sk"></div><div class="stamp sk"></div>
+    </div>
+  </template>
+  <div class="grid qige-grid" id="qige-grid">
+    {% for photo in photos %}
+    <button type="button" class="stamp{% if photo.id in new_ids %} new{% endif %}" data-photo-id="{{ photo.id }}">
+      <i style="background-image:url('{{ photo.media_url }}')"></i>
+    </button>
+    {% endfor %}
+  </div>
 </div>
+<div class="lb" id="day-lb" hidden>
+  <div class="bar">
+    <button type="button" class="ib" id="lb-close">✕</button>
+    <div class="t" id="lb-count"></div>
+    <a class="ib" id="lb-open" href="">{{ uds.lb_open }}</a>
+  </div>
+  <img class="pic" id="lb-img" alt="">
+  <div class="navs">
+    <button type="button" id="lb-prev">‹</button>
+    <button type="button" id="lb-next">›</button>
+  </div>
+  <div class="hint" id="lb-swipe">{{ uds.swipe }}</div>
+</div>
+<script type="application/json" id="qige-photos">{{ photo_json | safe }}</script>
+<script src="/static/day_grid.js" defer></script>
 {% endif %}
 {% if notes %}
 <section class="day-notes" id="day-notes">
@@ -66,7 +94,7 @@
   <p>{{ wn_copy.day_empty_sub }}</p>
 </div>
 {% endif %}
-{% if can_upload %}
+{% if can_upload and notes_on %}
 <form id="day-note-form" class="day-note-form" hidden>
   <div class="wtop">
     <button type="button" class="back" id="day-note-cancel">✕</button>

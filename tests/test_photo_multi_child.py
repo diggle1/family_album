@@ -49,7 +49,11 @@ DAY = "2026-10-22"
 
 
 def _film(html: str) -> str:
-    return html.split('id="film-strip"', 1)[1].split('class="caprow"', 1)[0]
+    chunk = html.split('id="film-strip"', 1)[1]
+    for marker in ('id="film-end"', 'class="caprow"', 'id="photo-foot"', 'class="wfoot"'):
+        if marker in chunk:
+            return chunk.split(marker, 1)[0]
+    return chunk
 
 
 def _tag_href(html: str, element_id: str) -> str:
@@ -120,8 +124,8 @@ def test_photo_two_children_both_feeds_family_one_card(client: TestClient):
     assert [item["name"] for item in elder_feed["days"][0]["photos"][0]["children"]] == ["果果", "豆豆"]
     family = client.get("/?view=family")
     assert family.status_code == 200
-    assert family.text.count('class="pcard"') == 1
-    assert family.text.count(f'href="/photos/{photo_id}"') == 1
+    assert family.text.count('class="daycard"') == 1
+    assert family.text.count(f'data-photo-id="{photo_id}"') == 1
     assert "果果" in family.text and "豆豆" in family.text
 
 
@@ -134,7 +138,7 @@ def test_uploader_photo_multi_viewer_can_see(client: TestClient):
     viewer = _invite(client, "p-see-ro@example.com", "viewer", "外婆")
     page = viewer.get(f"/?child={elder}")
     assert page.status_code == 200
-    assert f'href="/photos/{photo_id}"' in page.text
+    assert f'data-photo-id="{photo_id}"' in page.text
     assert "豆豆" in page.text and "果果" in page.text
     assert 'class="fab"' not in page.text
     assert "/upload" not in page.text
@@ -157,14 +161,12 @@ def test_empty_child_ids_400(client: TestClient):
     assert denied.json()["code"] == "child_required"
     assert denied.json()["detail"] == PHOTO_MULTI_CHILD["err_no_child"]
     page = client.get("/upload?kind=child")
-    assert page.text.index('id="photo-date"') < page.text.index('id="photo-preview"') < page.text.index('id="film-strip"')
-    assert page.text.index('id="film-strip"') < page.text.index('class="caprow"') < page.text.index('id="redbar"')
-    assert page.text.index('id="redbar"') < page.text.index('class="wfoot"') < page.text.index('id="photo-submit"')
+    assert page.text.index('id="pick-row"') < page.text.index('id="photo-date"') < page.text.index('id="film-strip"')
+    assert page.text.index('id="film-strip"') < page.text.index('id="redbar"') < page.text.index('id="photo-submit"')
     block = _film(page.text)
     assert 'id="redbar"' not in block
     assert PHOTO_MULTI_CHILD["err_no_child"] in page.text.split('id="redbar"', 1)[1].split('id="photo-submit"', 1)[0]
     assert PHOTO_MULTI_CHILD["strip_hint_pick"] in block
-    assert PHOTO_MULTI_CHILD["u_cap_ph"] in page.text.split('class="caprow"', 1)[1].split('class="up-spacer"', 1)[0]
     assert "sticker on" not in block
     assert "btn dis" in page.text
     assert "disabled" in page.text.split('id="photo-submit"', 1)[1].split(">", 1)[0]
@@ -206,9 +208,11 @@ def test_edit_assoc_updates_both_feeds_age_on_taken_on(client: TestClient):
     assert edited.json()["children"][1]["age_label"] == elder_age
     elder_page = client.get(f"/?child={elder}")
     younger_page = client.get(f"/?child={younger}")
-    assert f"{'豆豆'}{younger_age}" in elder_page.text
-    assert f"{'果果'}{elder_age}" in younger_page.text
-    assert elder_page.text.count('class="pcard"') == 1
+    detail = client.get(f"/photos/{photo_id}")
+    assert f"豆豆 · {younger_age}" in detail.text
+    assert f"果果 · {elder_age}" in detail.text
+    assert elder_page.text.count('class="daycard"') == 1
+    assert younger_page.text.count('class="daycard"') == 1
     session = SessionLocal()
     try:
         row = session.get(Photo, photo_id)
@@ -224,7 +228,7 @@ def test_preselect_from_child_a_add_sibling(client: TestClient):
     page = client.get(f"/upload?kind=child&child={elder}")
     assert page.status_code == 200
     assert "已贴果果，可再贴兄弟姐妹" in page.text
-    assert page.text.index('id="photo-date"') < page.text.index('id="photo-preview"') < page.text.index('id="film-strip"')
+    assert page.text.index('id="pick-row"') < page.text.index('id="photo-date"') < page.text.index('id="film-strip"')
     block = _film(page.text)
     assert block.count('class="sticker on"') == 1
     assert "豆豆" in block and "果果" in block
@@ -241,7 +245,7 @@ def test_family_entry_does_not_preselect_child_page_does(client: TestClient):
     elder = _family(client, "p-fab@example.com", "妈妈", "入口家", child="果果")
     younger = _add(client, "豆豆", "2025-03-01")
     child_page = client.get(f"/?child={younger}")
-    assert _tag_href(child_page.text, "fab-photo") == f"/upload?child={younger}"
+    assert _tag_href(child_page.text, "fab-photo") == f"/upload?kind=child&amp;child={younger}"
     assert _tag_href(child_page.text, "fab-video") == f"/videos/new?child={younger}"
     feed = child_page.text.split('class="feed"', 1)[1].split(">", 1)[0]
     assert f'data-child-id="{younger}"' in feed
@@ -254,11 +258,11 @@ def test_family_entry_does_not_preselect_child_page_does(client: TestClient):
     video_form = client.get(f"/videos/new?child={younger}")
     video_picked = [part for part in video_form.text.split("<button") if "chip on" in part]
     assert len(video_picked) == 1 and f'data-child-id="{younger}"' in video_picked[0]
-    assert _tag_href(client.get(f"/?child={elder}").text, "fab-photo") == f"/upload?child={elder}"
+    assert _tag_href(client.get(f"/?child={elder}").text, "fab-photo") == f"/upload?kind=child&amp;child={elder}"
     assert _tag_href(client.get(f"/?child={elder}").text, "fab-video") == f"/videos/new?child={elder}"
 
     family = client.get("/?view=family")
-    assert _tag_href(family.text, "fab-photo") == "/upload"
+    assert _tag_href(family.text, "fab-photo") == "/upload?kind=child"
     assert _tag_href(family.text, "fab-video") == "/videos/new"
     assert "/upload?child=" not in family.text
     assert "/videos/new?child=" not in family.text
@@ -270,7 +274,7 @@ def test_family_entry_does_not_preselect_child_page_does(client: TestClient):
     assert "chip on" not in video_bare
 
     switched = client.get("/fragments/timeline?view=family")
-    assert _tag_href(switched.text, "fab-photo") == "/upload"
+    assert _tag_href(switched.text, "fab-photo") == "/upload?kind=child"
     assert _tag_href(switched.text, "fab-video") == "/videos/new"
     assert "/upload?child=" not in switched.text
     assert "/videos/new?child=" not in switched.text
@@ -293,13 +297,15 @@ def test_self_photo_path_no_film_strip(client: TestClient):
     _add(client, "豆豆", "2025-03-01")
     page = client.get("/upload?kind=self")
     assert page.status_code == 200
-    assert page.text.index('id="photo-date"') < page.text.index('id="photo-preview"') < page.text.index('id="self-banner"')
+    assert page.text.index('id="self-banner"') < page.text.index('id="pick-row"') < page.text.index('id="photo-date"')
     assert 'id="film-strip"' not in page.text
     assert 'class="caprow"' not in page.text
     assert 'id="redbar"' not in page.text
     assert "sticker" not in page.text
-    assert PHOTO_MULTI_CHILD["self_banner"] in page.text
-    assert PHOTO_MULTI_CHILD["u_submit_self"] in page.text
+    from app.constants import UPLOAD_DAY_SLIM
+    assert UPLOAD_DAY_SLIM["self_banner"] in page.text
+    assert PHOTO_MULTI_CHILD["self_banner"] not in page.text
+    assert UPLOAD_DAY_SLIM["submit_self"] in page.text
     assert "btn family" in page.text
     created = upload(client, kind="self", taken_on=DAY, send_child=False)
     assert created.status_code == 201, created.text
@@ -430,13 +436,13 @@ def test_child_feed_filter_not_trim_stack_photo(client: TestClient):
     assert both.status_code == only.status_code == 201
     elder_page = client.get(f"/?child={elder}")
     younger_page = client.get(f"/?child={younger}")
-    assert f"/photos/{both.json()['id']}" in elder_page.text
-    assert f"/photos/{only.json()['id']}" not in elder_page.text
-    assert f"/photos/{only.json()['id']}" in younger_page.text
-    card = elder_page.text.split(f'data-photo-id="{both.json()["id"]}"', 1)[1].split("</a>", 1)[0]
-    assert "果果" in card and "豆豆" in card and "安安" in card and "米米" in card
-    assert card.count('class="sa ') == 3
-    assert "+1" in card
+    both_id = both.json()["id"]
+    only_id = only.json()["id"]
+    assert f'data-photo-id="{both_id}"' in elder_page.text
+    assert f'data-photo-id="{only_id}"' not in elder_page.text
+    assert f'data-photo-id="{only_id}"' in younger_page.text
+    detail = client.get(f"/photos/{both_id}")
+    assert "果果" in detail.text and "豆豆" in detail.text and "安安" in detail.text and "米米" in detail.text
 
 
 def test_toggle_last_child_noop_photo():
@@ -563,9 +569,9 @@ def test_family_feed_dedupe_one_photo_card(client: TestClient):
     created = _photo(client, [elder, younger])
     assert created.status_code == 201
     family = client.get("/?view=family")
-    assert family.text.count('class="pcard"') == 1
-    assert client.get(f"/?child={elder}").text.count('class="pcard"') == 1
-    assert client.get(f"/?child={younger}").text.count('class="pcard"') == 1
+    assert family.text.count('class="daycard"') == 1
+    assert client.get(f"/?child={elder}").text.count('class="daycard"') == 1
+    assert client.get(f"/?child={younger}").text.count('class="daycard"') == 1
 
 
 def test_same_day_order_journal_video_photo(client: TestClient):
@@ -574,9 +580,9 @@ def test_same_day_order_journal_video_photo(client: TestClient):
     assert _video(client, [elder], on_date=DAY).status_code == 201
     assert _photo(client, [elder]).status_code == 201
     page = client.get(f"/?child={elder}")
-    assert page.text.index('class="jcard"') < page.text.index('class="vcard') < page.text.index('class="pcard"')
+    assert page.text.index('class="jcard"') < page.text.index('class="vcard') < page.text.index('class="daycard"')
     family = client.get("/?view=family")
-    assert family.text.index('class="jcard"') < family.text.index('class="vcard') < family.text.index('class="pcard"')
+    assert family.text.index('class="jcard"') < family.text.index('class="vcard') < family.text.index('class="daycard"')
 
 
 def test_api_empty_array_400_photo(client: TestClient):

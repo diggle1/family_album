@@ -628,7 +628,7 @@ def test_upload_mp4_under_limits_201_on_feed(client: TestClient):
     assert page.status_code == 200
     text = page.text
     assert text.index(f"/journals/{journal.json()['id']}") < text.index(f"/videos/{body['id']}")
-    assert text.index(f"/videos/{body['id']}") < text.index(f"/photos/{photo.json()['id']}")
+    assert text.index(f"/videos/{body['id']}") < text.index('class="daycard"')
     assert "妈妈传" in text
     assert "0:12" in text
     assert label in text
@@ -774,7 +774,7 @@ def test_feed_order_journal_video_photo(client: TestClient):
     assert journal.status_code == 201 and video.status_code == 201
     text = client.get(f"/?child={child_id}").text
     assert text.index("第一条甲") < text.index(f"/videos/{video.json()['id']}")
-    assert text.index(f"/videos/{video.json()['id']}") < text.index('class="pics')
+    assert text.index(f"/videos/{video.json()['id']}") < text.index('class="daycard"')
     timeline = client.get(f"/api/children/{child_id}/timeline").json()
     assert "journals" not in timeline["days"][0]
     assert "videos" not in timeline["days"][0]

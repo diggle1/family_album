@@ -470,7 +470,7 @@ def test_feed_mixes_journal_before_photos_same_day(client: TestClient):
     created = _post(client, child_id, body="日志在照片前", on_date=today, photos=[photo.json()["id"]])
     assert created.status_code == 201
     page = client.get(f"/?child={child_id}")
-    assert page.text.index(f"/journals/{created.json()['id']}") < page.text.index(f"/photos/{photo.json()['id']}")
+    assert page.text.index(f"/journals/{created.json()['id']}") < page.text.index('class="daycard"')
 
 
 def test_timeline_same_day_journals_desc(client: TestClient):
@@ -483,7 +483,7 @@ def test_timeline_same_day_journals_desc(client: TestClient):
     assert first.status_code == second.status_code == 201
     page = client.get(f"/?child={child_id}").text
     assert page.index("第二条乙") < page.index("第一条甲")
-    assert page.index("第一条甲") < page.index('class="pics')
+    assert page.index("第一条甲") < page.index('class="daycard"')
 
 
 def test_card_first_three_lines_and_cover(client: TestClient):

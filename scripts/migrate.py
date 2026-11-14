@@ -53,6 +53,7 @@ def main() -> None:
     print("legacy_import ready (no new tables)")
     print("timeline_child_filter ready (no new tables)")
     print("exif_day_split ready (no new tables)")
+    print("upload_day_slim ready (no new tables)")
     print("schema ready")
 
 

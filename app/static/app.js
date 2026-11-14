@@ -1025,7 +1025,7 @@
       var photo = sheet.querySelector("[data-fab-photo]");
       var video = sheet.querySelector("[data-fab-video]");
       var legacy = sheet.querySelector("[data-fab-legacy]");
-      if (photo) photo.setAttribute("href", id ? "/upload?child=" + id : "/upload");
+      if (photo) photo.setAttribute("href", id ? "/upload?kind=child&child=" + id : "/upload?kind=child");
       if (video) video.setAttribute("href", id ? "/videos/new?child=" + id : "/videos/new");
       if (legacy) legacy.setAttribute("href", id ? "/legacy-import?child=" + id : "/legacy-import");
       sheet.hidden = false;

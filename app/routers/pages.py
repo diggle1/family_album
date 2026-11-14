@@ -13,7 +13,7 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.auth import set_session
-from app.constants import ELDERS_NO_APP, FORBIDDEN, JOURNAL, PHOTO_MULTI_CHILD, ROLE_LABEL, ROLE_NOTE, VIDEO
+from app.constants import ELDERS_NO_APP, FORBIDDEN, JOURNAL, PHOTO_MULTI_CHILD, ROLE_LABEL, ROLE_NOTE, UPLOAD_DAY_SLIM, VIDEO
 from app.db import get_db
 from app.deps import MemberCtx, optional_user
 from app.http import client_ip, safe_next, toast_text
@@ -295,7 +295,7 @@ def _timeline_response(
             "show_nav": True,
             "show_fab": flags["can_upload"],
             "fab_menu": flags["can_upload"],
-            "fab_href": "/upload" if family_view else f"/upload?child={current.id}",
+            "fab_href": "/upload?kind=child" if family_view else f"/upload?kind=child&child={current.id}",
             "tab": "timeline",
             "highlight_video": request.query_params.get("vhl") or "",
             "toast": _photo_toast(request.query_params)
@@ -709,6 +709,29 @@ def people_page(request: Request, db: Session = Depends(get_db)):
     )
 
 
+@router.get("/people/{user_id}/album/days/{taken_on}")
+def album_day_page(user_id: int, taken_on: str, request: Request, db: Session = Depends(get_db)):
+    gate = gate_member(request, db)
+    if isinstance(gate, RedirectResponse):
+        return gate
+    album = self_album(db, family_id=gate.family.id, user_id=user_id)
+    if album is None:
+        raise HTTPException(status_code=403, detail=FORBIDDEN)
+    day = parse_iso_date(taken_on, invalid="拍摄日期无效", missing="拍摄日期无效")
+    assert day is not None
+    photos = [photo for photo in album["photos"] if photo["taken_on"] == day.isoformat()]
+    photos.sort(key=lambda photo: photo["id"])
+    return _render_day(
+        request,
+        db,
+        gate,
+        day,
+        child=None,
+        self_owner={"user_id": album["user_id"], "name": album["name"] or "未命名"},
+        self_photos=photos,
+    )
+
+
 @router.get("/people/{user_id}/album")
 def album_page(user_id: int, request: Request, toast: str | None = None, db: Session = Depends(get_db)):
     gate = gate_member(request, db)
@@ -797,6 +820,7 @@ def _upload_form(
         {"id": child.id, "name": child.name, "birth": child.birth_date.isoformat()} for child in children
     ]
     flags = _flags(gate.user, gate.membership)
+    today = shanghai_today()
     return render(
         request,
         "upload.html",
@@ -810,7 +834,9 @@ def _upload_form(
             "kind": chosen,
             "mode": mode,
             "photo": photo,
-            "today": shanghai_today().isoformat(),
+            "today": today.isoformat(),
+            "today_mo": today.month,
+            "today_d": today.day,
             "error": error,
             "show_red": chosen == "child" and not selected_ids,
             "show_nav": False,
@@ -880,10 +906,7 @@ async def upload_save(
             status_code=exc.status_code,
             selected_override=override,
         )
-    if photo.kind == "self":
-        response = RedirectResponse(f"/people/{gate.user.id}/album?toast=album", status_code=303)
-    else:
-        response = RedirectResponse(f"/?child={photo.child_id}&toast=timeline", status_code=303)
+    response = RedirectResponse(_placed_location(photo, gate.user.id), status_code=303)
     note_child_upload(request, response, role=gate.membership.role, kind=photo.kind)
     return response
 
@@ -1020,33 +1043,95 @@ def photo_edit_page(photo_id: int, request: Request, db: Session = Depends(get_d
     )
 
 
-def _render_day(request: Request, db: Session, gate: MemberCtx, day, *, child):
-    if child is not None:
+def _new_ids(raw: str | None) -> list[int]:
+    found: list[int] = []
+    for part in (raw or "").split(","):
+        piece = part.strip()
+        if piece.isdigit():
+            found.append(int(piece))
+    return found
+
+
+def _placed_toast(request: Request) -> str | None:
+    kind = request.query_params.get("toast")
+    if kind == "placed_today":
+        return UPLOAD_DAY_SLIM["done_toast"]
+    if kind == "placed_day":
+        return UPLOAD_DAY_SLIM["done_toast_other"]
+    return None
+
+
+def _placed_location(photo: Photo, user_id: int) -> str:
+    toast = "placed_today" if photo.taken_on == shanghai_today() else "placed_day"
+    query = f"new={photo.id}&toast={toast}"
+    if photo.kind == "self":
+        return f"/people/{user_id}/album/days/{photo.taken_on.isoformat()}?{query}"
+    return f"/children/{photo.child_id}/days/{photo.taken_on.isoformat()}?{query}"
+
+
+def _render_day(request: Request, db: Session, gate: MemberCtx, day, *, child, self_owner=None, self_photos=None):
+    self_mode = self_owner is not None
+    if self_mode:
+        photos = list(self_photos or [])
+        journals = []
+        videos = []
+        age = ""
+        back_href = f"/people/{self_owner['user_id']}/album"
+        child_id = None
+        state = {
+            "body": "",
+            "selected_ids": [],
+            "own_id": None,
+            "mode": "new",
+            "notes": [],
+            "children": [],
+        }
+        tab = "people"
+        family_entry = False
+    elif child is not None:
         timeline = build_feed(db, child)
         back_href = f"/?child={child.id}"
         child_id = child.id
+        photos = []
+        journals = []
+        videos = []
+        age = ""
+        for group in timeline["days"]:
+            if group["taken_on"] == day.isoformat():
+                photos = group["photos"]
+                journals = group.get("journals") or []
+                videos = group.get("videos") or []
+                age = group.get("age_label") or ""
+                break
+        state = day_page_state(db, gate, day, child_id=child_id)
+        tab = "timeline"
+        family_entry = False
     else:
         timeline = build_family_feed(db, gate.family.id)
         back_href = "/?view=family"
         child_id = None
-    photos: list[dict] = []
-    journals: list[dict] = []
-    videos: list[dict] = []
-    age = ""
-    for group in timeline["days"]:
-        if group["taken_on"] == day.isoformat():
-            photos = group["photos"]
-            journals = group.get("journals") or []
-            videos = group.get("videos") or []
-            age = group.get("age_label") or ""
-            break
-    state = day_page_state(db, gate, day, child_id=child_id)
+        photos = []
+        journals = []
+        videos = []
+        age = ""
+        for group in timeline["days"]:
+            if group["taken_on"] == day.isoformat():
+                photos = group["photos"]
+                journals = group.get("journals") or []
+                videos = group.get("videos") or []
+                age = group.get("age_label") or ""
+                break
+        state = day_page_state(db, gate, day, child_id=child_id)
+        tab = "timeline"
+        family_entry = True
     initial = {
         "body": state["body"],
         "childIds": state["selected_ids"],
         "noteId": state["own_id"],
         "mode": state["mode"],
     }
+    highlighted = set(_new_ids(request.query_params.get("new")))
+    photo_json = [{"id": photo["id"], "url": photo["media_url"]} for photo in photos]
     return render(
         request,
         "day.html",
@@ -1054,20 +1139,26 @@ def _render_day(request: Request, db: Session, gate: MemberCtx, day, *, child):
             **_flags(gate.user, gate.membership),
             "family": gate.family,
             "child": child,
-            "family_entry": child is None,
+            "family_entry": family_entry,
+            "self_mode": self_mode,
+            "self_owner": self_owner,
             "taken_on": day.isoformat(),
             "date_label": date_label(day),
             "weekday": weekday_zh(day),
             "age_label": age,
             "photos": photos,
+            "new_ids": highlighted,
+            "photo_json": json.dumps(photo_json, ensure_ascii=True),
             "journals": journals,
             "videos": videos,
             "notes": state["notes"],
             "state": state,
+            "notes_on": not self_mode,
             "back_href": back_href,
-            "otd_year_meta": year_meta_for(day) or "",
+            "otd_year_meta": "" if self_mode else (year_meta_for(day) or ""),
             "show_nav": True,
-            "tab": "timeline",
+            "tab": tab,
+            "toast": _placed_toast(request),
             "initial_json": json.dumps(initial, ensure_ascii=True),
             "children_json": json.dumps(state["children"], ensure_ascii=True),
         },

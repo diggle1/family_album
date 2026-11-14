@@ -142,6 +142,14 @@ from app.day_note_copy import DAY_NOTE_BODY_WARN as DAY_NOTE_BODY_WARN
 from app.day_note_copy import DAY_NOTE_SNIP as DAY_NOTE_SNIP
 from app.exif_day_split_copy import DAY_PILES as DAY_PILES
 from app.legacy_import_copy import LEGACY_IMPORT as LEGACY_IMPORT
+from app.upload_day_slim_copy import UPLOAD_DAY_SLIM as UPLOAD_DAY_SLIM
+
+# Daily upload stays on the existing 20 MiB cap. These client knobs are not shown.
+SILENT_MAX_EDGE = 2560
+SILENT_TARGET_BYTES = 2 * 1024 * 1024
+SILENT_FALLBACK_EDGE = 1920
+DAILY_BATCH_MAX_FILES = 50
+DAILY_CONCURRENCY = 1
 from app.on_this_day_copy import ON_THIS_DAY as ON_THIS_DAY
 from app.timeline_child_filter_copy import TIMELINE_CHILD_FILTER as TIMELINE_CHILD_FILTER
 from app.whats_new_copy import ELDERS_WHATS_NEW as ELDERS_WHATS_NEW
