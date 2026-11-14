@@ -1,5 +1,5 @@
 {% extends "layout.html" %}
-{% block title %}{{ legacy.tray_lab }} · kids时光机{% endblock %}
+{% block title %}{{ piles.tray_lab }} · kids时光机{% endblock %}
 {% block content %}
 <div id="legacy-import" class="paper li-root"
      data-max-files="{{ max_files }}"
@@ -7,65 +7,74 @@
      data-max-batch="{{ max_batch }}"
      data-max-edge="{{ max_edge }}"
      data-concurrency="{{ concurrency }}"
+     data-peek-limit="3"
      data-who="{{ who }}"
      data-single="{{ 1 if single else 0 }}"
-     {% for key, value in legacy.items() %}data-copy-{{ key }}="{{ value }}" {% endfor %}>
+     data-mo-suffix="月"
+     data-y-suffix="年"
+     data-d-suffix="日"
+     data-week-prefix="周"
+     data-weekdays="日一二三四五六"
+     data-hand-mark="手选"
+     data-shot-label="拍摄日"
+     data-hand-label="手选日"
+     data-count-prefix="共 "
+     {% for key, value in piles.items() %}data-copy-{{ key }}="{{ value }}" {% endfor %}>
   <div class="wtop">
-    <button type="button" class="back" id="li-close" aria-label="{{ legacy.re_pick }}">✕</button>
-    <span class="mid" id="li-title">{{ legacy.tray_lab }}</span>
+    <button type="button" class="back" id="li-close" aria-label="{{ piles.re_pick }}">✕</button>
+    <span class="mid" id="li-title">{{ piles.tray_lab }}</span>
     <span class="balance"></span>
   </div>
 
   <section data-frame="tray">
     <div class="li-tray" id="tray-shell">
       <div class="li-tray-top">
-        <b id="tray-heading">{{ legacy.tray_lab }}</b>
+        <b id="tray-heading">{{ piles.tray_lab }}</b>
         <span class="li-count-badge" id="tray-count" hidden>0</span>
       </div>
       <div id="tray-empty">
-        <p class="li-empty-t">{{ legacy.tray_empty_t }}</p>
-        <p class="li-empty-s">{{ legacy.tray_empty_s }}</p>
+        <p class="li-empty-t">{{ piles.tray_empty_t }}</p>
+        <p class="li-empty-s">{{ piles.tray_empty_s }}</p>
       </div>
       <div class="li-grid" id="tray-grid" hidden></div>
     </div>
-    <p class="li-hint">{{ legacy.pick_hint }}</p>
-    <p class="li-hint">{{ legacy.size_hint }}</p>
+    <p class="li-hint">{{ piles.pick_hint }}</p>
+    <p class="li-hint">{{ piles.size_hint }}</p>
     <div class="wfoot">
-      <button type="button" class="btn" id="pick-btn">{{ legacy.pick_cta }}</button>
-      <button type="button" class="btn" id="next-btn" hidden>{{ legacy.next }}</button>
+      <button type="button" class="btn" id="pick-btn">{{ piles.pick_cta }}</button>
+      <button type="button" class="btn" id="next-btn" hidden>{{ piles.next }}</button>
       <input id="pick-file" type="file" accept="image/*" multiple hidden>
     </div>
   </section>
 
   <section data-frame="err_over50" hidden>
-    <div class="li-banner err">{{ legacy.err_over50 }}</div>
+    <div class="li-banner err">{{ piles.err_over50 }}</div>
     <div class="wfoot">
-      <button type="button" class="btn" data-back="tray">{{ legacy.re_pick }}</button>
+      <button type="button" class="btn" data-back="tray">{{ piles.re_pick }}</button>
     </div>
   </section>
 
   <section data-frame="err_batch_mb" hidden>
-    <div class="li-banner warn">{{ legacy.err_batch_mb }}</div>
+    <div class="li-banner warn">{{ piles.err_batch_mb }}</div>
     <div class="wfoot">
-      <button type="button" class="btn" data-back="tray">{{ legacy.re_pick }}</button>
+      <button type="button" class="btn" data-back="tray">{{ piles.re_pick }}</button>
     </div>
   </section>
 
   <section data-frame="confirm" hidden>
-    <h2 class="li-h">{{ legacy.tray_title }}</h2>
-    <div class="li-field">
-      <div class="li-lab">{{ legacy.date_lab }}</div>
-      <div class="date-chip" id="date-chip">
-        <span class="mark" id="date-mark" hidden></span>
-        <span id="date-text">{{ legacy.date_pick_go }}</span>
-      </div>
-      <p class="li-hint" id="date-empty">{{ legacy.date_empty }}</p>
-      <input id="on-date" type="date" value="" autocomplete="off">
+    <h2 class="li-h">{{ piles.tray_title }}</h2>
+    <p class="split-oral" id="split-oral">{{ piles.split_oral }}</p>
+    <div class="split-head">
+      <b id="split-lab"></b>
+      <span id="split-sum"></span>
     </div>
+    <div id="pile-list"></div>
+    <p class="li-hint no-today" id="no-today" hidden>{{ piles.no_today_hint }}</p>
+    <p class="li-banner warn" id="confirm-error" hidden></p>
     <div id="film-strip">
       <div class="strip-wrap{% if single %} single{% endif %}" id="strip">
         <div class="slbl">
-          <span>{{ legacy.child_lab }}</span>
+          <span>{{ piles.child_lab }}</span>
           <span class="hint" id="strip-hint"></span>
         </div>
         <div class="strip">
@@ -84,69 +93,74 @@
       </div>
     </div>
     <div class="wfoot">
-      <button type="button" class="errline" id="confirm-error" hidden></button>
-      <button type="button" class="btn" id="submit-btn">{{ legacy.submit }}</button>
+      <button type="button" class="btn" id="submit-btn" disabled>{{ piles.submit }}</button>
     </div>
+    <input id="on-date" type="date" value="" autocomplete="off">
   </section>
 
   <section data-frame="err_nodate" hidden>
-    <div class="li-banner warn">{{ legacy.err_nodate }}</div>
+    <div class="li-banner warn">{{ piles.err_nodate }}</div>
+    <p class="li-hint no-today">{{ piles.no_today_hint }}</p>
     <div class="wfoot">
-      <button type="button" class="btn" data-back="confirm">{{ legacy.date_pick_go }}</button>
+      <button type="button" class="btn" data-back="confirm">{{ piles.date_pick_go }}</button>
     </div>
   </section>
 
   <section data-frame="err_child" hidden>
-    <div class="li-banner err">{{ legacy.err_child }}</div>
+    <div class="li-banner err">{{ piles.err_child }}</div>
     <div class="wfoot">
-      <button type="button" class="btn" data-back="confirm">{{ legacy.child_lab }}</button>
+      <button type="button" class="btn" data-back="confirm">{{ piles.child_lab }}</button>
     </div>
   </section>
 
   <section data-frame="progress" hidden>
-    <p class="li-progress-label">{{ legacy.progress }}</p>
+    <p class="li-progress-label">{{ piles.progress }}</p>
     <p class="li-big" id="progress-count">0/0</p>
     <div class="li-bar" aria-hidden="true"><i id="progress-bar"></i></div>
-    <p class="li-hint">{{ legacy.keep_open }}</p>
+    <p class="li-hint">{{ piles.keep_open }}</p>
   </section>
 
   <section data-frame="done_ok" hidden>
-    <h2 class="li-h">{{ legacy.done_title }}</h2>
+    <h2 class="li-h">{{ piles.done_title }}</h2>
     <p class="li-ok" id="done-all"></p>
+    <p class="li-hint" id="done-split-ok"></p>
+    <div class="done-piles" id="done-piles-ok"></div>
     <p class="li-by" id="done-by-ok"></p>
-    <p class="li-hint">{{ legacy.day_photos }}</p>
+    <p class="li-hint">{{ piles.day_photos }}</p>
     <div class="wfoot">
-      <a class="btn" id="go-see-ok" href="/">{{ legacy.go_see }}</a>
-      <button type="button" class="btn ghost" id="re-ok">{{ legacy.re_pick }}</button>
+      <a class="btn" id="go-see-ok" href="/">{{ piles.go_see }}</a>
+      <button type="button" class="btn ghost" id="re-ok">{{ piles.re_pick }}</button>
     </div>
   </section>
 
   <section data-frame="done_partial" hidden>
-    <h2 class="li-h">{{ legacy.done_title }}</h2>
+    <h2 class="li-h">{{ piles.done_title }}</h2>
     <p class="li-ok" id="done-ok"></p>
+    <p class="li-hint" id="done-split-partial"></p>
     <p class="li-bad" id="done-fail" hidden></p>
     <ul class="li-fails" id="fail-list"></ul>
+    <div class="done-piles" id="done-piles-partial"></div>
     <p class="li-by" id="done-by-partial"></p>
-    <p class="li-hint">{{ legacy.day_photos }}</p>
+    <p class="li-hint">{{ piles.day_photos }}</p>
     <div class="wfoot">
-      <a class="btn" id="go-see-partial" href="/">{{ legacy.go_see }}</a>
-      <button type="button" class="btn ghost" id="re-partial">{{ legacy.re_pick }}</button>
+      <a class="btn" id="go-see-partial" href="/">{{ piles.go_see }}</a>
+      <button type="button" class="btn ghost" id="re-partial">{{ piles.re_pick }}</button>
     </div>
   </section>
 
   <section data-frame="err_perm" hidden>
-    <div class="li-banner err">{{ legacy.err_perm }}</div>
-    <p class="li-hint">{{ legacy.ro_hint }}</p>
-    <p class="li-hint">{{ legacy.ro_body }}</p>
-    <p class="li-hint">{{ legacy.ro_note }}</p>
+    <div class="li-banner err">{{ piles.err_perm }}</div>
+    <p class="li-hint">{{ piles.ro_hint }}</p>
+    <p class="li-hint">{{ piles.ro_body }}</p>
+    <p class="li-hint">{{ piles.ro_note }}</p>
   </section>
 
   <section data-frame="deny" hidden>
-    <h2 class="li-h">{{ legacy.deny_title }}</h2>
-    <p class="li-hint">{{ legacy.deny_sub }}</p>
+    <h2 class="li-h">{{ piles.deny_title }}</h2>
+    <p class="li-hint">{{ piles.deny_sub }}</p>
   </section>
 
-  <p class="desk-aside">{{ legacy.desk_aside }}</p>
+  <p class="desk-aside">{{ piles.desk_aside }}</p>
 </div>
 <script type="application/json" id="li-children">{{ children_json | safe }}</script>
 <script type="application/json" id="li-selected">{{ selected_json | safe }}</script>

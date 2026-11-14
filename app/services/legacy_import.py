@@ -1,7 +1,9 @@
 """One old photo at a time. The file is spooled to disk, then stored.
 
-The hand-picked calendar day is the only date. Nothing in this module reads
-camera metadata. A failed file does not delete photos that already committed.
+A readable capture day in the file wins over the day the client claimed.
+When the file has no capture day, the hand-picked day is required.
+This module never fills in today's date. A failed file does not delete
+photos that already committed.
 """
 
 from __future__ import annotations
@@ -18,10 +20,12 @@ from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.constants import (
+    DAY_PILES,
     LEGACY_IMPORT,
     LEGACY_IMPORT_MAX_BYTES,
     LEGACY_IMPORT_MAX_EDGE,
 )
+from app.services.capture_day import read_capture_day
 from app.models import Photo
 from app.services.assoc import ChildSetError, parse_form_child_ids, replace_photo_children, resolve_children
 from app.services.photos import _EXT, photo_payload, sniff_image
@@ -44,17 +48,35 @@ class LegacyImportError(Exception):
         super().__init__(detail)
 
 
-def require_on_date(raw: str | None) -> date:
-    """Hand-picked calendar day. Missing and invalid are different codes."""
+def parse_claimed_on_date(raw: str | None) -> date | None:
+    """Client day, if one was sent. Blank is missing. A bad shape is invalid."""
     if raw is None or str(raw).strip() == "":
-        raise LegacyImportError(422, "on_date_required", LEGACY_IMPORT["err_nodate"])
+        return None
     text = str(raw).strip()
     if not DATE_RE.match(text):
-        raise LegacyImportError(422, "on_date_invalid", LEGACY_IMPORT["err_nodate"])
+        raise LegacyImportError(422, "on_date_invalid", DAY_PILES["err_nodate"])
     try:
         return date.fromisoformat(text)
     except ValueError:
-        raise LegacyImportError(422, "on_date_invalid", LEGACY_IMPORT["err_nodate"]) from None
+        raise LegacyImportError(422, "on_date_invalid", DAY_PILES["err_nodate"]) from None
+
+
+def require_on_date(raw: str | None) -> date:
+    """Hand-picked calendar day. Missing and invalid are different codes."""
+    claimed = parse_claimed_on_date(raw)
+    if claimed is None:
+        raise LegacyImportError(422, "on_date_required", DAY_PILES["err_nodate"])
+    return claimed
+
+
+def choose_on_date(path: Path, claimed: date | None) -> date:
+    """Prefer the day read from the file. Never invent today's date."""
+    captured = read_capture_day(path)
+    if captured is not None:
+        return captured
+    if claimed is None:
+        raise LegacyImportError(422, "on_date_required", DAY_PILES["err_nodate"])
+    return claimed
 
 
 def require_child_ids(raw: list[str] | None) -> list[int]:
@@ -184,9 +206,14 @@ def import_spooled_photo(
     path: Path,
     byte_size: int,
 ) -> dict:
-    """Store one spooled file and one child-photo row. ``on_date`` is already checked."""
+    """Store one spooled file and one child-photo row.
+
+    ``on_date`` is the client claim and may be missing. A day read from the
+    file replaces it. Today's date is not a fallback.
+    """
     if byte_size > LEGACY_IMPORT_MAX_BYTES:
         raise LegacyImportError(400, "legacy_import_file_too_large", LEGACY_IMPORT["fail_why_mb"])
+    on_date = choose_on_date(path, on_date)
     try:
         resolved = resolve_children(
             db,

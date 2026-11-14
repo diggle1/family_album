@@ -779,7 +779,7 @@ def test_no_new_bottom_tab_copy_day_note():
 
 
 def test_version_and_release_keep_tables():
-    assert app.version == "2026.10.25.8"
+    assert app.version == "2026.10.25.9"
     notes = Path("releases/v2026.10.25.6.md").read_text(encoding="utf-8")
     assert "v2026.10.25.5" in notes
     assert "day_notes" in notes and "day_note_children" in notes
@@ -788,5 +788,5 @@ def test_version_and_release_keep_tables():
     assert "DROP TABLE" not in notes
     assert "DROP COLUMN" not in notes
     changelog = Path("CHANGELOG.md").read_text(encoding="utf-8")
-    assert changelog.split("## v2026.10.25.6", 1)[0].startswith("# Changelog\n\n## v2026.10.25.8")
+    assert changelog.split("## v2026.10.25.6", 1)[0].startswith("# Changelog\n\n## v2026.10.25.9")
     assert "DROP TABLE" not in changelog.split("## v2026.10.25.5", 1)[0]
